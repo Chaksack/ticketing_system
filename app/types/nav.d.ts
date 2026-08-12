@@ -3,6 +3,7 @@ export interface NavLink {
   link: string
   icon?: string
   new?: boolean
+  adminOnly?: boolean
 }
 
 export interface NavSectionTitle {

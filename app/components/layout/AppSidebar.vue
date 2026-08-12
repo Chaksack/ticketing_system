@@ -15,31 +15,20 @@ const teams: {
   plan: string
 }[] = [
   {
-    name: 'Acme Inc',
+    name: 'IBS Ticketing System',
     logo: 'i-lucide-gallery-vertical-end',
-    plan: 'Enterprise',
-  },
-  {
-    name: 'Acme Corp.',
-    logo: 'i-lucide-audio-waveform',
-    plan: 'Startup',
-  },
-  {
-    name: 'Evil Corp.',
-    logo: 'i-lucide-command',
-    plan: 'Free',
+    plan: 'Customer Support',
   },
 ]
 
-const user: {
-  name: string
-  email: string
-  avatar: string
-} = {
-  name: 'Dian Pratama',
-  email: 'dianpratama2@gmail.com',
-  avatar: '/avatars/avatartion.png',
-}
+const { currentUser, isAdmin } = useAuth()
+
+const visibleNavMenu = computed(() => navMenu
+  .map(group => ({
+    ...group,
+    items: group.items.filter(item => !('adminOnly' in item) || !item.adminOnly || isAdmin.value),
+  }))
+  .filter(group => group.items.length > 0))
 
 const { sidebar } = useAppSettings()
 </script>
@@ -51,7 +40,7 @@ const { sidebar } = useAppSettings()
       <Search />
     </SidebarHeader>
     <SidebarContent>
-      <SidebarGroup v-for="(nav, indexGroup) in navMenu" :key="indexGroup">
+      <SidebarGroup v-for="(nav, indexGroup) in visibleNavMenu" :key="indexGroup">
         <SidebarGroupLabel v-if="nav.heading">
           {{ nav.heading }}
         </SidebarGroupLabel>
@@ -62,7 +51,7 @@ const { sidebar } = useAppSettings()
       </SidebarGroup>
     </SidebarContent>
     <SidebarFooter>
-      <LayoutSidebarNavFooter :user="user" />
+      <LayoutSidebarNavFooter v-if="currentUser" :user="currentUser" />
     </SidebarFooter>
     <SidebarRail />
   </Sidebar>

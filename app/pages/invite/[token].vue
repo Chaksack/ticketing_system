@@ -1,0 +1,131 @@
+<script setup lang="ts">
+import { toTypedSchema } from '@vee-validate/zod'
+import { useForm } from 'vee-validate'
+import { toast } from 'vue-sonner'
+import * as z from 'zod'
+
+definePageMeta({
+  layout: 'blank',
+})
+
+const route = useRoute()
+const token = route.params.token as string
+
+const { currentUser } = useAuth()
+
+const invite = ref<{ name: string, email: string } | null>(null)
+const loadError = ref<string | null>(null)
+const isLoading = ref(true)
+
+const inviteUrl: string = `/api/staff/invite/${token}`
+
+onMounted(async () => {
+  try {
+    invite.value = await $fetch<{ name: string, email: string }>(inviteUrl)
+  }
+  catch (error: any) {
+    loadError.value = error?.data?.statusMessage ?? 'This invite link is invalid or has expired.'
+  }
+  finally {
+    isLoading.value = false
+  }
+})
+
+const acceptFormSchema = toTypedSchema(z.object({
+  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Passwords do not match.',
+  path: ['confirmPassword'],
+}))
+
+const { handleSubmit } = useForm({
+  validationSchema: acceptFormSchema,
+  initialValues: { password: '', confirmPassword: '' },
+})
+
+const isSubmitting = ref(false)
+
+const onSubmit = handleSubmit(async (values) => {
+  isSubmitting.value = true
+  try {
+    const { user } = await $fetch('/api/staff/accept-invite', {
+      method: 'POST',
+      body: { token, password: values.password },
+    })
+    currentUser.value = user
+    toast('Welcome aboard!', { description: 'Your password has been set.' })
+    await navigateTo('/tickets')
+  }
+  catch (error: any) {
+    toast('Could not set your password', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    isSubmitting.value = false
+  }
+})
+</script>
+
+<template>
+  <div class="min-h-svh flex items-center justify-center bg-muted/30 px-4">
+    <Card class="w-full max-w-sm">
+      <template v-if="isLoading">
+        <CardContent class="py-10 text-center text-sm text-muted-foreground">
+          Checking your invite...
+        </CardContent>
+      </template>
+
+      <template v-else-if="loadError">
+        <CardHeader>
+          <CardTitle>Invite link invalid</CardTitle>
+          <CardDescription>{{ loadError }}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button as-child class="w-full">
+            <NuxtLink to="/login">
+              Back to login
+            </NuxtLink>
+          </Button>
+        </CardContent>
+      </template>
+
+      <template v-else>
+        <CardHeader>
+          <CardTitle>Welcome, {{ invite?.name }}</CardTitle>
+          <CardDescription>
+            Create a password for {{ invite?.email }} to activate your IBS Ticketing System account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form class="flex flex-col gap-4" @submit="onSubmit">
+            <FormField v-slot="{ componentField }" name="password">
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <Input type="password" v-bind="componentField" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+
+            <FormField v-slot="{ componentField }" name="confirmPassword">
+              <FormItem>
+                <FormLabel>Confirm Password</FormLabel>
+                <FormControl>
+                  <Input type="password" v-bind="componentField" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+
+            <Button type="submit" class="w-full" :disabled="isSubmitting">
+              Set password & sign in
+            </Button>
+          </form>
+        </CardContent>
+      </template>
+    </Card>
+  </div>
+</template>
