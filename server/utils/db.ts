@@ -21,9 +21,14 @@ async function migrate() {
       password_hash TEXT,
       invite_token TEXT,
       invite_expires_at TEXT,
+      reset_token TEXT,
+      reset_expires_at TEXT,
       created_at TEXT NOT NULL
     )
   `)
+
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS reset_token TEXT')
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS reset_expires_at TEXT')
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS tickets (

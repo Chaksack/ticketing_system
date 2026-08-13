@@ -16,11 +16,13 @@ onMounted(() => {
 })
 
 const isDetailOpen = ref(false)
-const selectedTicket = ref<Ticket | null>(null)
+const selectedTicketId = ref<string | null>(null)
+const selectedTicket = computed(() => tickets.value.find(t => t.id === selectedTicketId.value) ?? null)
 
 async function openTicket(ticket: Ticket) {
+  selectedTicketId.value = ticket.id
   isDetailOpen.value = true
-  selectedTicket.value = await fetchTicket(ticket.id)
+  await fetchTicket(ticket.id)
 }
 
 const isReportOpen = ref(false)

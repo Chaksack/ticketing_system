@@ -11,6 +11,8 @@ export interface StaffRow {
   password_hash: string | null
   invite_token: string | null
   invite_expires_at: string | null
+  reset_token: string | null
+  reset_expires_at: string | null
   created_at: string
 }
 

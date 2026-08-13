@@ -121,7 +121,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     gmailUser: '',
-    gmailAppPassword: '',
+    gmailClientId: '',
+    gmailClientSecret: '',
+    gmailRefreshToken: '',
     sessionPassword: '',
     vapidPrivateKey: '',
     vapidSubject: '',

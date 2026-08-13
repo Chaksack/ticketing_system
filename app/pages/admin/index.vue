@@ -18,10 +18,11 @@ onMounted(() => {
 const isAddOpen = ref(false)
 
 const isDetailOpen = ref(false)
-const selectedStaff = ref<StaffMember | null>(null)
+const selectedStaffId = ref<string | null>(null)
+const selectedStaff = computed(() => staff.value.find(s => s.id === selectedStaffId.value) ?? null)
 
 function openStaff(member: StaffMember) {
-  selectedStaff.value = member
+  selectedStaffId.value = member.id
   isDetailOpen.value = true
 }
 

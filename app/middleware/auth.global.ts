@@ -15,7 +15,7 @@ const PUBLIC_PATHS = new Set([
 ])
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (PUBLIC_PATHS.has(to.path) || to.path.startsWith('/invite/'))
+  if (PUBLIC_PATHS.has(to.path) || to.path.startsWith('/invite/') || to.path.startsWith('/reset-password/'))
     return
 
   const { isLoggedIn, ensureAuth } = useAuth()
