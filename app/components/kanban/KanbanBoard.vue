@@ -1,404 +1,146 @@
 <script setup lang="ts">
-import type { DateValue } from '@internationalized/date'
-import type { UseTimeAgoMessages, UseTimeAgoOptions, UseTimeAgoUnitNamesDefault } from '@vueuse/core'
-import type { Column, NewTask, Task } from '~/types/kanban'
-import {
-  CalendarDateTime,
-  DateFormatter,
-  getLocalTimeZone,
-  parseAbsoluteToLocal,
-} from '@internationalized/date'
+import type { SlaStatus, Ticket, TicketStatus } from '~/types/ticket'
 import Draggable from 'vuedraggable'
-import { useKanban } from '~/composables/useKanban'
-import CardFooter from '../ui/card/CardFooter.vue'
+import { priorities, statuses } from '../tickets/data/data'
+import TicketDetailSheet from '../tickets/TicketDetailSheet.vue'
 
-const { board, addTask, updateTask, removeTask, setColumns, removeColumn, updateColumn } = useKanban()
+const { tickets, fetchTickets, updateStatus } = useTickets()
 
-const df = new DateFormatter('en-US', {
-  dateStyle: 'medium',
-})
-const dueDate = ref<DateValue | undefined>()
-const dueTime = ref<string | undefined>('00:00')
+interface Column { status: TicketStatus, title: string, tasks: Ticket[] }
 
-watch(() => dueTime.value, (newVal) => {
-  if (!newVal)
-    return
-  if (dueDate.value) {
-    const [hours, minutes] = newVal.split(':').map(Number)
-    dueDate.value = new CalendarDateTime(
-      dueDate.value.year,
-      dueDate.value.month,
-      dueDate.value.day,
-      hours,
-      minutes,
-    )
-  }
+const board = ref<Column[]>(statuses.map(s => ({ status: s.value as TicketStatus, title: s.label, tasks: [] })))
+
+function syncBoard() {
+  for (const column of board.value)
+    column.tasks = tickets.value.filter(t => t.status === column.status)
+}
+
+watch(tickets, syncBoard, { immediate: true })
+
+onMounted(() => {
+  fetchTickets()
 })
 
-const showModalTask = ref<{ type: 'create' | 'edit', open: boolean, columnId: string | null, taskId?: string | null }>({
-  type: 'create',
-  open: false,
-  columnId: null,
-  taskId: null,
-})
-const newTask = reactive<NewTask>({
-  title: '',
-  description: '',
-  priority: undefined,
-  dueDate: undefined,
-  status: '',
-  labels: undefined,
-})
-function resetData() {
-  dueDate.value = undefined
-  dueTime.value = '00:00'
-}
-watch(() => showModalTask.value.open, (newVal) => {
-  if (!newVal)
-    resetData()
-})
+const isDetailOpen = ref(false)
+const selectedTicketId = ref<string | null>(null)
+const selectedTicket = computed(() => tickets.value.find(t => t.id === selectedTicketId.value) ?? null)
 
-function openNewTask(colId: string) {
-  showModalTask.value = { type: 'create', open: true, columnId: colId }
-  newTask.title = ''
-  newTask.description = ''
-  newTask.priority = undefined
-}
-function createTask() {
-  if (!showModalTask.value.columnId || !newTask.title.trim())
-    return
-  const payload: NewTask = {
-    title: newTask.title.trim(),
-    description: newTask.description?.trim(),
-    priority: newTask.priority,
-    dueDate: dueDate.value?.toDate(getLocalTimeZone()),
-    status: showModalTask.value.columnId,
-    labels: newTask.labels,
-  }
-  addTask(showModalTask.value.columnId, payload)
-  showModalTask.value.open = false
+async function openTicket(ticket: Ticket) {
+  selectedTicketId.value = ticket.id
+  isDetailOpen.value = true
 }
 
-function editTask() {
-  if (!showModalTask.value.columnId || !newTask.title.trim())
-    return
-  const payload: Partial<Task> = {
-    title: newTask.title.trim(),
-    description: newTask.description?.trim(),
-    priority: newTask.priority,
-    dueDate: dueDate.value?.toDate(getLocalTimeZone()),
-    status: showModalTask.value.columnId,
-    labels: newTask.labels,
-  }
-  updateTask(showModalTask.value.columnId, showModalTask.value.taskId!, payload)
-  showModalTask.value.open = false
+async function onColumnChange(status: TicketStatus, evt: any) {
+  const moved = evt?.added?.element as Ticket | undefined
+  if (moved && moved.status !== status)
+    await updateStatus(moved.id, status)
 }
 
-function showEditTask(colId: string, taskId: string) {
-  const task = board.value.columns.find(c => c.id === colId)?.tasks.find(t => t.id === taskId)
-  if (!task)
-    return
-  newTask.title = task.title
-  newTask.description = task.description
-  newTask.priority = task.priority
-  if (typeof task.dueDate === 'object') {
-    task.dueDate = task.dueDate.toISOString()
-  }
-  dueDate.value = parseAbsoluteToLocal(task.dueDate as string)
-  dueTime.value = `${dueDate.value.hour < 10 ? `0${dueDate.value?.hour}` : dueDate.value?.hour}:${dueDate.value.minute < 10 ? `0${dueDate.value?.minute}` : dueDate.value?.minute}`
-  newTask.status = task.status
-  newTask.labels = task.labels
-  showModalTask.value = { type: 'edit', open: true, columnId: colId, taskId }
+function priorityOption(p: Ticket['priority']) {
+  return priorities.find(option => option.value === p)
 }
 
-function onColumnDrop(evt: any) {
-  // Full columns re-ordered
-  setColumns(evt.to.__draggable_component__.modelValue)
+function initials(name?: string) {
+  return name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ?? '?'
 }
 
-function renameColumn(id: string) {
-  const titleRef = document.getElementById(`col-title-${id}`) as HTMLElement
-  if (titleRef)
-    setTimeout(() => titleRef.focus(), 500)
+const SLA_DOT_CLASS: Record<SlaStatus, string> = {
+  'on-track': 'bg-emerald-500',
+  'at-risk': 'bg-amber-500',
+  'breached': 'bg-destructive',
 }
 
-function onUpdateColumn(evt: any, id: string) {
-  if (!evt.target.textContent?.trim())
-    return
-  updateColumn(id, evt.target.textContent?.trim())
-}
-
-function onTaskDrop() {
-  // ensure state is persisted after any move (within or across columns)
-  nextTick(() => setColumns([...board.value.columns]))
-}
-
-function colorPriority(p?: Task['priority']) {
-  if (!p)
-    return 'text-warning'
-  if (p === 'low')
-    return 'text-blue-500'
-  if (p === 'medium')
-    return 'text-warning'
-  return 'text-destructive'
-}
-
-function iconPriority(p?: Task['priority']) {
-  if (!p)
-    return 'lucide:equal'
-  if (p === 'low')
-    return 'lucide:chevron-down'
-  if (p === 'medium')
-    return 'lucide:equal'
-  return 'lucide:chevron-up'
-}
-
-const SHORT_MESSAGES = {
-  justNow: 'now',
-  past: (n: string, _isPast: boolean) => n,
-  future: (n: string, _isPast: boolean) => n,
-  invalid: '',
-
-  second: (n: number, _isPast: boolean) => `${n}sec`,
-  minute: (n: number, _isPast: boolean) => `${n}min`,
-  hour: (n: number, _isPast: boolean) => `${n}h`,
-  day: (n: number, _isPast: boolean) => `${n}d`,
-  week: (n: number, _isPast: boolean) => `${n}w`,
-  month: (n: number, _isPast: boolean) => `${n}m`,
-  year: (n: number, _isPast: boolean) => `${n}y`,
-} as const satisfies UseTimeAgoMessages<UseTimeAgoUnitNamesDefault>
-
-const OPTIONS: UseTimeAgoOptions<false, UseTimeAgoUnitNamesDefault> = {
-  messages: SHORT_MESSAGES,
-  showSecond: true,
-  rounding: 'floor',
-  updateInterval: 1000,
+const SLA_LABEL: Record<SlaStatus, string> = {
+  'on-track': 'On track',
+  'at-risk': 'At risk',
+  'breached': 'SLA breached',
 }
 </script>
 
 <template>
   <div class="flex gap-4 overflow-x-auto overflow-y-hidden pb-4">
-    <!-- Columns Draggable wrapper -->
-    <Draggable
-      v-model="board.columns"
-      class="flex gap-4 min-w-max"
-      item-key="id"
-      :animation="180"
-      handle=".col-handle"
-      ghost-class="opacity-50"
-      @end="onColumnDrop"
-    >
-      <template #item="{ element: col }: { element: Column }">
-        <Card class="w-[272px] shrink-0 py-2 gap-4 self-start">
-          <CardHeader class="flex flex-row items-center justify-between gap-2 px-2">
-            <CardTitle class="font-semibold text-base flex items-center gap-2">
-              <Icon name="lucide:grip-vertical" class="col-handle cursor-grab opacity-60" />
-              <span
-                :id="`col-title-${col.id}`"
-                contenteditable="true" class="hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 px-1 rounded"
-                @blur="onUpdateColumn($event, col.id)" @keydown.enter.prevent
-              >{{ col.title }}</span>
-              <Badge variant="secondary" class="h-5 min-w-5 px-1 font-mono tabular-nums">
-                {{ col.tasks.length }}
-              </Badge>
-            </CardTitle>
-            <CardAction class="flex">
-              <Button size="icon-sm" variant="ghost" class="size-7 text-muted-foreground" @click="openNewTask(col.id)">
-                <Icon name="lucide:plus" />
-              </Button>
-              <DropdownMenu modal>
-                <DropdownMenuTrigger as-child>
-                  <Button size="icon-sm" variant="ghost" class="size-7 text-muted-foreground">
-                    <Icon name="lucide:ellipsis-vertical" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent class="w-20" align="start">
-                  <DropdownMenuItem @click="renameColumn(col.id)">
-                    <Icon name="lucide:edit-2" class="size-4" />
-                    Rename
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" class="text-destructive" @click="removeColumn(col.id)">
-                    <Icon name="lucide:trash-2" class="size-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardAction>
-          </CardHeader>
-          <CardContent class="px-2 overflow-y-auto overflow-x-hidden flex-1">
-            <!-- Tasks within the column -->
-            <Draggable
-              v-model="col.tasks"
-              :group="{ name: 'kanban-tasks', pull: true, put: true }"
-              item-key="id"
-              :animation="180"
-              class="flex flex-col gap-3 min-h-[24px] p-0.5"
-              ghost-class="opacity-50"
-              @end="onTaskDrop"
+    <Card v-for="col in board" :key="col.status" class="w-[280px] shrink-0 py-2 gap-4 self-start">
+      <CardHeader class="flex flex-row items-center justify-between gap-2 px-2">
+        <CardTitle class="font-semibold text-base flex items-center gap-2">
+          <span>{{ col.title }}</span>
+          <Badge variant="secondary" class="h-5 min-w-5 px-1 font-mono tabular-nums">
+            {{ col.tasks.length }}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent class="px-2 overflow-y-auto overflow-x-hidden flex-1">
+        <Draggable
+          v-model="col.tasks"
+          :group="{ name: 'kanban-tickets', pull: true, put: true }"
+          item-key="id"
+          :animation="180"
+          class="flex flex-col gap-3 min-h-6 p-0.5"
+          ghost-class="opacity-50"
+          @change="onColumnChange(col.status, $event)"
+        >
+          <template #item="{ element: ticket }: { element: Ticket }">
+            <div
+              class="rounded-xl border bg-card px-3 py-2 shadow-sm hover:bg-accent/50 cursor-pointer"
+              @click="openTicket(ticket)"
             >
-              <template #item="{ element: t }: { element: Task }">
-                <div class="rounded-xl border bg-card px-3 py-2 shadow-sm hover:bg-accent/50 cursor-pointer">
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="text-sm text-muted-foreground">
-                      {{ t.id }}
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger as-child>
-                        <Button size="icon-sm" variant="ghost" class="size-7 text-muted-foreground" title="More actions">
-                          <Icon name="lucide:ellipsis-vertical" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent class="w-20" align="start">
-                        <DropdownMenuItem @click="showEditTask(col.id, t.id)">
-                          <Icon name="lucide:edit-2" class="size-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <Icon name="lucide:copy" class="size-4" />
-                          Copy card
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Icon name="lucide:link" class="size-4" />
-                          Copy link
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" class="text-destructive" @click="removeTask(col.id, t.id)">
-                          <Icon name="lucide:trash-2" class="size-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <p class="font-medium leading-5 mt-1">
-                    {{ t.title }}
-                  </p>
-                  <div class="mt-3 flex items-center gap-1.5">
-                    <badge variant="outline">
-                      Web
-                    </badge>
-                    <badge variant="destructive">
-                      UI/UX
-                    </badge>
-                  </div>
-                  <div class="mt-3 flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                      <div class="flex items-center text-sm text-muted-foreground gap-1">
-                        <Icon name="lucide:folder" />
-                        <span>4</span>
-                      </div>
-                      <div class="flex items-center text-sm text-muted-foreground gap-1">
-                        <Icon name="lucide:message-square" />
-                        <span>2</span>
-                      </div>
-                      <div class="flex items-center text-sm text-muted-foreground gap-1">
-                        <Icon name="lucide:clock-fading" />
-                        <span>{{ useTimeAgo(t.dueDate ?? '', OPTIONS) }}</span>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Icon v-if="t.priority" :name="iconPriority(t.priority)" class="size-4" :class="colorPriority(t.priority)" />
-                        </TooltipTrigger>
-                        <TooltipContent class="capitalize">
-                          {{ t.priority }}
-                        </TooltipContent>
-                      </Tooltip>
+              <div class="flex items-start justify-between gap-2">
+                <div class="text-xs font-mono text-muted-foreground">
+                  {{ ticket.id }}
+                </div>
+                <Tooltip v-if="getSlaStatus(ticket)">
+                  <TooltipTrigger as-child>
+                    <span class="size-2 rounded-full shrink-0 mt-1" :class="SLA_DOT_CLASS[getSlaStatus(ticket)!]" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ SLA_LABEL[getSlaStatus(ticket)!] }}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p class="font-medium leading-5 mt-1 line-clamp-2">
+                {{ ticket.subject }}
+              </p>
+              <p class="text-xs text-muted-foreground mt-1">
+                {{ ticket.requester }}
+              </p>
+              <div v-if="ticket.tags.length" class="mt-2 flex flex-wrap items-center gap-1">
+                <Badge v-for="tag in ticket.tags.slice(0, 3)" :key="tag.id" variant="outline" class="text-[10px]">
+                  {{ tag.name }}
+                </Badge>
+              </div>
+              <div class="mt-3 flex items-center justify-between gap-2">
+                <div class="flex items-center text-xs text-muted-foreground gap-1">
+                  <Icon name="lucide:message-square" class="size-3.5" />
+                  <span>{{ ticket.replies.length }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <component :is="priorityOption(ticket.priority)?.icon" class="size-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent class="capitalize">
+                      {{ ticket.priority }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip v-if="ticket.assigneeName">
+                    <TooltipTrigger as-child>
                       <Avatar class="size-6">
-                        <AvatarImage src="/avatars/avatartion.png" alt="avatar" />
                         <AvatarFallback class="text-[10px]">
-                          DP
+                          {{ initials(ticket.assigneeName) }}
                         </AvatarFallback>
                       </Avatar>
-                    </div>
-                  </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ ticket.assigneeName }}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-              </template>
-            </Draggable>
-          </CardContent>
-          <CardFooter class="px-2 mt-auto">
-            <Button size="sm" variant="ghost" class="text-muted-foreground" @click="openNewTask(col.id)">
-              <Icon name="lucide:plus" />
-              Add Task
-            </Button>
-          </CardFooter>
-        </Card>
-      </template>
-    </Draggable>
+              </div>
+            </div>
+          </template>
+        </Draggable>
+      </CardContent>
+    </Card>
   </div>
 
-  <!-- New Task Dialog -->
-  <Dialog v-model:open="showModalTask.open">
-    <DialogContent class="sm:max-w-[520px]">
-      <DialogHeader>
-        <DialogTitle>{{ showModalTask.type === 'create' ? 'New Task' : 'Edit Task' }}</DialogTitle>
-        <DialogDescription class="sr-only">
-          {{ showModalTask.type === 'create' ? 'Add a new task to the board' : 'Edit the task' }}
-        </DialogDescription>
-      </DialogHeader>
-      <div class="flex flex-col gap-3">
-        <div class="grid items-baseline grid-cols-1 md:grid-cols-4 md:[&>label]:col-span-1 *:col-span-3 gap-3">
-          <Label>Title</Label>
-          <Input v-model="newTask.title" placeholder="Title" />
-          <Label>Description</Label>
-          <Textarea v-model="newTask.description" placeholder="Description (optional)" rows="4" />
-          <Label>Priority</Label>
-          <Select v-model="newTask.priority">
-            <SelectTrigger class="w-full">
-              <SelectValue placeholder="Select a priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">
-                Low
-              </SelectItem>
-              <SelectItem value="medium">
-                Medium
-              </SelectItem>
-              <SelectItem value="high">
-                High
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          <Label>Due Date</Label>
-          <div class="flex items-center gap-1">
-            <Popover>
-              <PopoverTrigger as-child>
-                <Button
-                  variant="outline"
-                  :class="cn(
-                    'flex-1 justify-start text-left font-normal px-3',
-                    !dueDate && 'text-muted-foreground',
-                  )"
-                >
-                  <Icon name="lucide:calendar" class="mr-2" />
-                  {{ dueDate ? df.format(dueDate.toDate(getLocalTimeZone())) : "Pick a date" }}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent class="w-auto p-0">
-                <Calendar v-model="dueDate" initial-focus />
-              </PopoverContent>
-            </Popover>
-            <Input
-              id="time-picker"
-              v-model="dueTime"
-              type="time"
-              step="60"
-              default-value="00:00"
-              class="flex-1 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-            />
-          </div>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="secondary" @click="showModalTask.open = false">
-          Cancel
-        </Button>
-        <Button @click="showModalTask.type === 'create' ? createTask() : editTask()">
-          {{ showModalTask.type === 'create' ? 'Create' : 'Update' }}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+  <TicketDetailSheet v-model:open="isDetailOpen" :ticket="selectedTicket" />
 </template>

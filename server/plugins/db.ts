@@ -76,4 +76,25 @@ export default defineNitroPlugin(async () => {
 
     console.warn(`[seed] Created ${seedTickets.length} demo tickets.`)
   }
+
+  const slaPolicyCount = await db.prepare('SELECT COUNT(*) as count FROM sla_policies').get() as { count: number | string }
+
+  if (Number(slaPolicyCount.count) === 0) {
+    const now = new Date().toISOString()
+    const defaultPolicies = [
+      { priority: 'urgent', firstResponseMins: 30, resolutionMins: 240 },
+      { priority: 'high', firstResponseMins: 60, resolutionMins: 480 },
+      { priority: 'medium', firstResponseMins: 240, resolutionMins: 1440 },
+      { priority: 'low', firstResponseMins: 480, resolutionMins: 2880 },
+    ]
+
+    for (const [index, policy] of defaultPolicies.entries()) {
+      await db.prepare(`
+        INSERT INTO sla_policies (id, priority, first_response_mins, resolution_mins, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(`SLA-${index + 1}`, policy.priority, policy.firstResponseMins, policy.resolutionMins, now)
+    }
+
+    console.warn(`[seed] Created ${defaultPolicies.length} default SLA policies.`)
+  }
 })

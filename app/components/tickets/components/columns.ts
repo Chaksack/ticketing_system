@@ -1,10 +1,23 @@
 import type { ColumnDef } from '@tanstack/vue-table'
-import type { Ticket } from '~/types/ticket'
+import type { SlaStatus, Ticket } from '~/types/ticket'
 import { h } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { getSlaStatus } from '@/lib/sla'
 import { priorities, statuses } from '../data/data'
 import DataTableColumnHeader from './DataTableColumnHeader.vue'
+
+const SLA_DOT_CLASS: Record<SlaStatus, string> = {
+  'on-track': 'bg-emerald-500',
+  'at-risk': 'bg-amber-500',
+  'breached': 'bg-destructive',
+}
+
+const SLA_LABEL: Record<SlaStatus, string> = {
+  'on-track': 'On track',
+  'at-risk': 'At risk',
+  'breached': 'Breached',
+}
 
 export const columns: ColumnDef<Ticket>[] = [
   {
@@ -51,6 +64,27 @@ export const columns: ColumnDef<Ticket>[] = [
     cell: ({ row }) => h('span', { class: 'text-sm' }, row.getValue('requester')),
   },
   {
+    id: 'assigneeId',
+    accessorFn: row => row.assigneeId ?? 'unassigned',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Assignee' }),
+    cell: ({ row }) => h('span', { class: 'text-sm' }, row.original.assigneeName ?? 'Unassigned'),
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
+  },
+  {
+    id: 'tags',
+    accessorFn: row => row.tags.map(tag => tag.id),
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Tags' }),
+    cell: ({ row }) => h('div', { class: 'flex flex-wrap gap-1' }, row.original.tags.map(tag =>
+      h(Badge, { key: tag.id, variant: 'outline', class: 'text-xs' }, () => tag.name),
+    )),
+    filterFn: (row, id, value: string[]) => {
+      const tagIds = row.getValue(id) as string[]
+      return value.some(v => tagIds.includes(v))
+    },
+  },
+  {
     accessorKey: 'status',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Status' }),
     cell: ({ row }) => {
@@ -89,6 +123,21 @@ export const columns: ColumnDef<Ticket>[] = [
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
+  },
+  {
+    id: 'sla',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'SLA' }),
+    cell: ({ row }) => {
+      const sla = getSlaStatus(row.original)
+      if (!sla)
+        return null
+
+      return h('div', { class: 'flex items-center gap-1.5 text-xs text-muted-foreground' }, [
+        h('span', { class: `size-2 rounded-full ${SLA_DOT_CLASS[sla]}` }),
+        h('span', SLA_LABEL[sla]),
+      ])
+    },
+    enableSorting: false,
   },
   {
     accessorKey: 'createdAt',

@@ -9,6 +9,14 @@ export interface NewTicket {
   priority: TicketPriority
   referenceNumber?: string
   attachments?: string[]
+  assigneeId?: string
+}
+
+export interface TicketPatch {
+  status?: TicketStatus
+  priority?: TicketPriority
+  category?: string
+  assigneeId?: string | null
 }
 
 export function useTickets() {
@@ -23,13 +31,17 @@ export function useTickets() {
     return tickets.value.find(t => t.id === id)
   }
 
-  async function fetchTicket(id: string) {
-    const { ticket } = await $fetch(`/api/tickets/${id}`)
-    const index = tickets.value.findIndex(t => t.id === id)
+  function replaceTicket(ticket: Ticket) {
+    const index = tickets.value.findIndex(t => t.id === ticket.id)
     if (index === -1)
       tickets.value.unshift(ticket)
     else
       tickets.value[index] = ticket
+  }
+
+  async function fetchTicket(id: string) {
+    const { ticket } = await $fetch(`/api/tickets/${id}`)
+    replaceTicket(ticket)
     return ticket
   }
 
@@ -39,19 +51,39 @@ export function useTickets() {
     return ticket
   }
 
-  async function addReply(ticketId: string, message: string) {
-    const { ticket } = await $fetch(`/api/tickets/${ticketId}/replies`, { method: 'POST', body: { message } })
-    const index = tickets.value.findIndex(t => t.id === ticketId)
-    if (index !== -1)
-      tickets.value[index] = ticket
+  async function addReply(ticketId: string, message: string, internal = false) {
+    const { ticket } = await $fetch(`/api/tickets/${ticketId}/replies`, { method: 'POST', body: { message, internal } })
+    replaceTicket(ticket)
     return ticket
   }
 
   async function updateStatus(ticketId: string, status: TicketStatus) {
     const { ticket } = await $fetch(`/api/tickets/${ticketId}`, { method: 'PATCH', body: { status } })
-    const index = tickets.value.findIndex(t => t.id === ticketId)
-    if (index !== -1)
-      tickets.value[index] = ticket
+    replaceTicket(ticket)
+    return ticket
+  }
+
+  async function updateTicket(ticketId: string, patch: TicketPatch) {
+    const { ticket } = await $fetch(`/api/tickets/${ticketId}`, { method: 'PATCH', body: patch })
+    replaceTicket(ticket)
+    return ticket
+  }
+
+  async function addTag(ticketId: string, tag: { tagId?: string, name?: string }) {
+    const { ticket } = await $fetch(`/api/tickets/${ticketId}/tags`, { method: 'POST', body: tag })
+    replaceTicket(ticket)
+    return ticket
+  }
+
+  async function removeTag(ticketId: string, tagId: string) {
+    const { ticket } = await $fetch(`/api/tickets/${ticketId}/tags/${tagId}`, { method: 'DELETE' })
+    replaceTicket(ticket)
+    return ticket
+  }
+
+  async function applyMacro(ticketId: string, macroId: string) {
+    const { ticket } = await $fetch(`/api/tickets/${ticketId}/apply-macro`, { method: 'POST', body: { macroId } })
+    replaceTicket(ticket)
     return ticket
   }
 
@@ -60,5 +92,5 @@ export function useTickets() {
     tickets.value = tickets.value.filter(t => t.id !== ticketId)
   }
 
-  return { tickets, fetchTickets, getTicket, fetchTicket, addTicket, addReply, updateStatus, removeTicket }
+  return { tickets, fetchTickets, getTicket, fetchTicket, addTicket, addReply, updateStatus, updateTicket, addTag, removeTag, applyMacro, removeTicket }
 }

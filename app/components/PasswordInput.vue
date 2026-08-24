@@ -3,6 +3,10 @@ import type { ComponentFieldBindingObject } from 'vee-validate'
 import type { HTMLAttributes } from 'vue'
 import { cn } from '~/lib/utils'
 
+defineOptions({
+  inheritAttrs: false,
+})
+
 const props = defineProps<{
   class?: HTMLAttributes['class']
   disabled?: boolean
@@ -26,7 +30,7 @@ const showPassword = ref(false)
       :placeholder="props?.placeholder ? props.placeholder : 'Enter your password'"
       :disabled="props?.disabled"
       :autocomplete="props?.autocomplete"
-      v-bind="props?.componentField"
+      v-bind="{ ...props?.componentField, ...$attrs }"
     />
     <Button
       type="button"
@@ -38,13 +42,13 @@ const showPassword = ref(false)
     >
       <Icon
         v-if="showPassword"
-        name="i-lucide-eye"
+        name="i-lucide-eye-off"
         class="size-4"
         aria-hidden="true"
       />
-      <Icon v-else name="i-lucide-eye-off" class="size-4" aria-hidden="true" />
+      <Icon v-else name="i-lucide-eye" class="size-4" aria-hidden="true" />
       <span class="sr-only">
-        {{ showPassword ? "Show password" : "Hide password" }}
+        {{ showPassword ? "Hide password" : "Show password" }}
       </span>
     </Button>
   </div>

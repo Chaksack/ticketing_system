@@ -48,8 +48,7 @@
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint .",
     "format": "eslint --fix .",
-    "release": "release-it",
-    "gmail:setup": "node scripts/gmail-oauth-setup.mjs"
+    "release": "release-it"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.68",
@@ -62,7 +61,6 @@
     "@unovis/vue": "^1.6.1",
     "embla-carousel": "^8.6.0",
     "embla-carousel-vue": "^8.6.0",
-    "google-auth-library": "^11.0.1",
     "nanoid": "^5.1.6",
     "pg": "^8.23.0",
     "reka-ui": "^2.5.1",

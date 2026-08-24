@@ -46,12 +46,94 @@ async function migrate() {
     )
   `)
 
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS assignee_id TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS due_at TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS first_response_due_at TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS first_response_at TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS resolved_at TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS closed_at TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS sla_escalated INTEGER NOT NULL DEFAULT 0')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS updated_at TEXT')
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS ticket_replies (
       id TEXT PRIMARY KEY,
       ticket_id TEXT NOT NULL,
       author TEXT NOT NULL,
       message TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec('ALTER TABLE ticket_replies ADD COLUMN IF NOT EXISTS internal INTEGER NOT NULL DEFAULT 0')
+  await db.exec('ALTER TABLE ticket_replies ADD COLUMN IF NOT EXISTS author_id TEXT')
+  await db.exec('ALTER TABLE ticket_replies ADD COLUMN IF NOT EXISTS author_type TEXT NOT NULL DEFAULT \'customer\'')
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS ticket_activity (
+      id TEXT PRIMARY KEY,
+      ticket_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      actor_id TEXT,
+      actor_name TEXT,
+      from_value TEXT,
+      to_value TEXT,
+      message TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      color TEXT NOT NULL DEFAULT 'gray',
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS ticket_tags (
+      ticket_id TEXT NOT NULL,
+      tag_id TEXT NOT NULL,
+      PRIMARY KEY (ticket_id, tag_id)
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS sla_policies (
+      id TEXT PRIMARY KEY,
+      priority TEXT NOT NULL UNIQUE,
+      first_response_mins INTEGER NOT NULL,
+      resolution_mins INTEGER NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS macros (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      body TEXT NOT NULL,
+      set_status TEXT,
+      set_priority TEXT,
+      add_tag_id TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS automation_rules (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      field TEXT NOT NULL,
+      operator TEXT NOT NULL,
+      value TEXT NOT NULL,
+      set_priority TEXT,
+      set_status TEXT,
+      set_assignee_id TEXT,
+      add_tag_id TEXT,
       created_at TEXT NOT NULL
     )
   `)
@@ -120,4 +202,24 @@ export async function nextReplyId() {
 export async function nextPageId() {
   const n = await nextSequence('page')
   return `PAGE-${n}`
+}
+
+export async function nextActivityId() {
+  const n = await nextSequence('activity')
+  return `ACT-${n}`
+}
+
+export async function nextTagId() {
+  const n = await nextSequence('tag')
+  return `TAG-${n}`
+}
+
+export async function nextMacroId() {
+  const n = await nextSequence('macro')
+  return `MACRO-${n}`
+}
+
+export async function nextRuleId() {
+  const n = await nextSequence('rule')
+  return `RULE-${n}`
 }

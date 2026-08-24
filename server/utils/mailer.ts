@@ -1,77 +1,23 @@
-import { Buffer } from 'node:buffer'
-import { OAuth2Client } from 'google-auth-library'
-
-let oauthClient: OAuth2Client | null = null
-
-function getOAuthClient() {
-  if (!oauthClient) {
-    const config = useRuntimeConfig()
-    oauthClient = new OAuth2Client(config.gmailClientId, config.gmailClientSecret)
-    oauthClient.setCredentials({ refresh_token: config.gmailRefreshToken })
-  }
-
-  return oauthClient
-}
-
-async function getAccessToken(): Promise<string> {
-  const client = getOAuthClient()
-  const { token } = await client.getAccessToken()
-
-  if (!token)
-    throw new Error('Failed to obtain a Gmail access token — check NUXT_GMAIL_CLIENT_ID/SECRET/REFRESH_TOKEN.')
-
-  return token
-}
-
-function base64UrlEncode(input: string): string {
-  return Buffer.from(input)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-}
-
-function encodeSubject(subject: string): string {
-  return `=?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`
-}
-
-function buildRawMessage(params: { from: string, to: string, subject: string, html: string }): string {
-  const message = [
-    `From: ${params.from}`,
-    `To: ${params.to}`,
-    `Subject: ${encodeSubject(params.subject)}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/html; charset=utf-8',
-    '',
-    params.html,
-  ].join('\r\n')
-
-  return base64UrlEncode(message)
-}
-
 export async function sendMail(options: { to: string, subject: string, html: string }) {
   const config = useRuntimeConfig()
-  const accessToken = await getAccessToken()
 
-  const raw = buildRawMessage({
-    from: `"IBS Ticketing System" <${config.gmailUser}>`,
-    to: options.to,
-    subject: options.subject,
-    html: options.html,
-  })
-
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+  const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      'Authorization': `Bearer ${config.resendApiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ raw }),
+    body: JSON.stringify({
+      from: config.resendFromEmail,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    }),
   })
 
   if (!response.ok) {
     const body = await response.text()
-    throw new Error(`Gmail API send failed (${response.status}): ${body}`)
+    throw new Error(`Resend send failed (${response.status}): ${body}`)
   }
 }
 
@@ -87,6 +33,19 @@ export async function sendStaffInviteEmail(params: { to: string, name: string, t
       <p>You've been added as staff on IBS Ticketing System. Click the link below to create your password and get started:</p>
       <p><a href="${link}">${link}</a></p>
       <p>This link expires in 48 hours. If you weren't expecting this, you can ignore this email.</p>
+    `,
+  })
+}
+
+export async function sendTicketReplyEmail(params: { to: string, name: string, ticketId: string, subject: string, message: string }) {
+  await sendMail({
+    to: params.to,
+    subject: `Re: [${params.ticketId}] ${params.subject}`,
+    html: `
+      <p>Hi ${params.name},</p>
+      <p>Our support team has replied to your ticket <strong>${params.ticketId}</strong>:</p>
+      <blockquote style="margin:0;padding:12px 16px;border-left:3px solid #ccc;color:#333;">${params.message.replace(/\n/g, '<br>')}</blockquote>
+      <p>Reply to this email or contact us if you have further questions.</p>
     `,
   })
 }

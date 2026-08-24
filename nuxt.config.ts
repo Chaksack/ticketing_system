@@ -120,10 +120,8 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    gmailUser: '',
-    gmailClientId: '',
-    gmailClientSecret: '',
-    gmailRefreshToken: '',
+    resendApiKey: '',
+    resendFromEmail: 'IBS Ticketing System <onboarding@resend.dev>',
     sessionPassword: '',
     vapidPrivateKey: '',
     vapidSubject: '',

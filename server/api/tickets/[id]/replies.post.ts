@@ -1,10 +1,10 @@
-import type { ReplyRow, TicketRow } from '../../../utils/mappers'
+import type { TicketRow } from '../../../utils/mappers'
 
 export default defineEventHandler(async (event) => {
   const user = await requireSessionUser(event)
 
   const id = getRouterParam(event, 'id')
-  const body = await readBody<{ message?: string }>(event)
+  const body = await readBody<{ message?: string, internal?: boolean }>(event)
 
   if (!id) {
     throw createError({ statusCode: 400, statusMessage: 'Missing ticket id' })
@@ -13,6 +13,8 @@ export default defineEventHandler(async (event) => {
   if (!body?.message?.trim()) {
     throw createError({ statusCode: 400, statusMessage: 'Reply message is required' })
   }
+
+  const internal = !!body.internal
 
   await ensureDb()
   const db = useDatabase()
@@ -24,13 +26,38 @@ export default defineEventHandler(async (event) => {
 
   const replyId = await nextReplyId()
   const now = new Date().toISOString()
+  const message = body.message.trim()
 
   await db.prepare(`
-    INSERT INTO ticket_replies (id, ticket_id, author, message, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(replyId, id, user.name, body.message.trim(), now)
+    INSERT INTO ticket_replies (id, ticket_id, author, message, created_at, internal, author_id, author_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'staff')
+  `).run(replyId, id, user.name, message, now, internal ? 1 : 0, user.id)
 
-  const replyRows = await db.prepare('SELECT * FROM ticket_replies WHERE ticket_id = ? ORDER BY created_at ASC').all(id) as ReplyRow[]
+  if (!internal) {
+    if (!ticket.first_response_at) {
+      await db.prepare('UPDATE tickets SET first_response_at = ?, updated_at = ? WHERE id = ?').run(now, now, id)
+    }
+    else {
+      await touchTicket(id)
+    }
 
-  return { ticket: mapTicketRow(ticket, replyRows.map(row => mapReplyRow(row))) }
+    try {
+      await sendTicketReplyEmail({
+        to: ticket.requester_email,
+        name: ticket.requester,
+        ticketId: id,
+        subject: ticket.subject,
+        message,
+      })
+    }
+    catch (error) {
+      console.error('Failed to send ticket reply email', error)
+    }
+  }
+  else {
+    await touchTicket(id)
+  }
+
+  const updated = await loadFullTicket(id)
+  return { ticket: updated }
 })

@@ -1,5 +1,4 @@
 import type { TicketPriority } from '../../../app/types/ticket'
-import type { TicketRow } from '../../utils/mappers'
 
 interface NewTicketBody {
   subject?: string
@@ -10,6 +9,7 @@ interface NewTicketBody {
   priority?: TicketPriority
   referenceNumber?: string
   attachments?: string[]
+  assigneeId?: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -25,14 +25,34 @@ export default defineEventHandler(async (event) => {
   const id = await nextTicketId()
   const now = new Date().toISOString()
   const attachments = body.attachments?.length ? JSON.stringify(body.attachments) : null
+  const { dueAt, firstResponseDueAt } = await computeSlaDeadlines(body.priority, now)
 
   await db.prepare(`
-    INSERT INTO tickets (id, subject, description, requester, requester_email, category, status, priority, reference_number, attachments, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)
-  `).run(id, body.subject, body.description, body.requester, body.requesterEmail, body.category, body.priority, body.referenceNumber ?? null, attachments, now)
+    INSERT INTO tickets (
+      id, subject, description, requester, requester_email, category, status, priority,
+      reference_number, attachments, created_at, updated_at, assignee_id, due_at, first_response_due_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    body.subject,
+    body.description,
+    body.requester,
+    body.requesterEmail,
+    body.category,
+    body.priority,
+    body.referenceNumber ?? null,
+    attachments,
+    now,
+    now,
+    body.assigneeId ?? null,
+    dueAt ?? null,
+    firstResponseDueAt ?? null,
+  )
 
-  const row = await db.prepare('SELECT * FROM tickets WHERE id = ?').get(id) as TicketRow
-  const ticket = mapTicketRow(row)
+  let ticket = await loadFullTicket(id)
+  ticket = await applyAutomationRules(ticket)
+  ticket = await autoAssign(ticket)
 
   const pagedCount = await pageOnCallForTicket(ticket)
 

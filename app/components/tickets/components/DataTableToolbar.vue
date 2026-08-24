@@ -13,11 +13,28 @@ interface DataTableToolbarProps {
 const props = defineProps<DataTableToolbarProps>()
 
 const isFiltered = computed(() => props.table.getState().columnFilters.length > 0)
+
+const { staff, fetchStaff } = useStaff()
+const { tags, fetchTags } = useTags()
+
+onMounted(() => {
+  if (!staff.value.length)
+    fetchStaff()
+  if (!tags.value.length)
+    fetchTags()
+})
+
+const assigneeOptions = computed(() => [
+  { label: 'Unassigned', value: 'unassigned' },
+  ...staff.value.map(member => ({ label: member.name, value: member.id })),
+])
+
+const tagOptions = computed(() => tags.value.map(tag => ({ label: tag.name, value: tag.id })))
 </script>
 
 <template>
   <div class="flex items-center justify-between">
-    <div class="flex flex-1 items-center space-x-2">
+    <div class="flex flex-1 flex-wrap items-center gap-2">
       <Input
         placeholder="Filter tickets..."
         :model-value="(table.getColumn('subject')?.getFilterValue() as string) ?? ''"
@@ -35,6 +52,18 @@ const isFiltered = computed(() => props.table.getState().columnFilters.length > 
         :column="table.getColumn('priority')"
         title="Priority"
         :options="priorities"
+      />
+      <DataTableFacetedFilter
+        v-if="table.getColumn('assigneeId')"
+        :column="table.getColumn('assigneeId')"
+        title="Assignee"
+        :options="assigneeOptions"
+      />
+      <DataTableFacetedFilter
+        v-if="table.getColumn('tags') && tagOptions.length"
+        :column="table.getColumn('tags')"
+        title="Tags"
+        :options="tagOptions"
       />
 
       <Button

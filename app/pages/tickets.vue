@@ -10,10 +10,14 @@ import { priorities } from '@/components/tickets/data/data'
 import TicketDetailSheet from '@/components/tickets/TicketDetailSheet.vue'
 
 const { tickets, fetchTickets, fetchTicket, addTicket } = useTickets()
+const { staff, fetchStaff } = useStaff()
 
 onMounted(() => {
   fetchTickets()
+  fetchStaff()
 })
+
+const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
 
 const isDetailOpen = ref(false)
 const selectedTicketId = ref<string | null>(null)
@@ -34,16 +38,17 @@ const reportFormSchema = toTypedSchema(z.object({
   requesterEmail: z.string().email({ message: 'Please enter a valid email address.' }),
   category: z.string().min(2, { message: 'Category is required.' }),
   priority: z.enum(['low', 'medium', 'high', 'urgent'], { required_error: 'Please select a priority.' }),
+  assigneeId: z.string().optional(),
 }))
 
 const { handleSubmit, resetForm } = useForm({
   validationSchema: reportFormSchema,
-  initialValues: { subject: '', description: '', requester: '', requesterEmail: '', category: '', priority: 'medium' },
+  initialValues: { subject: '', description: '', requester: '', requesterEmail: '', category: '', priority: 'medium', assigneeId: undefined },
 })
 
 const onReportSubmit = handleSubmit(async (values) => {
   try {
-    const ticket = await addTicket(values)
+    const ticket = await addTicket({ ...values, assigneeId: values.assigneeId || undefined })
     resetForm()
     isReportOpen.value = false
     toast('Ticket reported', {
@@ -148,6 +153,25 @@ const onReportSubmit = handleSubmit(async (values) => {
                   <SelectContent>
                     <SelectItem v-for="option in priorities" :key="option.value" :value="option.value">
                       {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+
+            <FormField v-slot="{ componentField }" name="assigneeId">
+              <FormItem>
+                <FormLabel>Assignee (optional)</FormLabel>
+                <Select v-bind="componentField">
+                  <FormControl>
+                    <SelectTrigger class="w-full">
+                      <SelectValue placeholder="Leave unassigned" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
+                      {{ member.name }}
                     </SelectItem>
                   </SelectContent>
                 </Select>
