@@ -11,12 +11,15 @@ jobs:
     steps:
       - name: SLA sweep
         continue-on-error: true
-        run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/sla-sweep"
+        run: >-
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/sla-sweep"
 
       - name: Gmail inbound check
         continue-on-error: true
-        run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/gmail-inbound"
+        run: >-  
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/gmail-inbound"
 
       - name: AMC renewal reminders
         continue-on-error: true
-        run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/amc-reminders"
+        run: >-  
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/amc-reminders"
