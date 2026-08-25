@@ -37,9 +37,12 @@ export default defineEventHandler(async (event) => {
   const windowStart = Date.now() - VOLUME_WINDOW_DAYS * DAY_MS
   const createdByDay = new Map<string, number>()
   const resolvedByDay = new Map<string, number>()
+  const breachedByDay = new Map<string, number>()
 
   let resolvedInWindowCount = 0
   let slaCompliantCount = 0
+  let slaBreachedCount = 0
+  let openOverdueCount = 0
 
   let firstResponseTotalMins = 0
   let firstResponseCount = 0
@@ -76,8 +79,15 @@ export default defineEventHandler(async (event) => {
         resolvedByDay.set(key, (resolvedByDay.get(key) ?? 0) + 1)
         resolvedInWindowCount++
 
-        if (ticket.due_at && resolvedAt <= new Date(ticket.due_at).getTime())
-          slaCompliantCount++
+        if (ticket.due_at) {
+          if (resolvedAt <= new Date(ticket.due_at).getTime()) {
+            slaCompliantCount++
+          }
+          else {
+            slaBreachedCount++
+            breachedByDay.set(key, (breachedByDay.get(key) ?? 0) + 1)
+          }
+        }
       }
 
       if (ticket.assignee_id) {
@@ -88,12 +98,17 @@ export default defineEventHandler(async (event) => {
         agentStats.set(ticket.assignee_id, stats)
       }
     }
+    else if (ticket.due_at && new Date(ticket.due_at).getTime() < Date.now()) {
+      openOverdueCount++
+    }
   }
 
   const volume: { date: string, created: number, resolved: number }[] = []
+  const slaBreachVolume: { date: string, breached: number }[] = []
   for (let i = VOLUME_WINDOW_DAYS - 1; i >= 0; i--) {
     const date = dayKey(new Date(Date.now() - i * DAY_MS).toISOString())
     volume.push({ date, created: createdByDay.get(date) ?? 0, resolved: resolvedByDay.get(date) ?? 0 })
+    slaBreachVolume.push({ date, breached: breachedByDay.get(date) ?? 0 })
   }
 
   const agents = [...agentStats.entries()].map(([assigneeId, stats]) => ({
@@ -109,10 +124,15 @@ export default defineEventHandler(async (event) => {
     byPriority,
     byCategory,
     volume,
+    slaBreachVolume,
     slaCompliance: {
       resolvedInWindow: resolvedInWindowCount,
       compliant: slaCompliantCount,
-      rate: resolvedInWindowCount ? Math.round((slaCompliantCount / resolvedInWindowCount) * 100) : null,
+      breached: slaBreachedCount,
+      openOverdue: openOverdueCount,
+      // Denominator is only tickets that actually had an SLA deadline — tickets with no due_at
+      // (no policy matched their priority) shouldn't silently count against the rate.
+      rate: (slaCompliantCount + slaBreachedCount) ? Math.round((slaCompliantCount / (slaCompliantCount + slaBreachedCount)) * 100) : null,
     },
     avgFirstResponseMins: firstResponseCount ? Math.round(firstResponseTotalMins / firstResponseCount) : null,
     avgResolutionMins: resolutionCount ? Math.round(resolutionTotalMins / resolutionCount) : null,

@@ -36,7 +36,7 @@ const priorityData = computed(() => Object.entries(summary.value?.byPriority ?? 
     </div>
 
     <main class="@container/main flex flex-1 flex-col gap-4 md:gap-8">
-      <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+      <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-5">
         <Card class="@container/card">
           <CardHeader>
             <CardDescription>Total Tickets</CardDescription>
@@ -58,7 +58,7 @@ const priorityData = computed(() => Object.entries(summary.value?.byPriority ?? 
             </CardTitle>
           </CardHeader>
           <CardFooter class="text-sm text-muted-foreground">
-            {{ summary?.slaCompliance.compliant ?? 0 }} of {{ summary?.slaCompliance.resolvedInWindow ?? 0 }} resolved on time
+            {{ summary?.slaCompliance.compliant ?? 0 }} of {{ (summary?.slaCompliance.compliant ?? 0) + (summary?.slaCompliance.breached ?? 0) }} resolved on time
           </CardFooter>
         </Card>
         <Card class="@container/card">
@@ -77,6 +77,17 @@ const priorityData = computed(() => Object.entries(summary.value?.byPriority ?? 
             </CardTitle>
           </CardHeader>
         </Card>
+        <Card class="@container/card border-destructive/30">
+          <CardHeader>
+            <CardDescription>Overdue Right Now</CardDescription>
+            <CardTitle class="text-2xl font-semibold tabular-nums text-destructive @[250px]/card:text-3xl">
+              <NumberFlow :value="summary?.slaCompliance.openOverdue ?? 0" />
+            </CardTitle>
+          </CardHeader>
+          <CardFooter class="text-sm text-muted-foreground">
+            {{ summary?.slaCompliance.breached ?? 0 }} resolved late in the last 30 days
+          </CardFooter>
+        </Card>
       </div>
 
       <Card class="@container/card">
@@ -86,6 +97,21 @@ const priorityData = computed(() => Object.entries(summary.value?.byPriority ?? 
         </CardHeader>
         <CardContent>
           <AreaChart :data="summary?.volume ?? []" :categories="['created', 'resolved']" index="date" />
+        </CardContent>
+      </Card>
+
+      <Card class="@container/card">
+        <CardHeader>
+          <CardTitle>Delayed SLA Responses</CardTitle>
+          <CardDescription>Tickets resolved after their SLA deadline, last 30 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BarChart
+            :data="summary?.slaBreachVolume ?? []"
+            :categories="['breached']"
+            index="date"
+            :colors="['#dc2626']"
+          />
         </CardContent>
       </Card>
 

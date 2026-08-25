@@ -4,7 +4,8 @@ export interface ReportSummary {
   byPriority: Record<string, number>
   byCategory: Record<string, number>
   volume: { date: string, created: number, resolved: number }[]
-  slaCompliance: { resolvedInWindow: number, compliant: number, rate: number | null }
+  slaBreachVolume: { date: string, breached: number }[]
+  slaCompliance: { resolvedInWindow: number, compliant: number, breached: number, openOverdue: number, rate: number | null }
   avgFirstResponseMins: number | null
   avgResolutionMins: number | null
   agents: { assigneeId: string, name: string, resolvedCount: number, avgResolutionMins: number }[]

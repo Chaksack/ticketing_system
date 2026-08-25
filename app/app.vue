@@ -65,6 +65,7 @@ const dir = computed(() => textDirection.value === 'rtl' ? 'rtl' : 'ltr')
       </div>
 
       <Toaster :theme="colorMode.preference as any || 'system'" position="top-right" />
+      <PagerAlert />
     </ConfigProvider>
   </Body>
 </template>
