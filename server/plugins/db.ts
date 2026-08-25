@@ -97,4 +97,53 @@ export default defineNitroPlugin(async () => {
 
     console.warn(`[seed] Created ${defaultPolicies.length} default SLA policies.`)
   }
+
+  const macroCount = await db.prepare('SELECT COUNT(*) as count FROM macros').get() as { count: number | string }
+
+  if (Number(macroCount.count) === 0) {
+    const now = new Date().toISOString()
+
+    await db.prepare(`
+      INSERT INTO macros (id, name, body, set_status, set_priority, add_tag_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'MACRO-1',
+      'Acknowledge Receipt',
+      'Hi, thanks for reaching out! We\'ve received your request and a member of our support team will follow up shortly. We appreciate your patience.',
+      'in-progress',
+      null,
+      null,
+      now,
+    )
+
+    await db.prepare('INSERT INTO counters (name, value) VALUES (\'macro\', 1)').run()
+
+    console.warn('[seed] Created 1 default macro.')
+  }
+
+  const automationRuleCount = await db.prepare('SELECT COUNT(*) as count FROM automation_rules').get() as { count: number | string }
+
+  if (Number(automationRuleCount.count) === 0) {
+    const now = new Date().toISOString()
+
+    await db.prepare(`
+      INSERT INTO automation_rules (id, name, enabled, field, operator, value, set_priority, set_status, set_assignee_id, add_tag_id, created_at)
+      VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'RULE-1',
+      'Prioritize Billing Issues',
+      'category',
+      'equals',
+      'Billing',
+      'high',
+      null,
+      null,
+      null,
+      now,
+    )
+
+    await db.prepare('INSERT INTO counters (name, value) VALUES (\'rule\', 1)').run()
+
+    console.warn('[seed] Created 1 default automation rule.')
+  }
 })
