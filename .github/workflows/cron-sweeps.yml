@@ -7,7 +7,7 @@ on:
 
 jobs:
   sweep:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - name: SLA sweep
         continue-on-error: true
@@ -16,10 +16,10 @@ jobs:
 
       - name: Gmail inbound check
         continue-on-error: true
-        run: >-  
+        run: >-
           curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/gmail-inbound"
 
       - name: AMC renewal reminders
         continue-on-error: true
-        run: >-  
+        run: >-
           curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/amc-reminders"

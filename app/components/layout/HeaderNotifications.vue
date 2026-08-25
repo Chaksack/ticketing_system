@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { currentUser } = useAuth()
 const { pages, fetchPages, acknowledgePage } = useOnCall()
+const { fetchTickets } = useTickets()
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
@@ -21,8 +22,23 @@ const myNotifications = computed(() =>
 
 const unreadCount = computed(() => myNotifications.value.filter(n => !n.acknowledged).length)
 
-function markAllRead() {
-  myNotifications.value.filter(n => !n.acknowledged).forEach(n => acknowledgePage(n.id))
+async function acknowledgeAndRefresh(id: string) {
+  await acknowledgePage(id)
+  await fetchTickets()
+}
+
+async function markAllRead() {
+  const unread = myNotifications.value.filter(n => !n.acknowledged)
+  if (!unread.length)
+    return
+
+  await Promise.all(unread.map(n => acknowledgePage(n.id)))
+  await fetchTickets()
+}
+
+function onOpenChange(isOpen: boolean) {
+  if (!isOpen)
+    markAllRead()
 }
 
 function formatDate(value: string) {
@@ -36,7 +52,7 @@ function formatDate(value: string) {
 </script>
 
 <template>
-  <DropdownMenu>
+  <DropdownMenu @update:open="onOpenChange">
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" size="icon" class="relative">
         <Icon name="i-lucide-bell" class="size-5" />
@@ -67,7 +83,7 @@ function formatDate(value: string) {
           v-for="notification in myNotifications"
           :key="notification.id"
           class="flex flex-col items-start gap-1 whitespace-normal"
-          @select.prevent="acknowledgePage(notification.id)"
+          @select.prevent="acknowledgeAndRefresh(notification.id)"
         >
           <div class="flex w-full items-center gap-2">
             <span v-if="!notification.acknowledged" class="size-1.5 shrink-0 rounded-full bg-primary" />
@@ -82,7 +98,7 @@ function formatDate(value: string) {
 
       <DropdownMenuSeparator />
       <DropdownMenuItem as-child>
-        <NuxtLink to="/tickets">
+        <NuxtLink to="/tickets" @click="fetchTickets">
           View all tickets
         </NuxtLink>
       </DropdownMenuItem>

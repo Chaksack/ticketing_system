@@ -44,6 +44,8 @@ watch(() => route.fullPath, (val) => {
       <BaseBreadcrumbCustom :links="links" />
     </div>
     <div class="ml-auto flex items-center gap-2">
+      <Search />
+      <AssistantPanel />
       <LayoutHeaderNotifications />
       <slot />
     </div>

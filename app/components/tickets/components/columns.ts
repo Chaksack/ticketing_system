@@ -95,9 +95,9 @@ export const columns: ColumnDef<Ticket>[] = [
       if (!status)
         return null
 
-      return h('div', { class: 'flex w-[110px] items-center' }, [
-        status.icon && h(status.icon, { class: 'mr-2 h-4 w-4 text-muted-foreground' }),
-        h('span', status.label),
+      return h(Badge, { variant: 'outline', class: status.badgeClass }, () => [
+        status.icon && h(status.icon, { class: 'size-3' }),
+        status.label,
       ])
     },
     filterFn: (row, id, value) => {
@@ -115,9 +115,9 @@ export const columns: ColumnDef<Ticket>[] = [
       if (!priority)
         return null
 
-      return h('div', { class: 'flex items-center' }, [
-        priority.icon && h(priority.icon, { class: 'mr-2 h-4 w-4 text-muted-foreground' }),
-        h('span', {}, priority.label),
+      return h(Badge, { variant: 'outline', class: priority.badgeClass }, () => [
+        priority.icon && h(priority.icon, { class: 'size-3' }),
+        priority.label,
       ])
     },
     filterFn: (row, id, value) => {

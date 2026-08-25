@@ -22,7 +22,7 @@ const { currentUser, isAdmin } = useAuth()
 const teams = computed(() => [
   {
     name: 'BD & SM Platform',
-    logo: 'i-lucide-gallery-vertical-end',
+    logo: '/icons/logo.png',
     role: currentUser.value?.roles.map(role => ROLE_LABELS[role]).join(', ') ?? '',
   },
 ])
@@ -41,8 +41,6 @@ const { sidebar } = useAppSettings()
   <Sidebar :collapsible="sidebar?.collapsible" :side="sidebar?.side" :variant="sidebar?.variant">
     <SidebarHeader>
       <LayoutSidebarNavHeader :teams="teams" />
-      <Search />
-      <AssistantPanel />
     </SidebarHeader>
     <SidebarContent>
       <SidebarGroup v-for="(nav, indexGroup) in visibleNavMenu" :key="indexGroup">

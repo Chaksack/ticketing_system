@@ -199,7 +199,7 @@ function formatDate(value: string) {
               {{ ticket.category }}
             </Badge>
             <Select :model-value="ticket.status" @update:model-value="onStatusChange">
-              <SelectTrigger class="h-7 w-auto gap-1.5 px-2 text-xs">
+              <SelectTrigger class="h-7 w-auto gap-1.5 rounded-full px-2 text-xs" :class="status?.badgeClass">
                 <component :is="status?.icon" v-if="status?.icon" class="h-3.5 w-3.5" />
                 <SelectValue />
               </SelectTrigger>
@@ -213,7 +213,7 @@ function formatDate(value: string) {
               </SelectContent>
             </Select>
             <Select :model-value="ticket.priority" @update:model-value="onPriorityChange">
-              <SelectTrigger class="h-7 w-auto gap-1.5 px-2 text-xs">
+              <SelectTrigger class="h-7 w-auto gap-1.5 rounded-full px-2 text-xs" :class="priority?.badgeClass">
                 <component :is="priority?.icon" v-if="priority?.icon" class="h-3.5 w-3.5" />
                 <SelectValue />
               </SelectTrigger>

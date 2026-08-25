@@ -8,7 +8,6 @@ interface ChatMessage {
 }
 
 const { isAgent, isBd, isSm, isAdmin } = useAuth()
-const { metaSymbol } = useShortcuts()
 
 const open = ref(false)
 const input = ref('')
@@ -77,16 +76,10 @@ watch(open, (isOpen) => {
 </script>
 
 <template>
-  <SidebarMenuButton as-child tooltip="Ask AI">
-    <Button variant="outline" size="sm" class="text-xs" @click="open = !open">
-      <Icon name="i-lucide-sparkles" />
-      <span class="font-normal group-data-[collapsible=icon]:hidden">Ask AI</span>
-      <div class="ml-auto flex items-center space-x-0.5 group-data-[collapsible=icon]:hidden">
-        <Kbd>{{ metaSymbol }}</Kbd>
-        <Kbd>J</Kbd>
-      </div>
-    </Button>
-  </SidebarMenuButton>
+  <Button variant="ghost" size="icon" @click="open = !open">
+    <Icon name="i-lucide-sparkles" class="size-5" />
+    <span class="sr-only">Ask AI</span>
+  </Button>
 
   <Sheet v-model:open="open">
     <SheetContent side="right" class="w-full sm:max-w-[50vw] p-0 flex flex-col gap-0">
