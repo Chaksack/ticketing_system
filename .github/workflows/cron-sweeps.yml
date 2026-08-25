@@ -1,0 +1,22 @@
+name: Cron sweeps
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SLA sweep
+        continue-on-error: true
+        run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/sla-sweep"
+
+      - name: Gmail inbound check
+        continue-on-error: true
+        run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/gmail-inbound"
+
+      - name: AMC renewal reminders
+        continue-on-error: true
+        run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/amc-reminders"
