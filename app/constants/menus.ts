@@ -28,16 +28,6 @@ export const navMenu: NavMenu[] = [
     ],
   },
   {
-    heading: 'Apps',
-    items: [
-      {
-        title: 'Kanban Board',
-        icon: 'i-lucide-kanban',
-        link: '/kanban',
-      },
-    ],
-  },
-  {
     heading: 'Administration',
     items: [
       {
@@ -72,7 +62,7 @@ export const navMenuBottom: NavMenuItems = [
   {
     title: 'Help & Support',
     icon: 'i-lucide-circle-help',
-    link: '',
+    link: '/help',
   },
   {
     title: 'Feedback',
