@@ -15,6 +15,8 @@ useHead({
   ],
   link: [
     { rel: 'icon', href: '/favicon.ico' },
+    { rel: 'manifest', href: '/manifest.webmanifest' },
+    { rel: 'apple-touch-icon', href: '/icons/icon-192.png' },
   ],
   htmlAttrs: {
     lang: 'en',

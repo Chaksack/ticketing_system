@@ -33,7 +33,7 @@ const tagOptions = computed(() => tags.value.map(tag => ({ label: tag.name, valu
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
+  <div class="flex flex-wrap items-center justify-between gap-2">
     <div class="flex flex-1 flex-wrap items-center gap-2">
       <Input
         placeholder="Filter tickets..."

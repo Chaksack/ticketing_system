@@ -39,7 +39,7 @@ const sidebarNavItems: Item[] = [
       :key="item.title"
       variant="ghost"
       :class="cn(
-        'w-full text-left justify-start items-start',
+        'shrink-0 text-left justify-start items-start lg:w-full',
         route.path === item.href && 'bg-muted hover:bg-muted',
       )"
       as-child

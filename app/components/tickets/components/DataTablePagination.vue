@@ -15,12 +15,12 @@ function onPageSizeChange(value: AcceptableValue) {
 </script>
 
 <template>
-  <div class="flex items-center justify-between px-2">
+  <div class="flex flex-wrap items-center justify-between gap-2 px-2">
     <div class="flex-1 text-sm text-muted-foreground">
       {{ table.getFilteredSelectedRowModel().rows.length }} of
       {{ table.getFilteredRowModel().rows.length }} row(s) selected.
     </div>
-    <div class="flex items-center space-x-6 lg:space-x-8">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 sm:space-x-6 lg:space-x-8">
       <div class="flex items-center space-x-2">
         <p class="text-sm font-medium">
           Rows per page

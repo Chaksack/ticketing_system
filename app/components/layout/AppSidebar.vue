@@ -42,6 +42,7 @@ const { sidebar } = useAppSettings()
     <SidebarHeader>
       <LayoutSidebarNavHeader :teams="teams" />
       <Search />
+      <AssistantPanel />
     </SidebarHeader>
     <SidebarContent>
       <SidebarGroup v-for="(nav, indexGroup) in visibleNavMenu" :key="indexGroup">
