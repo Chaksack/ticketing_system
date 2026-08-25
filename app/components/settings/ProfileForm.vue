@@ -1,53 +1,60 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
-import { FieldArray, useForm } from 'vee-validate'
-import { h, ref } from 'vue'
+import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
-import { cn } from '@/lib/utils'
 
-const verifiedEmails = ref(['m@example.com', 'm@google.com', 'm@support.com'])
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin',
+  agent: 'Agent',
+  bd: 'BD Executive',
+  sm: 'Sales & Marketing Exec',
+}
+
+const { currentUser } = useAuth()
+const { staff, fetchStaff } = useStaff()
+
+onMounted(() => {
+  if (!staff.value.length)
+    fetchStaff()
+})
+
+const myRecord = computed(() => staff.value.find(s => s.id === currentUser.value?.id))
 
 const profileFormSchema = toTypedSchema(z.object({
-  username: z
-    .string()
-    .min(2, {
-      message: 'Username must be at least 2 characters.',
-    })
-    .max(30, {
-      message: 'Username must not be longer than 30 characters.',
-    }),
-  email: z
-    .string({
-      required_error: 'Please select an email to display.',
-    })
-    .email(),
-  bio: z.string().max(160, { message: 'Bio must not be longer than 160 characters.' }).min(4, { message: 'Bio must be at least 2 characters.' }),
-  urls: z
-    .array(
-      z.object({
-        value: z.string().url({ message: 'Please enter a valid URL.' }),
-      }),
-    )
-    .optional(),
+  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }).max(60),
 }))
 
-const { handleSubmit, resetForm } = useForm({
+const { handleSubmit, setValues } = useForm({
   validationSchema: profileFormSchema,
-  initialValues: {
-    bio: 'I own a computer.',
-    urls: [
-      { value: 'https://shadcn.com' },
-      { value: 'http://twitter.com/shadcn' },
-    ],
-  },
+  initialValues: { name: currentUser.value?.name ?? '' },
 })
 
-const onSubmit = handleSubmit((values) => {
-  toast('You submitted the following values:', {
-    description: h('pre', { class: 'mt-2 w-[340px] rounded-md bg-slate-950 p-4' }, h('code', { class: 'text-white' }, JSON.stringify(values, null, 2))),
-  })
+watch(() => currentUser.value?.name, (name) => {
+  if (name)
+    setValues({ name })
+}, { immediate: true })
+
+const onSubmit = handleSubmit(async (values) => {
+  try {
+    const { user } = await $fetch('/api/auth/profile', { method: 'PATCH', body: { name: values.name } })
+    currentUser.value = user
+    toast('Profile updated', {
+      description: 'Your name has been updated.',
+    })
+  }
+  catch (error: any) {
+    toast('Could not update profile', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
 })
+
+function formatDate(value?: string) {
+  if (!value)
+    return '—'
+  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
 </script>
 
 <template>
@@ -56,109 +63,58 @@ const onSubmit = handleSubmit((values) => {
       Profile
     </h3>
     <p class="text-sm text-muted-foreground">
-      This is how others will see you on the site.
+      This is how you appear to other staff across the platform.
     </p>
   </div>
   <Separator />
   <form class="space-y-8" @submit="onSubmit">
-    <FormField v-slot="{ componentField }" name="username">
+    <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>Username</FormLabel>
+        <FormLabel>Name</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="shadcn" v-bind="componentField" />
+          <Input type="text" placeholder="Your name" v-bind="componentField" />
         </FormControl>
         <FormDescription>
-          This is your public display name. It can be your real name or a pseudonym. You can only change this once every 30 days.
+          This is the name shown on tickets, clients, and activity you're attributed to.
         </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ componentField }" name="email">
-      <FormItem>
-        <FormLabel>Email</FormLabel>
-
-        <Select v-bind="componentField">
-          <FormControl>
-            <SelectTrigger>
-              <SelectValue placeholder="Select an email" />
-            </SelectTrigger>
-          </FormControl>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem v-for="email in verifiedEmails" :key="email" :value="email">
-                {{ email }}
-              </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <FormDescription>
-          You can manage verified email addresses in your email settings.
-        </FormDescription>
-        <FormMessage />
-      </FormItem>
-    </FormField>
-
-    <FormField v-slot="{ componentField }" name="bio">
-      <FormItem>
-        <FormLabel>Bio</FormLabel>
-        <FormControl>
-          <Textarea placeholder="Tell us a little bit about yourself" v-bind="componentField" />
-        </FormControl>
-        <FormDescription>
-          You can <span>@mention</span> other users and organizations to link to them.
-        </FormDescription>
-        <FormMessage />
-      </FormItem>
-    </FormField>
-
-    <div>
-      <FieldArray v-slot="{ fields, push, remove }" name="urls">
-        <div v-for="(field, index) in fields" :key="`urls-${field.key}`">
-          <FormField v-slot="{ componentField }" :name="`urls[${index}].value`">
-            <FormItem>
-              <FormLabel :class="cn(index !== 0 && 'sr-only')">
-                URLs
-              </FormLabel>
-              <FormDescription :class="cn(index !== 0 && 'sr-only')">
-                Add links to your website, blog, or social media profiles.
-              </FormDescription>
-              <div class="relative flex items-center">
-                <FormControl>
-                  <Input type="url" v-bind="componentField" />
-                </FormControl>
-                <button type="button" class="absolute end-0 py-2 pe-3 text-muted-foreground" @click="remove(index)">
-                  <Icon name="i-radix-icons-cross-1" class="w-3" />
-                </button>
-              </div>
-              <FormMessage />
-            </FormItem>
-          </FormField>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          class="mt-2 w-20 text-xs"
-          @click="push({ value: '' })"
-        >
-          Add URL
-        </Button>
-      </FieldArray>
+    <div class="flex flex-col gap-1">
+      <span class="text-sm text-muted-foreground">Email</span>
+      <span class="text-sm">{{ currentUser?.email }}</span>
+      <span class="text-xs text-muted-foreground">Your email is your login — contact an admin to change it.</span>
     </div>
 
-    <div class="flex justify-start gap-2">
+    <div class="grid grid-cols-2 gap-6">
+      <div class="flex flex-col gap-1">
+        <span class="text-sm text-muted-foreground">Roles</span>
+        <div class="flex flex-wrap gap-1 pt-0.5">
+          <Badge v-for="role in currentUser?.roles" :key="role" variant="secondary" class="capitalize">
+            {{ ROLE_LABELS[role] ?? role }}
+          </Badge>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-sm text-muted-foreground">Status</span>
+        <Badge :variant="myRecord?.status === 'active' ? 'secondary' : 'outline'" class="capitalize w-fit">
+          {{ myRecord?.status ?? '—' }}
+        </Badge>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-sm text-muted-foreground">On-call</span>
+        <span class="text-sm">{{ myRecord?.onCall ? 'Yes' : 'No' }}</span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-sm text-muted-foreground">Member since</span>
+        <span class="text-sm">{{ formatDate(myRecord?.createdAt) }}</span>
+      </div>
+    </div>
+
+    <div class="flex justify-start">
       <Button type="submit">
         Update profile
-      </Button>
-
-      <Button
-        type="button"
-        variant="outline"
-        @click="resetForm"
-      >
-        Reset form
       </Button>
     </div>
   </form>

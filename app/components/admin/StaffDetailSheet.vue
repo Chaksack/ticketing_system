@@ -25,9 +25,10 @@ const roleOptions = [
   { value: 'admin', label: 'Admin' },
   { value: 'agent', label: 'Agent' },
   { value: 'bd', label: 'BD Executive' },
+  { value: 'sm', label: 'Sales & Marketing Exec' },
 ] as const
 
-async function onToggleRole(value: 'admin' | 'agent' | 'bd', checked: boolean) {
+async function onToggleRole(value: 'admin' | 'agent' | 'bd' | 'sm', checked: boolean) {
   if (!props.staff)
     return
 

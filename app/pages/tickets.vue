@@ -15,10 +15,15 @@ definePageMeta({
 
 const { tickets, fetchTickets, fetchTicket, addTicket } = useTickets()
 const { staff, fetchStaff } = useStaff()
+const route = useRoute()
 
-onMounted(() => {
-  fetchTickets()
-  fetchStaff()
+onMounted(async () => {
+  await Promise.all([fetchTickets(), fetchStaff()])
+
+  const openId = route.query.open
+  if (typeof openId === 'string') {
+    await openTicket({ id: openId } as Ticket)
+  }
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))

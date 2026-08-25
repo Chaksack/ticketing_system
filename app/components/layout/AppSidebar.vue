@@ -14,6 +14,7 @@ const ROLE_LABELS: Record<StaffRole, string> = {
   admin: 'Admin',
   agent: 'Agent',
   bd: 'BD Executive',
+  sm: 'Sales & Marketing Exec',
 }
 
 const { currentUser, isAdmin } = useAuth()
@@ -26,23 +27,10 @@ const teams = computed(() => [
   },
 ])
 
-function isNavItemVisible(item: NavLink | NavGroup | NavSectionTitle) {
-  if ('adminOnly' in item && item.adminOnly && !isAdmin.value)
-    return false
-
-  if ('roles' in item && item.roles?.length && !isAdmin.value) {
-    const userRoles = currentUser.value?.roles ?? []
-    if (!item.roles.some(role => userRoles.includes(role)))
-      return false
-  }
-
-  return true
-}
-
 const visibleNavMenu = computed(() => navMenu
   .map(group => ({
     ...group,
-    items: group.items.filter(isNavItemVisible),
+    items: group.items.filter(item => isNavItemVisible(item, isAdmin.value, currentUser.value?.roles ?? [])),
   }))
   .filter(group => group.items.length > 0))
 
@@ -74,5 +62,4 @@ const { sidebar } = useAppSettings()
 </template>
 
 <style scoped>
-
 </style>

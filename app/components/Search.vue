@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import type { NavGroup, NavMenu } from '~/types/nav'
-import { navMenu } from '@/constants/menus'
+import { useDebounceFn } from '@vueuse/core'
+
+interface SearchResults {
+  tickets: { id: string, subject: string, requester: string }[]
+  clients: { id: string, name: string, contactName: string | null }[]
+  staff: { id: string, name: string, email: string }[]
+  amcPlans: { id: string, name: string }[]
+}
 
 const { metaSymbol } = useShortcuts()
+const visibleNavLinks = useVisibleNavLinks()
 
 const openCommand = ref(false)
 const router = useRouter()
@@ -11,11 +18,50 @@ defineShortcuts({
   Meta_K: () => openCommand.value = true,
 })
 
-const componentsNav = computed<NavGroup | undefined>(() => {
-  return navMenu
-    .flatMap((nav: NavMenu) => nav.items)
-    // @ts-expect-error - We know that the title is unique
-    .find((item: NavGroup) => item.title === 'Components')
+const query = ref('')
+const isSearching = ref(false)
+const results = ref<SearchResults>({ tickets: [], clients: [], staff: [], amcPlans: [] })
+
+const hasResults = computed(() =>
+  results.value.tickets.length > 0
+  || results.value.clients.length > 0
+  || results.value.staff.length > 0
+  || results.value.amcPlans.length > 0,
+)
+
+const runSearch = useDebounceFn(async (q: string) => {
+  if (q.trim().length < 2) {
+    results.value = { tickets: [], clients: [], staff: [], amcPlans: [] }
+    isSearching.value = false
+    return
+  }
+  try {
+    results.value = await $fetch<SearchResults>('/api/search', { query: { q } })
+  }
+  catch {
+    results.value = { tickets: [], clients: [], staff: [], amcPlans: [] }
+  }
+  finally {
+    isSearching.value = false
+  }
+}, 250)
+
+watch(query, (q) => {
+  isSearching.value = q.trim().length >= 2
+  runSearch(q)
+})
+
+const inputRef = ref<HTMLInputElement>()
+
+watch(openCommand, async (isOpen) => {
+  if (isOpen) {
+    await nextTick()
+    // The underlying listbox auto-focuses its first item on mount; defer past that.
+    setTimeout(() => inputRef.value?.focus(), 50)
+  }
+  else {
+    query.value = ''
+  }
 })
 
 function handleSelectLink(link: string) {
@@ -28,7 +74,7 @@ function handleSelectLink(link: string) {
   <SidebarMenuButton as-child tooltip="Search">
     <Button variant="outline" size="sm" class="text-xs" @click="openCommand = !openCommand">
       <Icon name="i-lucide-search" />
-      <span class="font-normal group-data-[collapsible=icon]:hidden">Search documentation</span>
+      <span class="font-normal group-data-[collapsible=icon]:hidden">Search</span>
       <div class="ml-auto flex items-center space-x-0.5 group-data-[collapsible=icon]:hidden">
         <Kbd>{{ metaSymbol }}</Kbd>
         <Kbd>K</Kbd>
@@ -37,42 +83,97 @@ function handleSelectLink(link: string) {
   </SidebarMenuButton>
 
   <CommandDialog v-model:open="openCommand">
-    <CommandInput placeholder="Type a command or search..." />
+    <div data-slot="command-input-wrapper" class="flex h-12 items-center gap-2 border-b px-3">
+      <Icon name="i-lucide-search" class="size-4 shrink-0 opacity-50" />
+      <input
+        ref="inputRef"
+        v-model="query"
+        placeholder="Search tickets, clients, staff..."
+        class="placeholder:text-muted-foreground flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+      >
+    </div>
     <CommandList>
-      <CommandEmpty>No results found.</CommandEmpty>
-      <CommandGroup heading="Suggestions">
-        <CommandItem value="Home" @select="handleSelectLink('/')">
-          Home
-          <CommandShortcut>
-            <Kbd>G</Kbd>
-            <Kbd>H</Kbd>
-          </CommandShortcut>
-        </CommandItem>
-        <CommandItem value="email" @select="handleSelectLink('/email')">
-          Email
-          <CommandShortcut>
-            <Kbd>G</Kbd>
-            <Kbd>E</Kbd>
-          </CommandShortcut>
-        </CommandItem>
-      </CommandGroup>
-      <CommandSeparator />
-      <CommandGroup heading="Components">
-        <CommandItem
-          v-for="nav in componentsNav?.children"
-          :key="nav.title"
-          :value="nav.title"
-          class="gap-2"
-          @select="handleSelectLink(nav.link)"
-        >
-          <Icon name="i-radix-icons-circle" />
-          {{ nav.title }}
-        </CommandItem>
-      </CommandGroup>
+      <template v-if="query.trim().length < 2">
+        <CommandGroup heading="Pages">
+          <CommandItem
+            v-for="link in visibleNavLinks"
+            :key="link.link"
+            :value="link.title"
+            class="gap-2"
+            @select="handleSelectLink(link.link)"
+          >
+            <Icon v-if="link.icon" :name="link.icon" />
+            {{ link.title }}
+          </CommandItem>
+        </CommandGroup>
+      </template>
+
+      <template v-else>
+        <CommandGroup v-if="results.tickets.length" heading="Tickets">
+          <CommandItem
+            v-for="ticket in results.tickets"
+            :key="ticket.id"
+            :value="`ticket-${ticket.id}`"
+            class="gap-2"
+            @select="handleSelectLink(`/tickets?open=${ticket.id}`)"
+          >
+            <Icon name="i-lucide-ticket" />
+            <span class="flex flex-col">
+              <span>{{ ticket.subject }}</span>
+              <span class="text-xs text-muted-foreground">{{ ticket.id }} · {{ ticket.requester }}</span>
+            </span>
+          </CommandItem>
+        </CommandGroup>
+
+        <CommandGroup v-if="results.clients.length" heading="Clients">
+          <CommandItem
+            v-for="client in results.clients"
+            :key="client.id"
+            :value="`client-${client.id}`"
+            class="gap-2"
+            @select="handleSelectLink(`/clients?open=${client.id}`)"
+          >
+            <Icon name="i-lucide-building-2" />
+            <span class="flex flex-col">
+              <span>{{ client.name }}</span>
+              <span v-if="client.contactName" class="text-xs text-muted-foreground">{{ client.contactName }}</span>
+            </span>
+          </CommandItem>
+        </CommandGroup>
+
+        <CommandGroup v-if="results.staff.length" heading="Staff">
+          <CommandItem
+            v-for="member in results.staff"
+            :key="member.id"
+            :value="`staff-${member.id}`"
+            class="gap-2"
+            @select="handleSelectLink(`/admin?open=${member.id}`)"
+          >
+            <Icon name="i-lucide-user" />
+            <span class="flex flex-col">
+              <span>{{ member.name }}</span>
+              <span class="text-xs text-muted-foreground">{{ member.email }}</span>
+            </span>
+          </CommandItem>
+        </CommandGroup>
+
+        <CommandGroup v-if="results.amcPlans.length" heading="AMC Plans">
+          <CommandItem
+            v-for="plan in results.amcPlans"
+            :key="plan.id"
+            :value="`plan-${plan.id}`"
+            class="gap-2"
+            @select="handleSelectLink('/amc-plans')"
+          >
+            <Icon name="i-lucide-file-text" />
+            {{ plan.name }}
+          </CommandItem>
+        </CommandGroup>
+
+        <div v-if="!isSearching && !hasResults" class="py-6 text-center text-sm text-muted-foreground">
+          No results found.
+        </div>
+      </template>
     </CommandList>
   </CommandDialog>
 </template>
-
-<style scoped>
-
-</style>

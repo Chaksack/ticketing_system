@@ -47,10 +47,11 @@ export async function requireAdmin(event: H3Event): Promise<SessionUser> {
   return user
 }
 
+/** Gates the BD & SM area — bd and sm hold identical access here, alongside admin. */
 export async function requireBd(event: H3Event): Promise<SessionUser> {
   const user = await requireSessionUser(event)
 
-  if (!user.roles.includes('bd') && !user.roles.includes('admin')) {
+  if (!user.roles.includes('bd') && !user.roles.includes('sm') && !user.roles.includes('admin')) {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 

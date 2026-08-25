@@ -10,9 +10,17 @@ definePageMeta({
 })
 
 const { staff, fetchStaff, addStaff } = useStaff()
+const route = useRoute()
 
-onMounted(() => {
-  fetchStaff()
+onMounted(async () => {
+  await fetchStaff()
+
+  const openId = route.query.open
+  if (typeof openId === 'string') {
+    const member = staff.value.find(s => s.id === openId)
+    if (member)
+      openStaff(member)
+  }
 })
 
 const isAddOpen = ref(false)
@@ -30,12 +38,13 @@ const roleOptions = [
   { value: 'admin', label: 'Admin' },
   { value: 'agent', label: 'Agent' },
   { value: 'bd', label: 'BD Executive' },
+  { value: 'sm', label: 'Sales & Marketing Exec' },
 ] as const
 
 const staffFormSchema = toTypedSchema(z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  roles: z.array(z.enum(['admin', 'agent', 'bd'])).min(1, { message: 'Select at least one role.' }),
+  roles: z.array(z.enum(['admin', 'agent', 'bd', 'sm'])).min(1, { message: 'Select at least one role.' }),
 }))
 
 const { handleSubmit, resetForm, values, setFieldValue } = useForm({
@@ -43,7 +52,7 @@ const { handleSubmit, resetForm, values, setFieldValue } = useForm({
   initialValues: { name: '', email: '', roles: ['agent'] },
 })
 
-function toggleRole(value: 'admin' | 'agent' | 'bd', checked: boolean) {
+function toggleRole(value: 'admin' | 'agent' | 'bd' | 'sm', checked: boolean) {
   const current = values.roles ?? []
   setFieldValue('roles', checked ? [...current, value] : current.filter(r => r !== value))
 }

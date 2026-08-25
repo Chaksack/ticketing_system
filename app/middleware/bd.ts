@@ -1,6 +1,6 @@
 export default defineNuxtRouteMiddleware(() => {
-  const { isBd, isAdmin } = useAuth()
+  const { isBd, isSm, isAdmin } = useAuth()
 
-  if (!isBd.value && !isAdmin.value)
+  if (!isBd.value && !isSm.value && !isAdmin.value)
     return navigateTo('/403')
 })

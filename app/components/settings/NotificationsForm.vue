@@ -1,36 +1,40 @@
 <script setup lang="ts">
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import { h } from 'vue'
 import { toast } from 'vue-sonner'
-import * as z from 'zod'
 
-const notificationsFormSchema = toTypedSchema(z.object({
-  type: z.enum(['all', 'mentions', 'none'], {
-    required_error: 'You need to select a notification type.',
-  }),
-  mobile: z.boolean().default(false).optional(),
-  communication_emails: z.boolean().default(false).optional(),
-  social_emails: z.boolean().default(false).optional(),
-  marketing_emails: z.boolean().default(false).optional(),
-  security_emails: z.boolean(),
-}))
+const { isSupported, isSubscribed, checkSubscription, subscribe, unsubscribe } = usePush()
+const { currentUser, isBd, isSm } = useAuth()
 
-const { handleSubmit } = useForm({
-  validationSchema: notificationsFormSchema,
-  initialValues: {
-    communication_emails: false,
-    marketing_emails: false,
-    social_emails: true,
-    security_emails: true,
-  },
+const isWorking = ref(false)
+
+onMounted(() => {
+  checkSubscription()
 })
 
-const onSubmit = handleSubmit((values) => {
-  toast('You submitted the following values:', {
-    description: h('pre', { class: 'mt-2 w-[340px] rounded-md bg-slate-950 p-4' }, h('code', { class: 'text-white' }, JSON.stringify(values, null, 2))),
-  })
-})
+async function onToggle(enable: boolean) {
+  isWorking.value = true
+  try {
+    if (enable) {
+      await subscribe()
+      toast('Push notifications enabled', {
+        description: 'You\'ll get a notification on this device for new tickets, assignments, and reminders you\'re eligible for.',
+      })
+    }
+    else {
+      await unsubscribe()
+      toast('Push notifications disabled', {
+        description: 'You will no longer receive push notifications on this device.',
+      })
+    }
+  }
+  catch (error: any) {
+    toast('Could not update notifications', {
+      description: error?.message ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    isWorking.value = false
+  }
+}
 </script>
 
 <template>
@@ -39,158 +43,41 @@ const onSubmit = handleSubmit((values) => {
       Notifications
     </h3>
     <p class="text-sm text-muted-foreground">
-      Configure how you receive notifications.
+      Manage push notifications for this browser/device.
     </p>
   </div>
   <Separator />
-  <form class="space-y-8" @submit="onSubmit">
-    <FormField v-slot="{ componentField }" type="radio" name="type">
-      <FormItem class="space-y-3">
-        <FormLabel>Notify me about...</FormLabel>
-        <FormControl>
-          <RadioGroup
-            class="flex flex-col space-y-1"
-            v-bind="componentField"
-          >
-            <FormItem class="flex items-center space-x-3 space-y-0">
-              <FormControl>
-                <RadioGroupItem value="all" />
-              </FormControl>
-              <FormLabel class="font-normal">
-                All new messages
-              </FormLabel>
-            </FormItem>
-            <FormItem class="flex items-center space-x-3 space-y-0">
-              <FormControl>
-                <RadioGroupItem value="mentions" />
-              </FormControl>
-              <FormLabel class="font-normal">
-                Direct messages and mentions
-              </FormLabel>
-            </FormItem>
-            <FormItem class="flex items-center space-x-3 space-y-0">
-              <FormControl>
-                <RadioGroupItem value="none" />
-              </FormControl>
-              <FormLabel class="font-normal">
-                Nothing
-              </FormLabel>
-            </FormItem>
-          </RadioGroup>
-        </FormControl>
-        <FormMessage />
-      </FormItem>
-    </FormField>
 
-    <div>
-      <h3 class="mb-4 text-lg font-medium">
-        Email Notifications
-      </h3>
-      <div class="space-y-4">
-        <FormField v-slot="{ handleChange, value }" type="checkbox" name="communication_emails">
-          <FormItem class="flex flex-row items-center justify-between border rounded-lg p-4">
-            <div class="space-y-0.5">
-              <FormLabel class="text-base">
-                Communication emails
-              </FormLabel>
-              <FormDescription>
-                Receive emails about your account activity.
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Switch
-                :checked="value"
-                @update:checked="handleChange"
-              />
-            </FormControl>
-          </FormItem>
-        </FormField>
+  <div v-if="!isSupported" class="rounded-md border p-4 text-sm text-muted-foreground">
+    Push notifications aren't supported in this browser.
+  </div>
 
-        <FormField v-slot="{ handleChange, value }" type="checkbox" name="marketing_emails">
-          <FormItem class="flex flex-row items-center justify-between border rounded-lg p-4">
-            <div class="space-y-0.5">
-              <FormLabel class="text-base">
-                Marketing emails
-              </FormLabel>
-              <FormDescription>
-                Receive emails about new products, features, and more.
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Switch
-                :checked="value"
-                @update:checked="handleChange"
-              />
-            </FormControl>
-          </FormItem>
-        </FormField>
-
-        <FormField v-slot="{ handleChange, value }" type="checkbox" name="social_emails">
-          <FormItem class="flex flex-row items-center justify-between border rounded-lg p-4">
-            <div class="space-y-0.5">
-              <FormLabel class="text-base">
-                Social emails
-              </FormLabel>
-              <FormDescription>
-                Receive emails for friend requests, follows, and more.
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Switch
-                :checked="value"
-                @update:checked="handleChange"
-              />
-            </FormControl>
-          </FormItem>
-        </FormField>
-
-        <FormField v-slot="{ handleChange, value }" type="checkbox" name="security_emails">
-          <FormItem class="flex flex-row items-center justify-between border rounded-lg p-4">
-            <div class="space-y-0.5">
-              <FormLabel class="text-base">
-                Security emails
-              </FormLabel>
-              <FormDescription>
-                Receive emails about your account activity and security.
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Switch
-                :checked="value"
-                @update:checked="handleChange"
-              />
-            </FormControl>
-          </FormItem>
-        </FormField>
+  <div v-else class="flex flex-col gap-6">
+    <div class="flex flex-row items-center justify-between border rounded-lg p-4">
+      <div class="space-y-0.5">
+        <Label for="push-notifications" class="text-base">Push notifications</Label>
+        <p class="text-sm text-muted-foreground">
+          {{ isSubscribed ? 'Enabled on this device.' : 'Turn on to receive alerts on this device.' }}
+        </p>
       </div>
+      <Switch id="push-notifications" :model-value="isSubscribed" :disabled="isWorking" @update:model-value="onToggle" />
     </div>
 
-    <FormField v-slot="{ handleChange, value }" type="checkbox" name="mobile">
-      <FormItem class="flex flex-row items-start space-x-3 space-y-0">
-        <FormControl>
-          <Checkbox
-            :checked="value"
-            @update:checked="handleChange"
-          />
-        </FormControl>
-        <div class="leading-none space-y-1">
-          <FormLabel>
-            Use different settings for my mobile devices
-          </FormLabel>
-          <FormDescription>
-            You can manage your mobile notifications in the
-            <a href="/examples/forms">
-              mobile settings
-            </a> page.
-          </FormDescription>
-        </div>
-      </FormItem>
-    </FormField>
-
-    <div class="flex justify-start">
-      <Button type="submit">
-        Update notifications
-      </Button>
+    <div class="flex flex-col gap-2 text-sm text-muted-foreground">
+      <p class="font-medium text-foreground">
+        What you'll be notified about
+      </p>
+      <ul class="list-disc list-inside space-y-1">
+        <li v-if="currentUser?.roles.some(r => r === 'agent' || r === 'admin')">
+          New tickets, if you're on-call, and tickets assigned to you
+        </li>
+        <li v-if="isBd || isSm">
+          Clients assigned to you and AMC contracts nearing renewal
+        </li>
+      </ul>
+      <p v-if="!currentUser?.roles.length" class="italic">
+        Notification types depend on your role.
+      </p>
     </div>
-  </form>
+  </div>
 </template>

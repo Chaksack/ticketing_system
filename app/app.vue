@@ -24,7 +24,7 @@ useHead({
   },
 })
 
-const title = 'Ticketing System'
+const title = 'BD & SM Platform - Ticketing System'
 const description = 'ticketing system to help IBS offer support to their clients'
 
 useSeoMeta({
@@ -62,7 +62,7 @@ const dir = computed(() => textDirection.value === 'rtl' ? 'rtl' : 'ltr')
         <!-- <AppSettings /> -->
       </div>
 
-      <Toaster :theme="colorMode.preference as any || 'system'" />
+      <Toaster :theme="colorMode.preference as any || 'system'" position="top-right" />
     </ConfigProvider>
   </Body>
 </template>

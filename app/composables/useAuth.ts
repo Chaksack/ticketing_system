@@ -15,6 +15,7 @@ export function useAuth() {
   const isAdmin = computed(() => currentUser.value?.roles.includes('admin') ?? false)
   const isAgent = computed(() => currentUser.value?.roles.includes('agent') ?? false)
   const isBd = computed(() => currentUser.value?.roles.includes('bd') ?? false)
+  const isSm = computed(() => currentUser.value?.roles.includes('sm') ?? false)
   const isLoggedIn = computed(() => !!currentUser.value)
 
   async function ensureAuth() {
@@ -52,5 +53,5 @@ export function useAuth() {
     currentUser.value = null
   }
 
-  return { currentUser, authReady, isAdmin, isAgent, isBd, isLoggedIn, ensureAuth, login, logout }
+  return { currentUser, authReady, isAdmin, isAgent, isBd, isSm, isLoggedIn, ensureAuth, login, logout }
 }
