@@ -12,7 +12,16 @@ interface NewTicketBody {
   assigneeId?: string
 }
 
+const TICKETS_PER_IP_PER_HOUR = 5
+const TICKETS_PER_EMAIL_PER_HOUR = 5
+const HOUR_MS = 60 * 60 * 1000
+
 export default defineEventHandler(async (event) => {
+  // This handler only ever receives POST requests (Nitro dispatches OPTIONS to
+  // index.options.ts), so this never hits the preflight branch — it just appends the
+  // regular CORS response headers.
+  applyPortalCors(event)
+
   const body = await readBody<NewTicketBody>(event)
 
   if (!body?.subject || !body?.description || !body?.requester || !body?.requesterEmail || !body?.category || !body?.priority) {
@@ -21,6 +30,16 @@ export default defineEventHandler(async (event) => {
 
   await ensureDb()
   const db = useDatabase()
+
+  const ip = getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'
+  const [ipLimit, emailLimit] = await Promise.all([
+    checkRateLimit('ticket-create-ip', ip, TICKETS_PER_IP_PER_HOUR, HOUR_MS),
+    checkRateLimit('ticket-create-email', body.requesterEmail.trim().toLowerCase(), TICKETS_PER_EMAIL_PER_HOUR, HOUR_MS),
+  ])
+
+  if (!ipLimit.allowed || !emailLimit.allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Too many tickets submitted recently. Please try again later.' })
+  }
 
   const id = await nextTicketId()
   const now = new Date().toISOString()

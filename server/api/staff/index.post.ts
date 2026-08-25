@@ -5,10 +5,10 @@ import { randomBytes } from 'node:crypto'
 export default defineEventHandler(async (event) => {
   await requireAdmin(event)
 
-  const body = await readBody<{ name?: string, email?: string, role?: StaffRole }>(event)
+  const body = await readBody<{ name?: string, email?: string, roles?: StaffRole[] }>(event)
 
-  if (!body?.name || !body?.email || !body?.role) {
-    throw createError({ statusCode: 400, statusMessage: 'name, email and role are required' })
+  if (!body?.name || !body?.email || !body?.roles?.length) {
+    throw createError({ statusCode: 400, statusMessage: 'name, email and at least one role are required' })
   }
 
   await ensureDb()
@@ -25,9 +25,9 @@ export default defineEventHandler(async (event) => {
   const inviteExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
 
   await db.prepare(`
-    INSERT INTO staff (id, name, email, role, status, on_call, password_hash, invite_token, invite_expires_at, created_at)
-    VALUES (?, ?, ?, ?, 'pending', 0, NULL, ?, ?, ?)
-  `).run(id, body.name, body.email, body.role, inviteToken, inviteExpiresAt, now)
+    INSERT INTO staff (id, name, email, role, roles, status, on_call, password_hash, invite_token, invite_expires_at, created_at)
+    VALUES (?, ?, ?, ?, ?, 'pending', 0, NULL, ?, ?, ?)
+  `).run(id, body.name, body.email, body.roles[0], JSON.stringify(body.roles), inviteToken, inviteExpiresAt, now)
 
   let emailSent = true
   try {

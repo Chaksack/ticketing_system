@@ -9,19 +9,20 @@ export default defineNitroPlugin(async () => {
     const now = new Date().toISOString()
 
     const seedStaff = [
-      { id: 'STAFF-001', name: 'Andrew Chakdahah', email: 'chakdahah@gmail.com', role: 'admin', onCall: 0 },
-      { id: 'STAFF-002', name: 'Ama Owusu', email: 'ama.owusu@example.com', role: 'agent', onCall: 1 },
-      { id: 'STAFF-003', name: 'Kojo Mensah', email: 'kojo.mensah@example.com', role: 'agent', onCall: 0 },
+      { id: 'STAFF-001', name: 'Andrew Chakdahah', email: 'chakdahah@gmail.com', roles: ['admin'], onCall: 0 },
+      { id: 'STAFF-002', name: 'Ama Owusu', email: 'ama.owusu@example.com', roles: ['agent'], onCall: 1 },
+      { id: 'STAFF-003', name: 'Kojo Mensah', email: 'kojo.mensah@example.com', roles: ['agent'], onCall: 0 },
+      { id: 'STAFF-004', name: 'Efua Boateng', email: 'efua.boateng@example.com', roles: ['bd'], onCall: 0 },
     ]
 
     for (const member of seedStaff) {
       await db.prepare(`
-        INSERT INTO staff (id, name, email, role, status, on_call, password_hash, created_at)
-        VALUES (?, ?, ?, ?, 'active', ?, ?, ?)
-      `).run(member.id, member.name, member.email, member.role, member.onCall, defaultPasswordHash, now)
+        INSERT INTO staff (id, name, email, role, roles, status, on_call, password_hash, created_at)
+        VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
+      `).run(member.id, member.name, member.email, member.roles[0], JSON.stringify(member.roles), member.onCall, defaultPasswordHash, now)
     }
 
-    await db.prepare('INSERT INTO counters (name, value) VALUES (\'staff\', 3)').run()
+    await db.prepare('INSERT INTO counters (name, value) VALUES (\'staff\', ?)').run(seedStaff.length)
 
     console.warn(`[seed] Created ${seedStaff.length} staff accounts with default password "ChangeMe123!" — change this immediately.`)
   }

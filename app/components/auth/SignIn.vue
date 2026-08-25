@@ -7,7 +7,7 @@ const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
 
-const { login } = useAuth()
+const { login, currentUser } = useAuth()
 const route = useRoute()
 
 async function onSubmit(event: Event) {
@@ -19,7 +19,9 @@ async function onSubmit(event: Event) {
 
   try {
     await login(email.value, password.value)
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/tickets'
+    const canSeeTickets = currentUser.value?.roles.some(role => role === 'agent' || role === 'admin')
+    const fallback = canSeeTickets ? '/tickets' : '/'
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : fallback
     await navigateTo(redirect)
   }
   catch {

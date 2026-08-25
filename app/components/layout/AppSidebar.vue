@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavGroup, NavLink, NavSectionTitle } from '~/types/nav'
+import type { StaffRole } from '~/types/staff'
 import { navMenu, navMenuBottom } from '~/constants/menus'
 
 function resolveNavItemComponent(item: NavLink | NavGroup | NavSectionTitle): any {
@@ -9,24 +10,39 @@ function resolveNavItemComponent(item: NavLink | NavGroup | NavSectionTitle): an
   return resolveComponent('LayoutSidebarNavLink')
 }
 
-const teams: {
-  name: string
-  logo: string
-  plan: string
-}[] = [
-  {
-    name: 'IBS Ticketing System',
-    logo: 'i-lucide-gallery-vertical-end',
-    plan: 'Customer Support',
-  },
-]
+const ROLE_LABELS: Record<StaffRole, string> = {
+  admin: 'Admin',
+  agent: 'Agent',
+  bd: 'BD Executive',
+}
 
 const { currentUser, isAdmin } = useAuth()
+
+const teams = computed(() => [
+  {
+    name: 'BD & SM Platform',
+    logo: 'i-lucide-gallery-vertical-end',
+    role: currentUser.value?.roles.map(role => ROLE_LABELS[role]).join(', ') ?? '',
+  },
+])
+
+function isNavItemVisible(item: NavLink | NavGroup | NavSectionTitle) {
+  if ('adminOnly' in item && item.adminOnly && !isAdmin.value)
+    return false
+
+  if ('roles' in item && item.roles?.length && !isAdmin.value) {
+    const userRoles = currentUser.value?.roles ?? []
+    if (!item.roles.some(role => userRoles.includes(role)))
+      return false
+  }
+
+  return true
+}
 
 const visibleNavMenu = computed(() => navMenu
   .map(group => ({
     ...group,
-    items: group.items.filter(item => !('adminOnly' in item) || !item.adminOnly || isAdmin.value),
+    items: group.items.filter(isNavItemVisible),
   }))
   .filter(group => group.items.length > 0))
 

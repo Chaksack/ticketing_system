@@ -1,9 +1,12 @@
+import type { StaffRole } from './staff'
+
 export interface NavLink {
   title: string
   link: string
   icon?: string
   new?: boolean
   adminOnly?: boolean
+  roles?: StaffRole[]
 }
 
 export interface NavSectionTitle {

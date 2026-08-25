@@ -30,6 +30,9 @@ async function migrate() {
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS reset_token TEXT')
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS reset_expires_at TEXT')
 
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS roles TEXT')
+  await db.exec(`UPDATE staff SET roles = '["' || role || '"]' WHERE roles IS NULL`)
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS tickets (
       id TEXT PRIMARY KEY,
@@ -167,6 +170,77 @@ async function migrate() {
       value INTEGER NOT NULL
     )
   `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS clients (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      contact_name TEXT,
+      contact_email TEXT,
+      contact_phone TEXT,
+      stage TEXT NOT NULL DEFAULT 'lead',
+      notes TEXT,
+      assigned_to TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS client_activity (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      actor_id TEXT,
+      actor_name TEXT,
+      from_value TEXT,
+      to_value TEXT,
+      message TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS amc_plans (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      default_duration_months INTEGER NOT NULL DEFAULT 12,
+      price NUMERIC,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS client_amc_contracts (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      plan_id TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      reminder_30d_sent INTEGER NOT NULL DEFAULT 0,
+      reminder_7d_sent INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS integration_state (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS rate_limit_counters (
+      scope TEXT NOT NULL,
+      key TEXT NOT NULL,
+      window_start TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (scope, key, window_start)
+    )
+  `)
 }
 
 export async function nextSequence(name: string): Promise<number> {
@@ -222,4 +296,24 @@ export async function nextMacroId() {
 export async function nextRuleId() {
   const n = await nextSequence('rule')
   return `RULE-${n}`
+}
+
+export async function nextClientId() {
+  const n = await nextSequence('client')
+  return `CLIENT-${1000 + n}`
+}
+
+export async function nextClientActivityId() {
+  const n = await nextSequence('client_activity')
+  return `CACT-${n}`
+}
+
+export async function nextAmcPlanId() {
+  const n = await nextSequence('amc_plan')
+  return `PLAN-${n}`
+}
+
+export async function nextContractId() {
+  const n = await nextSequence('contract')
+  return `CONTRACT-${n}`
 }

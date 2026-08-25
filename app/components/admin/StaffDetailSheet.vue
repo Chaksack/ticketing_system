@@ -13,13 +13,39 @@ const emit = defineEmits<{
 
 const open = defineModel<boolean>('open', { default: false })
 
-const { updateStatus, setOnCall, removeStaff } = useStaff()
+const { updateStatus, setOnCall, updateRoles, removeStaff } = useStaff()
 
 const statusOptions = [
   { value: 'active', label: 'Active' },
   { value: 'disabled', label: 'Disabled' },
   { value: 'pending', label: 'Pending invite' },
 ] as const
+
+const roleOptions = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'agent', label: 'Agent' },
+  { value: 'bd', label: 'BD Executive' },
+] as const
+
+async function onToggleRole(value: 'admin' | 'agent' | 'bd', checked: boolean) {
+  if (!props.staff)
+    return
+
+  const current = props.staff.roles
+  const next = checked ? [...current, value] : current.filter(r => r !== value)
+
+  if (next.length === 0) {
+    toast('Cannot remove last role', {
+      description: 'A staff member needs at least one role.',
+    })
+    return
+  }
+
+  await updateRoles(props.staff.id, next)
+  toast('Roles updated', {
+    description: `${props.staff.name} is now ${next.join(', ')}.`,
+  })
+}
 
 async function onStatusChange(value: AcceptableValue) {
   if (!props.staff || value === null)
@@ -80,8 +106,8 @@ function formatDate(value: string) {
           </SheetDescription>
           <SheetTitle>{{ staff.name }}</SheetTitle>
           <div class="flex flex-wrap items-center gap-2 pt-1">
-            <Badge :variant="staff.role === 'admin' ? 'default' : 'secondary'" class="capitalize">
-              {{ staff.role }}
+            <Badge v-for="role in staff.roles" :key="role" :variant="role === 'admin' ? 'default' : 'secondary'" class="capitalize">
+              {{ role }}
             </Badge>
             <Select :model-value="staff.status" @update:model-value="onStatusChange">
               <SelectTrigger class="h-7 w-auto gap-1.5 px-2 text-xs">
@@ -100,6 +126,18 @@ function formatDate(value: string) {
           <div class="flex flex-col gap-1">
             <span class="text-sm text-muted-foreground">Email</span>
             <span class="text-sm font-medium">{{ staff.email }}</span>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <span class="text-sm text-muted-foreground">Roles</span>
+            <label v-for="option in roleOptions" :key="option.value" :for="`staff-role-${option.value}`" class="flex items-center gap-2 text-sm">
+              <Checkbox
+                :id="`staff-role-${option.value}`"
+                :model-value="staff.roles.includes(option.value)"
+                @update:model-value="(checked) => onToggleRole(option.value, !!checked)"
+              />
+              {{ option.label }}
+            </label>
           </div>
 
           <div class="flex flex-col gap-1">

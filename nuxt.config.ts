@@ -120,14 +120,19 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    resendApiKey: '',
-    resendFromEmail: 'IBS Ticketing System <onboarding@resend.dev>',
+    gmailClientId: '',
+    gmailClientSecret: '',
+    gmailRefreshToken: '',
+    gmailSender: '',
+    gmailFromName: 'IBS Ticketing System',
+    cronSecret: '',
     sessionPassword: '',
     vapidPrivateKey: '',
     vapidSubject: '',
     siteUrl: 'http://localhost:3000',
     public: {
       vapidPublicKey: '',
+      portalCorsOrigins: '',
     },
   },
 })

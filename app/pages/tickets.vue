@@ -9,6 +9,10 @@ import DataTable from '@/components/tickets/components/DataTable.vue'
 import { priorities } from '@/components/tickets/data/data'
 import TicketDetailSheet from '@/components/tickets/TicketDetailSheet.vue'
 
+definePageMeta({
+  middleware: 'agent',
+})
+
 const { tickets, fetchTickets, fetchTicket, addTicket } = useTickets()
 const { staff, fetchStaff } = useStaff()
 

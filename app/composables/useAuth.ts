@@ -4,7 +4,7 @@ export interface AuthUser {
   id: string
   name: string
   email: string
-  role: StaffRole
+  roles: StaffRole[]
 }
 
 export function useAuth() {
@@ -12,7 +12,9 @@ export function useAuth() {
   const authReady = useState('auth-ready', () => false)
   const requestFetch = useRequestFetch()
 
-  const isAdmin = computed(() => currentUser.value?.role === 'admin')
+  const isAdmin = computed(() => currentUser.value?.roles.includes('admin') ?? false)
+  const isAgent = computed(() => currentUser.value?.roles.includes('agent') ?? false)
+  const isBd = computed(() => currentUser.value?.roles.includes('bd') ?? false)
   const isLoggedIn = computed(() => !!currentUser.value)
 
   async function ensureAuth() {
@@ -50,5 +52,5 @@ export function useAuth() {
     currentUser.value = null
   }
 
-  return { currentUser, authReady, isAdmin, isLoggedIn, ensureAuth, login, logout }
+  return { currentUser, authReady, isAdmin, isAgent, isBd, isLoggedIn, ensureAuth, login, logout }
 }

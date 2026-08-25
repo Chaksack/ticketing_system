@@ -32,6 +32,10 @@ const faqs = [
     q: 'Who can see the Reports and Admin pages?',
     a: 'Reports, Admin, SLA Policies, Macros, and Automations are all admin-only. Agents can work tickets, reply, tag, and reassign, but can\'t change SLA targets, manage staff, or edit automation rules.',
   },
+  {
+    q: 'Can a customer reply to a ticket by email?',
+    a: 'If inbound email is configured (ask an admin), yes — replying to any ticket-reply email adds that reply directly to the ticket, and reopens it automatically if it was resolved or closed. If it isn\'t configured, customers can only continue the conversation by submitting a new request through the portal.',
+  },
 ]
 </script>
 
@@ -149,7 +153,13 @@ const faqs = [
               <li>On submit, the ticket is created and shown a confirmation with its ticket ID (e.g. <code class="text-xs bg-muted px-1 py-0.5 rounded">TICKET-1042</code>).</li>
               <li>Behind the scenes: any matching automation rule is applied, the ticket is auto-assigned to the least-loaded active staff member, its SLA deadlines are set from the priority's policy, and on-call staff are paged.</li>
               <li>The customer is emailed whenever a staff member posts a public reply on their ticket — internal notes are never emailed.</li>
+              <li>If inbound email is configured for this deployment, the customer can simply hit "reply" on that email — their reply is added to the ticket automatically, and reopens it if it had been resolved or closed.</li>
             </ol>
+            <p class="text-muted-foreground">
+              This portal can also be embedded elsewhere — the submission endpoint is a public,
+              rate-limited API that can be called directly from another site (e.g. a marketing
+              site's contact form), not just this app's own portal page.
+            </p>
             <p class="text-muted-foreground">
               Staff can also report a ticket on a customer's behalf from the
               <NuxtLink to="/tickets" class="underline">

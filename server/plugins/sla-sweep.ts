@@ -1,63 +1,25 @@
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000
-const AUTO_CLOSE_AFTER_MS = 72 * 60 * 60 * 1000
 
-interface SweepTicketRow {
-  id: string
-  status: string
-  due_at: string | null
-  resolved_at: string | null
-  sla_escalated: number
-}
-
-async function escalateBreachedSla() {
-  const db = useDatabase()
-  const now = new Date().toISOString()
-
-  const breached = await db.prepare(`
-    SELECT id, status, due_at, resolved_at, sla_escalated FROM tickets
-    WHERE status IN ('open', 'in-progress') AND sla_escalated = 0 AND due_at IS NOT NULL AND due_at < ?
-  `).all(now) as SweepTicketRow[]
-
-  for (const row of breached) {
-    const ticket = await loadFullTicket(row.id)
-    await pageOnCallForTicket(ticket)
-    await db.prepare('UPDATE tickets SET sla_escalated = 1 WHERE id = ?').run(row.id)
-    await logTicketActivity({
-      ticketId: row.id,
-      type: 'sla_escalated',
-      actorName: 'System',
-      message: 'SLA breached — on-call staff paged',
-    })
-  }
-}
-
-async function autoCloseInactiveTickets() {
-  const db = useDatabase()
-  const cutoff = new Date(Date.now() - AUTO_CLOSE_AFTER_MS).toISOString()
-  const now = new Date().toISOString()
-
-  const inactive = await db.prepare(`
-    SELECT id FROM tickets WHERE status = 'resolved' AND resolved_at IS NOT NULL AND resolved_at < ?
-  `).all(cutoff) as { id: string }[]
-
-  for (const row of inactive) {
-    await db.prepare('UPDATE tickets SET status = \'closed\', closed_at = ?, updated_at = ? WHERE id = ?').run(now, now, row.id)
-    await logTicketActivity({
-      ticketId: row.id,
-      type: 'status_changed',
-      actorName: 'System',
-      fromValue: 'Resolved',
-      toValue: 'Closed',
-      message: 'Auto-closed after 72 hours of inactivity',
-    })
-  }
-}
-
+/**
+ * Background sweep for local dev / any persistent (non-serverless) deployment, where a
+ * setInterval can actually stay alive between requests. On Vercel this never reliably fires
+ * (functions don't keep running between invocations) — there, the same logic runs via
+ * Vercel Cron hitting /api/cron/sla-sweep, /api/cron/gmail-inbound and /api/cron/amc-reminders
+ * instead. Both paths share the same underlying functions (server/utils/sweeps.ts,
+ * server/utils/gmail.ts, server/utils/amcSweep.ts) so there's exactly one implementation either way.
+ */
 export default defineNitroPlugin(async () => {
   await ensureDb()
 
   setInterval(() => {
-    escalateBreachedSla().catch(error => console.error('SLA escalation sweep failed', error))
-    autoCloseInactiveTickets().catch(error => console.error('Auto-close sweep failed', error))
+    runTicketSweep().catch(error => console.error('Ticket sweep failed', error))
+
+    checkAmcRenewals().catch(error => console.error('AMC renewal sweep failed', error))
+
+    checkGmailInbox().catch((error) => {
+      // Not configured is expected until NUXT_GMAIL_REFRESH_TOKEN is set — don't spam logs for it.
+      if (!(error instanceof Error) || !error.message.includes('not configured'))
+        console.error('Gmail inbox check failed', error)
+    })
   }, SWEEP_INTERVAL_MS)
 })

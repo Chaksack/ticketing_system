@@ -29,18 +29,24 @@ function openStaff(member: StaffMember) {
 const roleOptions = [
   { value: 'admin', label: 'Admin' },
   { value: 'agent', label: 'Agent' },
+  { value: 'bd', label: 'BD Executive' },
 ] as const
 
 const staffFormSchema = toTypedSchema(z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  role: z.enum(['admin', 'agent'], { required_error: 'Please select a role.' }),
+  roles: z.array(z.enum(['admin', 'agent', 'bd'])).min(1, { message: 'Select at least one role.' }),
 }))
 
-const { handleSubmit, resetForm } = useForm({
+const { handleSubmit, resetForm, values, setFieldValue } = useForm({
   validationSchema: staffFormSchema,
-  initialValues: { name: '', email: '', role: 'agent' },
+  initialValues: { name: '', email: '', roles: ['agent'] },
 })
+
+function toggleRole(value: 'admin' | 'agent' | 'bd', checked: boolean) {
+  const current = values.roles ?? []
+  setFieldValue('roles', checked ? [...current, value] : current.filter(r => r !== value))
+}
 
 const onSubmit = handleSubmit(async (values) => {
   try {
@@ -88,7 +94,7 @@ function formatDate(value: string) {
           <DialogHeader>
             <DialogTitle>Add Staff Member</DialogTitle>
             <DialogDescription>
-              Invite a new staff member and assign their role on the platform.
+              Invite a new staff member and assign their role(s) on the platform.
             </DialogDescription>
           </DialogHeader>
 
@@ -113,21 +119,21 @@ function formatDate(value: string) {
               </FormItem>
             </FormField>
 
-            <FormField v-slot="{ componentField }" name="role">
+            <FormField name="roles">
               <FormItem>
-                <FormLabel>Role</FormLabel>
-                <Select v-bind="componentField">
-                  <FormControl>
-                    <SelectTrigger class="w-full">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem v-for="option in roleOptions" :key="option.value" :value="option.value">
+                <FormLabel>Roles</FormLabel>
+                <FormControl>
+                  <div class="flex flex-col gap-2">
+                    <label v-for="option in roleOptions" :key="option.value" :for="`role-${option.value}`" class="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        :id="`role-${option.value}`"
+                        :model-value="values.roles?.includes(option.value)"
+                        @update:model-value="(checked) => toggleRole(option.value, !!checked)"
+                      />
                       {{ option.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                    </label>
+                  </div>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             </FormField>
@@ -150,7 +156,7 @@ function formatDate(value: string) {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
+            <TableHead>Roles</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>On-Call</TableHead>
             <TableHead>Joined</TableHead>
@@ -171,9 +177,11 @@ function formatDate(value: string) {
                 {{ member.email }}
               </TableCell>
               <TableCell>
-                <Badge :variant="member.role === 'admin' ? 'default' : 'secondary'" class="capitalize">
-                  {{ member.role }}
-                </Badge>
+                <div class="flex flex-wrap gap-1">
+                  <Badge v-for="role in member.roles" :key="role" :variant="role === 'admin' ? 'default' : 'secondary'" class="capitalize">
+                    {{ role }}
+                  </Badge>
+                </div>
               </TableCell>
               <TableCell>
                 <Badge

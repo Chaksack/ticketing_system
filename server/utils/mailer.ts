@@ -1,31 +1,12 @@
-export async function sendMail(options: { to: string, subject: string, html: string }) {
-  const config = useRuntimeConfig()
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.resendApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: config.resendFromEmail,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-    }),
-  })
-
-  if (!response.ok) {
-    const body = await response.text()
-    throw new Error(`Resend send failed (${response.status}): ${body}`)
-  }
+function trimTrailingSlash(url: string): string {
+  return url.endsWith('/') ? url.slice(0, -1) : url
 }
 
 export async function sendStaffInviteEmail(params: { to: string, name: string, token: string }) {
   const config = useRuntimeConfig()
-  const link = `${config.siteUrl.replace(/\/+$/, '')}/invite/${params.token}`
+  const link = `${trimTrailingSlash(config.siteUrl)}/invite/${params.token}`
 
-  await sendMail({
+  await sendGmailMessage({
     to: params.to,
     subject: 'You\'ve been invited to IBS Ticketing System',
     html: `
@@ -38,23 +19,24 @@ export async function sendStaffInviteEmail(params: { to: string, name: string, t
 }
 
 export async function sendTicketReplyEmail(params: { to: string, name: string, ticketId: string, subject: string, message: string }) {
-  await sendMail({
+  await sendGmailMessage({
     to: params.to,
     subject: `Re: [${params.ticketId}] ${params.subject}`,
+    ticketId: params.ticketId,
     html: `
       <p>Hi ${params.name},</p>
       <p>Our support team has replied to your ticket <strong>${params.ticketId}</strong>:</p>
-      <blockquote style="margin:0;padding:12px 16px;border-left:3px solid #ccc;color:#333;">${params.message.replace(/\n/g, '<br>')}</blockquote>
-      <p>Reply to this email or contact us if you have further questions.</p>
+      <blockquote style="margin:0;padding:12px 16px;border-left:3px solid #ccc;color:#333;">${params.message.replaceAll('\n', '<br>')}</blockquote>
+      <p>Reply to this email if you have further questions.</p>
     `,
   })
 }
 
 export async function sendPasswordResetEmail(params: { to: string, name: string, token: string }) {
   const config = useRuntimeConfig()
-  const link = `${config.siteUrl.replace(/\/+$/, '')}/reset-password/${params.token}`
+  const link = `${trimTrailingSlash(config.siteUrl)}/reset-password/${params.token}`
 
-  await sendMail({
+  await sendGmailMessage({
     to: params.to,
     subject: 'Reset your IBS Ticketing System password',
     html: `

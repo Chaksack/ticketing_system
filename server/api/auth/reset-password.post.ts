@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
     id: row.id,
     name: row.name,
     email: row.email,
-    role: row.role as 'admin' | 'agent',
+    roles: parseStaffRoles(row),
   }
 
   const session = await useAuthSession(event)

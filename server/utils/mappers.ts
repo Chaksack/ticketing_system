@@ -1,5 +1,7 @@
+import type { AmcContract, AmcPlan } from '../../app/types/amc'
 import type { Macro } from '../../app/types/automation'
-import type { StaffMember } from '../../app/types/staff'
+import type { Client, ClientActivity } from '../../app/types/client'
+import type { StaffMember, StaffRole } from '../../app/types/staff'
 import type { Ticket, TicketActivity, TicketReply, TicketTag } from '../../app/types/ticket'
 
 export interface StaffRow {
@@ -7,6 +9,7 @@ export interface StaffRow {
   name: string
   email: string
   role: string
+  roles: string | null
   status: string
   on_call: number
   password_hash: string | null
@@ -17,12 +20,16 @@ export interface StaffRow {
   created_at: string
 }
 
+export function parseStaffRoles(row: Pick<StaffRow, 'role' | 'roles'>): StaffRole[] {
+  return (row.roles ? JSON.parse(row.roles) : [row.role]) as StaffRole[]
+}
+
 export function mapStaffRow(row: StaffRow): StaffMember {
   return {
     id: row.id,
     name: row.name,
     email: row.email,
-    role: row.role as StaffMember['role'],
+    roles: parseStaffRoles(row),
     status: row.status as StaffMember['status'],
     onCall: !!row.on_call,
     createdAt: row.created_at,
@@ -179,4 +186,114 @@ export interface PageRow {
   staff_name: string
   created_at: string
   acknowledged: number
+}
+
+export interface ClientRow {
+  id: string
+  name: string
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  stage: string
+  notes: string | null
+  assigned_to: string | null
+  assigned_to_name?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function mapClientRow(
+  row: ClientRow,
+  activity: ClientActivity[] = [],
+  contracts: AmcContract[] = [],
+): Client {
+  return {
+    id: row.id,
+    name: row.name,
+    contactName: row.contact_name ?? undefined,
+    contactEmail: row.contact_email ?? undefined,
+    contactPhone: row.contact_phone ?? undefined,
+    stage: row.stage as Client['stage'],
+    notes: row.notes ?? undefined,
+    assignedTo: row.assigned_to ?? undefined,
+    assignedToName: row.assigned_to_name ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    activity,
+    contracts,
+  }
+}
+
+export interface ClientActivityRow {
+  id: string
+  client_id: string
+  type: string
+  actor_id: string | null
+  actor_name: string | null
+  from_value: string | null
+  to_value: string | null
+  message: string | null
+  created_at: string
+}
+
+export function mapClientActivityRow(row: ClientActivityRow): ClientActivity {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    type: row.type as ClientActivity['type'],
+    actorId: row.actor_id ?? undefined,
+    actorName: row.actor_name ?? undefined,
+    fromValue: row.from_value ?? undefined,
+    toValue: row.to_value ?? undefined,
+    message: row.message ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+export interface AmcPlanRow {
+  id: string
+  name: string
+  description: string | null
+  default_duration_months: number
+  price: number | string | null
+  created_at: string
+}
+
+export function mapAmcPlanRow(row: AmcPlanRow): AmcPlan {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? undefined,
+    defaultDurationMonths: row.default_duration_months,
+    price: row.price === null ? undefined : Number(row.price),
+    createdAt: row.created_at,
+  }
+}
+
+export interface ContractRow {
+  id: string
+  client_id: string
+  plan_id: string
+  plan_name?: string | null
+  start_date: string
+  end_date: string
+  status: string
+  reminder_30d_sent: number
+  reminder_7d_sent: number
+  created_at: string
+}
+
+export function mapContractRow(row: ContractRow): AmcContract {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    planId: row.plan_id,
+    planName: row.plan_name ?? undefined,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    status: row.status as AmcContract['status'],
+    reminder30dSent: !!row.reminder_30d_sent,
+    reminder7dSent: !!row.reminder_7d_sent,
+    createdAt: row.created_at,
+  }
 }

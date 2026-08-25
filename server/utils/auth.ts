@@ -5,7 +5,7 @@ export interface SessionUser {
   id: string
   name: string
   email: string
-  role: StaffRole
+  roles: StaffRole[]
 }
 
 interface SessionData {
@@ -40,7 +40,27 @@ export async function requireSessionUser(event: H3Event): Promise<SessionUser> {
 export async function requireAdmin(event: H3Event): Promise<SessionUser> {
   const user = await requireSessionUser(event)
 
-  if (user.role !== 'admin') {
+  if (!user.roles.includes('admin')) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  return user
+}
+
+export async function requireBd(event: H3Event): Promise<SessionUser> {
+  const user = await requireSessionUser(event)
+
+  if (!user.roles.includes('bd') && !user.roles.includes('admin')) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  return user
+}
+
+export async function requireAgent(event: H3Event): Promise<SessionUser> {
+  const user = await requireSessionUser(event)
+
+  if (!user.roles.includes('agent') && !user.roles.includes('admin')) {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
