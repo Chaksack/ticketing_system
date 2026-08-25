@@ -58,6 +58,14 @@ export default defineEventHandler(async (event) => {
     await touchTicket(id)
   }
 
+  if (ticket.assignee_id && ticket.assignee_id !== user.id) {
+    await sendPushToStaff(ticket.assignee_id, {
+      title: internal ? `New internal note on ${id}` : `New reply on ${id}`,
+      body: message.length > 120 ? `${message.slice(0, 117)}...` : message,
+      url: '/tickets',
+    })
+  }
+
   const updated = await loadFullTicket(id)
   return { ticket: updated }
 })

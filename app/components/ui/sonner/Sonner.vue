@@ -16,3 +16,22 @@ const props = defineProps<ToasterProps>()
     }"
   />
 </template>
+
+<style>
+[data-sonner-toaster] [data-sonner-toast]::before {
+  content: '';
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background-color: #fff;
+  background-image: url('/icons/logo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 6px;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  color: #ffffff !important;
+}
+</style>

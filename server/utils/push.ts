@@ -21,6 +21,9 @@ export interface PushPayload {
   title: string
   body: string
   url?: string
+  /** 'page' notifications persist until the user opens/dismisses them and trigger an in-app alarm. */
+  type?: 'page'
+  tag?: string
 }
 
 export async function sendPushNotification(sub: PushSubscriptionRecord, payload: PushPayload) {

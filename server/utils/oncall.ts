@@ -22,6 +22,8 @@ export async function pageOnCallForTicket(ticket: Ticket) {
       title: `Paging ${member.name}`,
       body: `[${ticket.priority.toUpperCase()}] ${ticket.id}: ${ticket.subject}`,
       url: '/tickets',
+      type: 'page',
+      tag: pageId,
     })
   }
 

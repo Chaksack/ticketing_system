@@ -30,6 +30,14 @@ export default defineEventHandler(async (event) => {
   await db.prepare('UPDATE staff SET status = ?, on_call = ?, role = ?, roles = ? WHERE id = ?')
     .run(status, onCall, roles[0], JSON.stringify(roles), id)
 
+  if (body.onCall === true && !existing.on_call) {
+    await sendPushToStaff(id, {
+      title: 'You\'re on call',
+      body: 'You\'ll be paged for new tickets until your on-call status changes.',
+      url: '/admin',
+    })
+  }
+
   const row = await db.prepare('SELECT * FROM staff WHERE id = ?').get(id) as StaffRow
   return { staff: mapStaffRow(row) }
 })

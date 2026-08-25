@@ -13,6 +13,7 @@ export function useOnCall() {
     const page = pages.value.find(p => p.id === id)
     if (page)
       page.acknowledged = true
+    useAlarm().stop()
   }
 
   return { pages, fetchPages, acknowledgePage }
