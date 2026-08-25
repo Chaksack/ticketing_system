@@ -5,7 +5,7 @@ import SheetDescription from '@/components/ui/sheet/SheetDescription.vue'
 import SheetHeader from '@/components/ui/sheet/SheetHeader.vue'
 import SheetTitle from '@/components/ui/sheet/SheetTitle.vue'
 import { cn } from '@/lib/utils'
-import { SIDEBAR_WIDTH_MOBILE, useSidebar } from './utils'
+import { useSidebar } from './utils'
 
 defineOptions({
   inheritAttrs: false,
@@ -36,10 +36,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
       data-slot="sidebar"
       data-mobile="true"
       :side="side"
-      class="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
-      :style="{
-        '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
-      }"
+      class="bg-sidebar text-sidebar-foreground w-[50vw] p-0 [&>button]:hidden"
     >
       <SheetHeader class="sr-only">
         <SheetTitle>Sidebar</SheetTitle>

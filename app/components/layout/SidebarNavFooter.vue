@@ -1,18 +1,48 @@
 <script setup lang="ts">
+import { toast } from 'vue-sonner'
 import { useSidebar } from '~/components/ui/sidebar'
 
 defineProps<{
   user: {
     name: string
     email: string
-    avatar: string
+    avatar?: string
   }
 }>()
 
 const { isMobile, setOpenMobile } = useSidebar()
+const { logout } = useAuth()
+const { isSupported, isSubscribed, checkSubscription, subscribe, unsubscribe } = usePush()
 
-function handleLogout() {
-  navigateTo('/login')
+onMounted(() => {
+  checkSubscription()
+})
+
+async function handleLogout() {
+  await logout()
+  await navigateTo('/login')
+}
+
+async function handleToggleNotifications() {
+  try {
+    if (isSubscribed.value) {
+      await unsubscribe()
+      toast('Notifications disabled', {
+        description: 'You will no longer receive push notifications on this device.',
+      })
+    }
+    else {
+      await subscribe()
+      toast('Notifications enabled', {
+        description: 'You will be paged on this device when new tickets come in.',
+      })
+    }
+  }
+  catch (error: any) {
+    toast('Could not update notifications', {
+      description: error?.message ?? 'Something went wrong. Please try again.',
+    })
+  }
 }
 
 const showModalTheme = ref(false)
@@ -28,7 +58,7 @@ const showModalTheme = ref(false)
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
             <Avatar class="h-8 w-8 rounded-lg">
-              <AvatarImage :src="user.avatar" :alt="user.name" />
+              <AvatarImage v-if="user.avatar" :src="user.avatar" :alt="user.name" />
               <AvatarFallback class="rounded-lg">
                 {{ user.name.split(' ').map((n) => n[0]).join('') }}
               </AvatarFallback>
@@ -45,53 +75,16 @@ const showModalTheme = ref(false)
           :side="isMobile ? 'bottom' : 'right'"
           align="end"
         >
-          <DropdownMenuLabel class="p-0 font-normal">
-            <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-              <Avatar class="h-8 w-8 rounded-lg">
-                <AvatarImage :src="user.avatar" :alt="user.name" />
-                <AvatarFallback class="rounded-lg">
-                  {{ user.name.split(' ').map((n) => n[0]).join('') }}
-                </AvatarFallback>
-              </Avatar>
-              <div class="grid flex-1 text-left text-sm leading-tight">
-                <span class="truncate font-semibold">{{ user.name }}</span>
-                <span class="truncate text-xs">{{ user.email }}</span>
-              </div>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem>
-              <Icon name="i-lucide-sparkles" />
-              Upgrade to Pro
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem>
-              <Icon name="i-lucide-badge-check" />
-              Account
-            </DropdownMenuItem>
             <DropdownMenuItem as-child>
               <NuxtLink to="/settings" @click="setOpenMobile(false)">
                 <Icon name="i-lucide-settings" />
                 Settings
               </NuxtLink>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem v-if="isSupported" @click="handleToggleNotifications">
               <Icon name="i-lucide-bell" />
-              Notifications
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem as-child>
-              <NuxtLink to="https://github.com/dianprata/nuxt-shadcn-dashboard" external target="_blank">
-                <Icon name="i-lucide-github" />
-                Github Repository
-              </NuxtLink>
-            </DropdownMenuItem>
-            <DropdownMenuItem @click="showModalTheme = true">
-              <Icon name="i-lucide-paintbrush" />
-              Theme
+              {{ isSubscribed ? 'Disable Notifications' : 'Enable Notifications' }}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />

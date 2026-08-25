@@ -5,7 +5,7 @@ const props = defineProps<{
   teams: {
     name: string
     logo: string
-    plan: string
+    role: string
   }[]
 }>()
 
@@ -30,7 +30,7 @@ const activeTeam = ref(props.teams[0])
               <span class="truncate font-semibold">
                 {{ activeTeam!.name }}
               </span>
-              <span class="truncate text-xs">{{ activeTeam!.plan }}</span>
+              <span class="truncate text-xs">{{ activeTeam!.role }}</span>
             </div>
             <Icon name="i-lucide-chevrons-up-down" class="ml-auto" />
           </SidebarMenuButton>

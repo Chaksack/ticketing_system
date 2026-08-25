@@ -4,6 +4,10 @@ export const THEME_COLORS = [
     value: 'oklch(0.205 0 0)',
   },
   {
+    name: 'ibsgh',
+    value: 'oklch(0.542 0.152 148.732)',
+  },
+  {
     name: 'blue',
     value: 'oklch(0.623 0.214 259.815)',
   },

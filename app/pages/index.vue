@@ -1,200 +1,133 @@
 <script setup lang="ts">
 import NumberFlow from '@number-flow/vue'
-import { TrendingDown, TrendingUp, TrendingUpIcon } from 'lucide-vue-next'
+import { stages } from '~/components/clients/data'
 
-const dataCard = ref({
-  totalRevenue: 0,
-  newCustomers: 0,
-  activeAccount: 0,
-  growthRate: 0,
+definePageMeta({
+  middleware: 'bd',
 })
+
+const { clients, upcomingRenewals, fetchClients, fetchUpcomingRenewals } = useClients()
 
 onMounted(() => {
-  dataCard.value = {
-    totalRevenue: 1250.44,
-    newCustomers: 1234,
-    activeAccount: 45678,
-    growthRate: 4.5,
-  }
+  fetchClients()
+  fetchUpcomingRenewals()
 })
 
-const timeRange = ref('30d')
+const totalClients = computed(() => clients.value.length)
+const activeContracts = computed(() => clients.value.reduce((sum, c) => sum + (c.activeContractCount ?? 0), 0))
+const renewalsDueSoon = computed(() => upcomingRenewals.value.filter((r) => {
+  const daysRemaining = (new Date(r.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+  return daysRemaining <= 30
+}).length)
 
-const isDesktop = useMediaQuery('(min-width: 768px)')
-watch(isDesktop, () => {
-  if (isDesktop.value) {
-    timeRange.value = '30d'
-  }
-  else {
-    timeRange.value = '7d'
-  }
-}, { immediate: true })
+const stageData = computed(() => stages.map(stage => ({
+  stage: stage.label,
+  count: clients.value.filter(c => c.stage === stage.value).length,
+})).filter(row => row.count > 0))
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function daysUntil(value: string) {
+  return Math.ceil((new Date(value).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+}
 </script>
 
 <template>
   <div class="w-full flex flex-col gap-4">
-    <div class="flex flex-wrap items-center justify-between gap-2">
+    <div>
       <h2 class="text-2xl font-bold tracking-tight">
-        Dashboard
+        Overview
       </h2>
-      <div class="flex items-center space-x-2">
-        <BaseDateRangePicker />
-        <Button>Download</Button>
-      </div>
+      <p class="text-muted-foreground">
+        Clients, AMC contracts, and renewals at a glance.
+      </p>
     </div>
+
     <main class="@container/main flex flex-1 flex-col gap-4 md:gap-8">
-      <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+      <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-3">
         <Card class="@container/card">
           <CardHeader>
-            <CardDescription>Total Revenue</CardDescription>
+            <CardDescription>Total Clients</CardDescription>
             <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-              <NumberFlow
-                :value="dataCard.totalRevenue"
-                :format="{ style: 'currency', currency: 'USD', trailingZeroDisplay: 'stripIfInteger' }"
-              />
+              <NumberFlow :value="totalClients" />
             </CardTitle>
-            <CardAction>
-              <Badge variant="outline">
-                <TrendingUpIcon />
-                +12.5%
-              </Badge>
-            </CardAction>
           </CardHeader>
-          <CardFooter class="flex-col items-start gap-1.5 text-sm">
-            <div class="line-clamp-1 flex gap-2 font-medium">
-              Trending up this month <TrendingUp class="size-4" />
-            </div>
-            <div class="text-muted-foreground">
-              Visitors for the last 6 months
-            </div>
-          </CardFooter>
         </Card>
         <Card class="@container/card">
           <CardHeader>
-            <CardDescription>New Customers</CardDescription>
+            <CardDescription>Active AMC Contracts</CardDescription>
             <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-              <NumberFlow
-                :value="dataCard.newCustomers"
-              />
+              <NumberFlow :value="activeContracts" />
             </CardTitle>
-            <CardAction>
-              <Badge variant="outline">
-                <TrendingDown />
-                -20%
-              </Badge>
-            </CardAction>
           </CardHeader>
-          <CardFooter class="flex-col items-start gap-1.5 text-sm">
-            <div class="line-clamp-1 flex gap-2 font-medium">
-              Down 20% this period <TrendingDown class="size-4" />
-            </div>
-            <div class="text-muted-foreground">
-              Acquisition needs attention
-            </div>
-          </CardFooter>
         </Card>
         <Card class="@container/card">
           <CardHeader>
-            <CardDescription>Active Accounts</CardDescription>
+            <CardDescription>Renewals Due in 30 Days</CardDescription>
             <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-              <NumberFlow
-                :value="dataCard.activeAccount"
-              />
+              <NumberFlow :value="renewalsDueSoon" />
             </CardTitle>
-            <CardAction>
-              <Badge variant="outline">
-                <TrendingUp />
-                +12.5%
-              </Badge>
-            </CardAction>
           </CardHeader>
-          <CardFooter class="flex-col items-start gap-1.5 text-sm">
-            <div class="line-clamp-1 flex gap-2 font-medium">
-              Strong user retention <TrendingUp class="size-4" />
-            </div>
-            <div class="text-muted-foreground">
-              Engagement exceed targets
-            </div>
-          </CardFooter>
-        </Card>
-        <Card class="@container/card">
-          <CardHeader>
-            <CardDescription>Growth Rate</CardDescription>
-            <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-              <NumberFlow
-                :value="dataCard.growthRate"
-                suffix="%"
-              />
-            </CardTitle>
-            <CardAction>
-              <Badge variant="outline">
-                <TrendingUp />
-                +4.5%
-              </Badge>
-            </CardAction>
-          </CardHeader>
-          <CardFooter class="flex-col items-start gap-1.5 text-sm">
-            <div class="line-clamp-1 flex gap-2 font-medium">
-              Steady performance increase <TrendingUp class="size-4" />
-            </div>
-            <div class="text-muted-foreground">
-              Meets growth projections
-            </div>
-          </CardFooter>
         </Card>
       </div>
-      <Card class="@container/card">
-        <CardHeader>
-          <CardTitle>Total Visitors</CardTitle>
-          <CardDescription>
-            <span className="hidden @[540px]/card:block">
-              Total for the last 3 months
-            </span>
-            <span className="@[540px]/card:hidden">Last 3 months</span>
-          </CardDescription>
-          <CardAction>
-            <ToggleGroup
-              v-model="timeRange"
-              type="single"
-              variant="outline"
-              class="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
-            >
-              <ToggleGroupItem value="90d">
-                Last 3 months
-              </ToggleGroupItem>
-              <ToggleGroupItem value="30d">
-                Last 30 days
-              </ToggleGroupItem>
-              <ToggleGroupItem value="7d">
-                Last 7 days
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <Select v-model="timeRange">
-              <SelectTrigger
-                class="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
-                size="sm"
-                aria-label="Select a value"
-              >
-                <SelectValue placeholder="Last 3 months" />
-              </SelectTrigger>
-              <SelectContent class="rounded-xl">
-                <SelectItem value="90d" class="rounded-lg">
-                  Last 3 months
-                </SelectItem>
-                <SelectItem value="30d" class="rounded-lg">
-                  Last 30 days
-                </SelectItem>
-                <SelectItem value="7d" class="rounded-lg">
-                  Last 7 days
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <DashboardTotalVisitors :time-range="timeRange" />
-        </CardContent>
-      </Card>
+
+      <div class="grid grid-cols-1 gap-4 @2xl/main:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Clients by Stage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DonutChart v-if="stageData.length" :data="stageData" category="count" index="stage" />
+            <p v-else class="text-sm text-muted-foreground">
+              No clients yet.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Renewals</CardTitle>
+            <CardDescription>Soonest-expiring active AMC contracts</CardDescription>
+          </CardHeader>
+          <CardContent class="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Expires</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <template v-if="upcomingRenewals.length">
+                  <TableRow v-for="renewal in upcomingRenewals" :key="renewal.contractId">
+                    <TableCell class="font-medium">
+                      <NuxtLink :to="`/clients?open=${renewal.clientId}`" class="hover:underline">
+                        {{ renewal.clientName }}
+                      </NuxtLink>
+                    </TableCell>
+                    <TableCell class="text-muted-foreground">
+                      {{ renewal.planName }}
+                    </TableCell>
+                    <TableCell>
+                      <span :class="daysUntil(renewal.endDate) <= 7 ? 'text-destructive font-medium' : ''">
+                        {{ formatDate(renewal.endDate) }}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                </template>
+                <TableRow v-else>
+                  <TableCell :colspan="3" class="h-24 text-center text-muted-foreground">
+                    No active AMC contracts.
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   </div>
 </template>

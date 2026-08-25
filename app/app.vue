@@ -15,6 +15,8 @@ useHead({
   ],
   link: [
     { rel: 'icon', href: '/favicon.ico' },
+    { rel: 'manifest', href: '/manifest.webmanifest' },
+    { rel: 'apple-touch-icon', href: '/icons/icon-192.png' },
   ],
   htmlAttrs: {
     lang: 'en',
@@ -24,7 +26,7 @@ useHead({
   },
 })
 
-const title = 'Ticketing System'
+const title = 'BD & SM Platform - Ticketing System'
 const description = 'ticketing system to help IBS offer support to their clients'
 
 useSeoMeta({
@@ -44,7 +46,7 @@ const router = useRouter()
 
 defineShortcuts({
   'G-H': () => router.push('/'),
-  'G-E': () => router.push('/email'),
+  'G-T': () => router.push('/tickets'),
 })
 
 const textDirection = useTextDirection({ initialValue: 'ltr' })
@@ -59,10 +61,10 @@ const dir = computed(() => textDirection.value === 'rtl' ? 'rtl' : 'ltr')
           <NuxtPage />
         </NuxtLayout>
 
-        <AppSettings />
+        <!-- <AppSettings /> -->
       </div>
 
-      <Toaster :theme="colorMode.preference as any || 'system'" />
+      <Toaster :theme="colorMode.preference as any || 'system'" position="top-right" />
     </ConfigProvider>
   </Body>
 </template>

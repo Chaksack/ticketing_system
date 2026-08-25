@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sla-sweep",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/gmail-inbound",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/amc-reminders",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

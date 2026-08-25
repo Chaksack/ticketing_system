@@ -346,6 +346,30 @@
   }
 }
 
+.color-ibsgh {
+  --primary: oklch(0.542 0.152 148.732);
+  --primary-foreground: oklch(1 0 0);
+  --ring: oklch(0.594 0.168 148.45);
+  --vis-primary-color: var(--primary);
+  --chart-1: oklch(0.75 0.14 148);
+  --chart-2: oklch(0.65 0.16 148);
+  --chart-3: oklch(0.594 0.168 148.45);
+  --chart-4: oklch(0.542 0.152 148.732);
+  --chart-5: oklch(0.4 0.13 148);
+  --sidebar-primary: oklch(0.542 0.152 148.732);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-ring: oklch(0.594 0.168 148.45);
+
+  @variant dark {
+    --primary: oklch(0.594 0.168 148.45);
+    --primary-foreground: oklch(1 0 0);
+    --ring: oklch(0.35 0.1 148);
+    --sidebar-primary: oklch(0.594 0.168 148.45);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-ring: oklch(0.3 0.08 148);
+  }
+}
+
 .color-violet {
   --primary: var(--color-violet-600);
   --primary-foreground: var(--color-violet-50);

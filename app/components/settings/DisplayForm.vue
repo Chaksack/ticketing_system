@@ -1,59 +1,22 @@
 <script setup lang="ts">
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import { h } from 'vue'
-import { toast } from 'vue-sonner'
-import * as z from 'zod'
+const { sidebar, updateAppSettings } = useAppSettings()
 
-const items = [
-  {
-    id: 'recents',
-    label: 'Recents',
-  },
-  {
-    id: 'home',
-    label: 'Home',
-  },
-  {
-    id: 'applications',
-    label: 'Applications',
-
-  },
-  {
-    id: 'desktop',
-    label: 'Desktop',
-
-  },
-  {
-    id: 'downloads',
-    label: 'Downloads',
-
-  },
-  {
-    id: 'documents',
-    label: 'Documents',
-
-  },
+const variantOptions = [
+  { value: 'sidebar', label: 'Sidebar' },
+  { value: 'floating', label: 'Floating' },
+  { value: 'inset', label: 'Inset' },
 ] as const
 
-const displayFormSchema = toTypedSchema(z.object({
-  items: z.array(z.string()).refine(value => value.some(item => item), {
-    message: 'You have to select at least one item.',
-  }),
-}))
+const collapsibleOptions = [
+  { value: 'offcanvas', label: 'Off-canvas' },
+  { value: 'icon', label: 'Icon' },
+  { value: 'none', label: 'None' },
+] as const
 
-const { handleSubmit } = useForm({
-  validationSchema: displayFormSchema,
-  initialValues: {
-    items: ['recents', 'home'],
-  },
-})
-
-const onSubmit = handleSubmit((values) => {
-  toast('You submitted the following values:', {
-    description: h('pre', { class: 'mt-2 w-[340px] rounded-md bg-slate-950 p-4' }, h('code', { class: 'text-white' }, JSON.stringify(values, null, 2))),
-  })
-})
+const sideOptions = [
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' },
+] as const
 </script>
 
 <template>
@@ -62,47 +25,54 @@ const onSubmit = handleSubmit((values) => {
       Display
     </h3>
     <p class="text-sm text-muted-foreground">
-      Turn items on or off to control what's displayed in the app.
+      Control how the sidebar looks and behaves. Changes apply immediately.
     </p>
   </div>
   <Separator />
-  <form @submit="onSubmit">
-    <FormField name="items">
-      <FormItem>
-        <div class="mb-4">
-          <FormLabel class="text-base">
-            Sidebar
-          </FormLabel>
-          <FormDescription>
-            Select the items you want to display in the sidebar.
-          </FormDescription>
-        </div>
-
-        <FormField v-for="item in items" v-slot="{ value, handleChange }" :key="item.id" name="items">
-          <FormItem :key="item.id" class="flex flex-row items-start space-x-3 space-y-0">
-            <FormControl>
-              <Checkbox
-                :checked="value.includes(item.id)"
-                @update:checked="(checked: boolean) => {
-                  if (Array.isArray(value)) {
-                    handleChange(checked ? [...value, item.id] : value.filter(id => id !== item.id))
-                  }
-                }"
-              />
-            </FormControl>
-            <FormLabel class="font-normal">
-              {{ item.label }}
-            </FormLabel>
-          </FormItem>
-        </FormField>
-        <FormMessage />
-      </FormItem>
-    </FormField>
-
-    <div class="mt-4 flex justify-start">
-      <Button type="submit">
-        Update display
-      </Button>
+  <div class="flex flex-col gap-6">
+    <div class="space-y-1.5">
+      <Label>Sidebar style</Label>
+      <div class="grid grid-cols-3 gap-2 max-w-md">
+        <Button
+          v-for="option in variantOptions"
+          :key="option.value"
+          variant="outline"
+          :class="{ '!border-primary border-2 !bg-primary/10': sidebar?.variant === option.value }"
+          @click="updateAppSettings({ sidebar: { variant: option.value } })"
+        >
+          {{ option.label }}
+        </Button>
+      </div>
     </div>
-  </form>
+
+    <div class="space-y-1.5">
+      <Label>Collapse behavior</Label>
+      <div class="grid grid-cols-3 gap-2 max-w-md">
+        <Button
+          v-for="option in collapsibleOptions"
+          :key="option.value"
+          variant="outline"
+          :class="{ '!border-primary border-2 !bg-primary/10': sidebar?.collapsible === option.value }"
+          @click="updateAppSettings({ sidebar: { collapsible: option.value } })"
+        >
+          {{ option.label }}
+        </Button>
+      </div>
+    </div>
+
+    <div class="space-y-1.5">
+      <Label>Side</Label>
+      <div class="grid grid-cols-2 gap-2 max-w-xs">
+        <Button
+          v-for="option in sideOptions"
+          :key="option.value"
+          variant="outline"
+          :class="{ '!border-primary border-2 !bg-primary/10': sidebar?.side === option.value }"
+          @click="updateAppSettings({ sidebar: { side: option.value } })"
+        >
+          {{ option.label }}
+        </Button>
+      </div>
+    </div>
+  </div>
 </template>

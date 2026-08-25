@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavGroup, NavLink, NavSectionTitle } from '~/types/nav'
+import type { StaffRole } from '~/types/staff'
 import { navMenu, navMenuBottom } from '~/constants/menus'
 
 function resolveNavItemComponent(item: NavLink | NavGroup | NavSectionTitle): any {
@@ -9,37 +10,29 @@ function resolveNavItemComponent(item: NavLink | NavGroup | NavSectionTitle): an
   return resolveComponent('LayoutSidebarNavLink')
 }
 
-const teams: {
-  name: string
-  logo: string
-  plan: string
-}[] = [
-  {
-    name: 'Acme Inc',
-    logo: 'i-lucide-gallery-vertical-end',
-    plan: 'Enterprise',
-  },
-  {
-    name: 'Acme Corp.',
-    logo: 'i-lucide-audio-waveform',
-    plan: 'Startup',
-  },
-  {
-    name: 'Evil Corp.',
-    logo: 'i-lucide-command',
-    plan: 'Free',
-  },
-]
-
-const user: {
-  name: string
-  email: string
-  avatar: string
-} = {
-  name: 'Dian Pratama',
-  email: 'dianpratama2@gmail.com',
-  avatar: '/avatars/avatartion.png',
+const ROLE_LABELS: Record<StaffRole, string> = {
+  admin: 'Admin',
+  agent: 'Agent',
+  bd: 'BD Executive',
+  sm: 'Sales & Marketing Exec',
 }
+
+const { currentUser, isAdmin } = useAuth()
+
+const teams = computed(() => [
+  {
+    name: 'BD & SM Platform',
+    logo: 'i-lucide-gallery-vertical-end',
+    role: currentUser.value?.roles.map(role => ROLE_LABELS[role]).join(', ') ?? '',
+  },
+])
+
+const visibleNavMenu = computed(() => navMenu
+  .map(group => ({
+    ...group,
+    items: group.items.filter(item => isNavItemVisible(item, isAdmin.value, currentUser.value?.roles ?? [])),
+  }))
+  .filter(group => group.items.length > 0))
 
 const { sidebar } = useAppSettings()
 </script>
@@ -49,9 +42,10 @@ const { sidebar } = useAppSettings()
     <SidebarHeader>
       <LayoutSidebarNavHeader :teams="teams" />
       <Search />
+      <AssistantPanel />
     </SidebarHeader>
     <SidebarContent>
-      <SidebarGroup v-for="(nav, indexGroup) in navMenu" :key="indexGroup">
+      <SidebarGroup v-for="(nav, indexGroup) in visibleNavMenu" :key="indexGroup">
         <SidebarGroupLabel v-if="nav.heading">
           {{ nav.heading }}
         </SidebarGroupLabel>
@@ -62,12 +56,11 @@ const { sidebar } = useAppSettings()
       </SidebarGroup>
     </SidebarContent>
     <SidebarFooter>
-      <LayoutSidebarNavFooter :user="user" />
+      <LayoutSidebarNavFooter v-if="currentUser" :user="currentUser" />
     </SidebarFooter>
     <SidebarRail />
   </Sidebar>
 </template>
 
 <style scoped>
-
 </style>

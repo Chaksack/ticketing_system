@@ -1,3 +1,4 @@
+import process from 'node:process'
 import tailwindcss from '@tailwindcss/vite'
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -96,6 +97,17 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-03-13',
 
   nitro: {
+    experimental: {
+      database: true,
+    },
+    database: {
+      default: {
+        connector: 'postgresql',
+        options: {
+          url: process.env.DATABASE_URL,
+        },
+      },
+    },
     prerender: {
       ignore: [
         '/examples/forms',
@@ -104,6 +116,23 @@ export default defineNuxtConfig({
         '/components/pagination',
         '/docs',
       ],
+    },
+  },
+
+  runtimeConfig: {
+    gmailClientId: '',
+    gmailClientSecret: '',
+    gmailRefreshToken: '',
+    gmailSender: '',
+    gmailFromName: 'IBS Ticketing System',
+    cronSecret: '',
+    sessionPassword: '',
+    vapidPrivateKey: '',
+    vapidSubject: '',
+    siteUrl: 'http://localhost:3000',
+    public: {
+      vapidPublicKey: '',
+      portalCorsOrigins: '',
     },
   },
 })

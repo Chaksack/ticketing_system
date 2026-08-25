@@ -17,4 +17,11 @@ export default withNuxt(antfu(
       'style/no-trailing-spaces': 'off',
     },
   },
+  // Service worker runs in ServiceWorkerGlobalScope, where `self` is the conventional global
+  {
+    files: ['public/sw.js'],
+    rules: {
+      'no-restricted-globals': 'off',
+    },
+  },
 ))
