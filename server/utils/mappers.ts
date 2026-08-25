@@ -1,7 +1,9 @@
 import type { AmcContract, AmcPlan } from '../../app/types/amc'
 import type { Macro } from '../../app/types/automation'
 import type { Client, ClientActivity } from '../../app/types/client'
+import type { Lead, LeadActivity } from '../../app/types/lead'
 import type { StaffMember, StaffRole } from '../../app/types/staff'
+import type { Task } from '../../app/types/task'
 import type { Ticket, TicketActivity, TicketReply, TicketTag } from '../../app/types/ticket'
 
 export interface StaffRow {
@@ -295,5 +297,114 @@ export function mapContractRow(row: ContractRow): AmcContract {
     reminder30dSent: !!row.reminder_30d_sent,
     reminder7dSent: !!row.reminder_7d_sent,
     createdAt: row.created_at,
+  }
+}
+
+export interface LeadRow {
+  id: string
+  name: string
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  source: string | null
+  stage: string
+  notes: string | null
+  assigned_to: string | null
+  assigned_to_name?: string | null
+  converted_client_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function mapLeadRow(row: LeadRow, activity: LeadActivity[] = []): Lead {
+  return {
+    id: row.id,
+    name: row.name,
+    contactName: row.contact_name ?? undefined,
+    contactEmail: row.contact_email ?? undefined,
+    contactPhone: row.contact_phone ?? undefined,
+    source: row.source ?? undefined,
+    stage: row.stage as Lead['stage'],
+    notes: row.notes ?? undefined,
+    assignedTo: row.assigned_to ?? undefined,
+    assignedToName: row.assigned_to_name ?? undefined,
+    convertedClientId: row.converted_client_id ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    activity,
+  }
+}
+
+export interface LeadActivityRow {
+  id: string
+  lead_id: string
+  type: string
+  actor_id: string | null
+  actor_name: string | null
+  from_value: string | null
+  to_value: string | null
+  message: string | null
+  created_at: string
+}
+
+export function mapLeadActivityRow(row: LeadActivityRow): LeadActivity {
+  return {
+    id: row.id,
+    leadId: row.lead_id,
+    type: row.type as LeadActivity['type'],
+    actorId: row.actor_id ?? undefined,
+    actorName: row.actor_name ?? undefined,
+    fromValue: row.from_value ?? undefined,
+    toValue: row.to_value ?? undefined,
+    message: row.message ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+export interface TaskRow {
+  id: string
+  type: string
+  title: string
+  description: string | null
+  status: string
+  priority: string
+  color: string | null
+  assignee_id: string | null
+  assignee_name?: string | null
+  epic_id: string | null
+  epic_title?: string | null
+  epic_color?: string | null
+  parent_task_id: string | null
+  start_date: string | null
+  due_date: string | null
+  remind_at: string | null
+  reminder_sent: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function mapTaskRow(row: TaskRow): Task {
+  return {
+    id: row.id,
+    type: row.type as Task['type'],
+    title: row.title,
+    description: row.description ?? undefined,
+    status: row.status as Task['status'],
+    priority: row.priority as Task['priority'],
+    color: row.color ?? undefined,
+    assigneeId: row.assignee_id ?? undefined,
+    assigneeName: row.assignee_name ?? undefined,
+    epicId: row.epic_id ?? undefined,
+    epicTitle: row.epic_title ?? undefined,
+    epicColor: row.epic_color ?? undefined,
+    parentTaskId: row.parent_task_id ?? undefined,
+    startDate: row.start_date ?? undefined,
+    dueDate: row.due_date ?? undefined,
+    remindAt: row.remind_at ?? undefined,
+    reminderSent: !!row.reminder_sent,
+    createdBy: row.created_by ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }

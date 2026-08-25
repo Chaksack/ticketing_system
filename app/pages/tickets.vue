@@ -19,11 +19,6 @@ const route = useRoute()
 
 onMounted(async () => {
   await Promise.all([fetchTickets(), fetchStaff()])
-
-  const openId = route.query.open
-  if (typeof openId === 'string') {
-    await openTicket({ id: openId } as Ticket)
-  }
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
@@ -37,6 +32,11 @@ async function openTicket(ticket: Ticket) {
   isDetailOpen.value = true
   await fetchTicket(ticket.id)
 }
+
+watch(() => route.query.open, async (openId) => {
+  if (typeof openId === 'string')
+    await openTicket({ id: openId } as Ticket)
+}, { immediate: true })
 
 const isReportOpen = ref(false)
 

@@ -154,6 +154,22 @@ async function migrate() {
   `)
 
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      staff_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      url TEXT,
+      ticket_id TEXT,
+      read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS task_id TEXT')
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id TEXT PRIMARY KEY,
       staff_id TEXT NOT NULL,
@@ -226,6 +242,59 @@ async function migrate() {
   `)
 
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      contact_name TEXT,
+      contact_email TEXT,
+      contact_phone TEXT,
+      source TEXT,
+      stage TEXT NOT NULL DEFAULT 'new',
+      notes TEXT,
+      assigned_to TEXT,
+      converted_client_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS lead_activity (
+      id TEXT PRIMARY KEY,
+      lead_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      actor_id TEXT,
+      actor_name TEXT,
+      from_value TEXT,
+      to_value TEXT,
+      message TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL DEFAULT 'task',
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'todo',
+      priority TEXT NOT NULL DEFAULT 'medium',
+      color TEXT,
+      assignee_id TEXT,
+      epic_id TEXT,
+      parent_task_id TEXT,
+      start_date TEXT,
+      due_date TEXT,
+      remind_at TEXT,
+      reminder_sent INTEGER NOT NULL DEFAULT 0,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS integration_state (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -278,6 +347,11 @@ export async function nextPageId() {
   return `PAGE-${n}`
 }
 
+export async function nextNotificationId() {
+  const n = await nextSequence('notification')
+  return `NOTIF-${n}`
+}
+
 export async function nextActivityId() {
   const n = await nextSequence('activity')
   return `ACT-${n}`
@@ -316,4 +390,19 @@ export async function nextAmcPlanId() {
 export async function nextContractId() {
   const n = await nextSequence('contract')
   return `CONTRACT-${n}`
+}
+
+export async function nextLeadId() {
+  const n = await nextSequence('lead')
+  return `LEAD-${n}`
+}
+
+export async function nextLeadActivityId() {
+  const n = await nextSequence('lead_activity')
+  return `LACT-${n}`
+}
+
+export async function nextTaskId() {
+  const n = await nextSequence('task')
+  return `TASK-${n}`
 }

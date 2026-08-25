@@ -7,7 +7,7 @@ on:
 
 jobs:
   sweep:
-    runs-on: ubuntu-lates
+    runs-on: ubuntu-latest
     steps:
       - name: SLA sweep
         continue-on-error: true
@@ -23,3 +23,8 @@ jobs:
         continue-on-error: true
         run: >-
           curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/amc-reminders"
+
+      - name: Task reminders
+        continue-on-error: true
+        run: >-
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/task-reminders"

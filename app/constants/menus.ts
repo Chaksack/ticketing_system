@@ -17,6 +17,12 @@ export const navMenu: NavMenu[] = [
         roles: ['bd', 'sm'],
       },
       {
+        title: 'Leads',
+        icon: 'i-lucide-target',
+        link: '/leads',
+        roles: ['bd', 'sm'],
+      },
+      {
         title: 'Clients',
         icon: 'i-lucide-users',
         link: '/clients',

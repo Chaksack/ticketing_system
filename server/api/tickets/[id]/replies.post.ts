@@ -59,10 +59,23 @@ export default defineEventHandler(async (event) => {
   }
 
   if (ticket.assignee_id && ticket.assignee_id !== user.id) {
+    const notificationTitle = internal ? `New internal note on ${id}` : `New reply on ${id}`
+    const notificationBody = message.length > 120 ? `${message.slice(0, 117)}...` : message
+    const url = `/tickets?open=${id}`
+
+    await createNotification({
+      staffId: ticket.assignee_id,
+      type: internal ? 'internal_note' : 'reply',
+      title: notificationTitle,
+      body: notificationBody,
+      url,
+      ticketId: id,
+    })
+
     await sendPushToStaff(ticket.assignee_id, {
-      title: internal ? `New internal note on ${id}` : `New reply on ${id}`,
-      body: message.length > 120 ? `${message.slice(0, 117)}...` : message,
-      url: '/tickets',
+      title: notificationTitle,
+      body: notificationBody,
+      url,
     })
   }
 

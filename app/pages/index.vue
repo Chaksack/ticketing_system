@@ -1,16 +1,22 @@
 <script setup lang="ts">
 import NumberFlow from '@number-flow/vue'
 import { stages } from '~/components/clients/data'
+import { leadStages } from '~/components/leads/data'
+import { statuses as taskStatuses } from '~/components/tasks/data'
 
 definePageMeta({
   middleware: 'bd',
 })
 
 const { clients, upcomingRenewals, fetchClients, fetchUpcomingRenewals } = useClients()
+const { leads, fetchLeads } = useLeads()
+const { tasks, fetchTasks } = useTasks()
 
 onMounted(() => {
   fetchClients()
   fetchUpcomingRenewals()
+  fetchLeads()
+  fetchTasks()
 })
 
 const totalClients = computed(() => clients.value.length)
@@ -23,6 +29,18 @@ const renewalsDueSoon = computed(() => upcomingRenewals.value.filter((r) => {
 const stageData = computed(() => stages.map(stage => ({
   stage: stage.label,
   count: clients.value.filter(c => c.stage === stage.value).length,
+})).filter(row => row.count > 0))
+
+const totalLeads = computed(() => leads.value.length)
+const leadStageData = computed(() => leadStages.map(stage => ({
+  stage: stage.label,
+  count: leads.value.filter(l => l.stage === stage.value).length,
+})).filter(row => row.count > 0))
+
+const openTasks = computed(() => tasks.value.filter(t => t.type === 'task' && t.status !== 'done').length)
+const taskStatusData = computed(() => taskStatuses.map(status => ({
+  status: status.label,
+  count: tasks.value.filter(t => t.type === 'task' && t.status === status.value).length,
 })).filter(row => row.count > 0))
 
 function formatDate(value: string) {
@@ -46,7 +64,7 @@ function daysUntil(value: string) {
     </div>
 
     <main class="@container/main flex flex-1 flex-col gap-4 md:gap-8">
-      <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-3">
+      <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-3 @5xl/main:grid-cols-5">
         <Card class="@container/card">
           <CardHeader>
             <CardDescription>Total Clients</CardDescription>
@@ -71,9 +89,25 @@ function daysUntil(value: string) {
             </CardTitle>
           </CardHeader>
         </Card>
+        <Card class="@container/card">
+          <CardHeader>
+            <CardDescription>Total Leads</CardDescription>
+            <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+              <NumberFlow :value="totalLeads" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card class="@container/card">
+          <CardHeader>
+            <CardDescription>Open Tasks</CardDescription>
+            <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+              <NumberFlow :value="openTasks" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
       </div>
 
-      <div class="grid grid-cols-1 gap-4 @2xl/main:grid-cols-2">
+      <div class="grid grid-cols-1 gap-4 @2xl/main:grid-cols-2 @5xl/main:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Clients by Stage</CardTitle>
@@ -86,6 +120,32 @@ function daysUntil(value: string) {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Leads by Stage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DonutChart v-if="leadStageData.length" :data="leadStageData" category="count" index="stage" />
+            <p v-else class="text-sm text-muted-foreground">
+              No leads yet.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Tasks by Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BarChart v-if="taskStatusData.length" :data="taskStatusData" :categories="['count']" index="status" />
+            <p v-else class="text-sm text-muted-foreground">
+              No tasks yet.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Renewals</CardTitle>

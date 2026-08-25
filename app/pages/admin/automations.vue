@@ -74,20 +74,20 @@ async function onDelete(id: string, name: string) {
         </p>
       </div>
 
-      <Dialog v-model:open="isAddOpen">
-        <DialogTrigger as-child>
+      <Sheet v-model:open="isAddOpen">
+        <SheetTrigger as-child>
           <Button>
             <Icon name="i-lucide-plus" class="mr-2 h-4 w-4" />
             New Rule
           </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New Automation Rule</DialogTitle>
-            <DialogDescription>
+        </SheetTrigger>
+        <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
+          <SheetHeader class="p-0">
+            <SheetTitle>New Automation Rule</SheetTitle>
+            <SheetDescription>
               If the condition matches a new ticket, the selected fields are applied.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
 
           <form class="flex flex-col gap-4" @submit="onSubmit">
             <FormField v-slot="{ componentField }" name="name">
@@ -215,14 +215,14 @@ async function onDelete(id: string, name: string) {
               </FormField>
             </div>
 
-            <DialogFooter>
+            <SheetFooter class="p-0">
               <Button type="submit">
                 Create Rule
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
 
     <div class="border rounded-md">

@@ -13,14 +13,8 @@ const { staff, fetchStaff, addStaff } = useStaff()
 const route = useRoute()
 
 onMounted(async () => {
-  await fetchStaff()
-
-  const openId = route.query.open
-  if (typeof openId === 'string') {
-    const member = staff.value.find(s => s.id === openId)
-    if (member)
-      openStaff(member)
-  }
+  if (!staff.value.length)
+    await fetchStaff()
 })
 
 const isAddOpen = ref(false)
@@ -33,6 +27,18 @@ function openStaff(member: StaffMember) {
   selectedStaffId.value = member.id
   isDetailOpen.value = true
 }
+
+watch(() => route.query.open, async (openId) => {
+  if (typeof openId !== 'string')
+    return
+
+  if (!staff.value.length)
+    await fetchStaff()
+
+  const member = staff.value.find(s => s.id === openId)
+  if (member)
+    openStaff(member)
+}, { immediate: true })
 
 const roleOptions = [
   { value: 'admin', label: 'Admin' },
@@ -92,20 +98,20 @@ function formatDate(value: string) {
         </p>
       </div>
 
-      <Dialog v-model:open="isAddOpen">
-        <DialogTrigger as-child>
+      <Sheet v-model:open="isAddOpen">
+        <SheetTrigger as-child>
           <Button>
             <Icon name="i-lucide-user-plus" class="mr-2 h-4 w-4" />
             Add Staff Member
           </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Staff Member</DialogTitle>
-            <DialogDescription>
+        </SheetTrigger>
+        <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
+          <SheetHeader class="p-0">
+            <SheetTitle>Add Staff Member</SheetTitle>
+            <SheetDescription>
               Invite a new staff member and assign their role(s) on the platform.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
 
           <form class="flex flex-col gap-4" @submit="onSubmit">
             <FormField v-slot="{ componentField }" name="name">
@@ -147,14 +153,14 @@ function formatDate(value: string) {
               </FormItem>
             </FormField>
 
-            <DialogFooter>
+            <SheetFooter class="p-0">
               <Button type="submit">
                 Add Staff Member
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
 
     <AdminOnCallPanel />

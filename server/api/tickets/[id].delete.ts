@@ -13,6 +13,7 @@ export default defineEventHandler(async (event) => {
   await db.prepare('DELETE FROM ticket_activity WHERE ticket_id = ?').run(id)
   await db.prepare('DELETE FROM ticket_tags WHERE ticket_id = ?').run(id)
   await db.prepare('DELETE FROM pages WHERE ticket_id = ?').run(id)
+  await db.prepare('DELETE FROM notifications WHERE ticket_id = ?').run(id)
   await db.prepare('DELETE FROM tickets WHERE id = ?').run(id)
 
   return { success: true }

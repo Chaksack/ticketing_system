@@ -2,7 +2,7 @@ import type { AmcContract } from './amc'
 
 export type ClientStage = 'lead' | 'contacted' | 'proposal' | 'negotiation' | 'active' | 'lost'
 
-export type ClientActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'amc_assigned' | 'amc_cancelled' | 'amc_renewal_reminder'
+export type ClientActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'amc_assigned' | 'amc_cancelled' | 'amc_renewal_reminder' | 'converted_from_lead'
 
 export interface ClientActivity {
   id: string

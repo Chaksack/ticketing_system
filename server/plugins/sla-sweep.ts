@@ -6,7 +6,8 @@ const SWEEP_INTERVAL_MS = 5 * 60 * 1000
  * (functions don't keep running between invocations) — there, the same logic runs via
  * Vercel Cron hitting /api/cron/sla-sweep, /api/cron/gmail-inbound and /api/cron/amc-reminders
  * instead. Both paths share the same underlying functions (server/utils/sweeps.ts,
- * server/utils/gmail.ts, server/utils/amcSweep.ts) so there's exactly one implementation either way.
+ * server/utils/gmail.ts, server/utils/amcSweep.ts, server/utils/taskSweep.ts) so there's exactly
+ * one implementation either way.
  */
 export default defineNitroPlugin(async () => {
   await ensureDb()
@@ -15,6 +16,8 @@ export default defineNitroPlugin(async () => {
     runTicketSweep().catch(error => console.error('Ticket sweep failed', error))
 
     checkAmcRenewals().catch(error => console.error('AMC renewal sweep failed', error))
+
+    checkTaskReminders().catch(error => console.error('Task reminder sweep failed', error))
 
     checkGmailInbox().catch((error) => {
       // Not configured is expected until NUXT_GMAIL_REFRESH_TOKEN is set — don't spam logs for it.

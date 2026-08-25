@@ -66,20 +66,20 @@ function formatPrice(price?: number) {
         </p>
       </div>
 
-      <Dialog v-model:open="isAddOpen">
-        <DialogTrigger as-child>
+      <Sheet v-model:open="isAddOpen">
+        <SheetTrigger as-child>
           <Button>
             <Icon name="i-lucide-plus" class="mr-2 h-4 w-4" />
             New Plan
           </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New AMC Plan</DialogTitle>
-            <DialogDescription>
+        </SheetTrigger>
+        <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
+          <SheetHeader class="p-0">
+            <SheetTitle>New AMC Plan</SheetTitle>
+            <SheetDescription>
               Create a reusable template. You'll pick the exact start/end dates when assigning it to a client.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
 
           <form class="flex flex-col gap-4" @submit="onSubmit">
             <FormField v-slot="{ componentField }" name="name">
@@ -124,14 +124,14 @@ function formatPrice(price?: number) {
               </FormField>
             </div>
 
-            <DialogFooter>
+            <SheetFooter class="p-0">
               <Button type="submit">
                 Create Plan
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
 
     <div class="border rounded-md">

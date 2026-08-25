@@ -31,9 +31,20 @@ export default defineEventHandler(async (event) => {
     .run(status, onCall, roles[0], JSON.stringify(roles), id)
 
   if (body.onCall === true && !existing.on_call) {
+    const title = 'You\'re on call'
+    const notificationBody = 'You\'ll be paged for new tickets until your on-call status changes.'
+
+    await createNotification({
+      staffId: id,
+      type: 'on_call_assigned',
+      title,
+      body: notificationBody,
+      url: '/admin',
+    })
+
     await sendPushToStaff(id, {
-      title: 'You\'re on call',
-      body: 'You\'ll be paged for new tickets until your on-call status changes.',
+      title,
+      body: notificationBody,
       url: '/admin',
     })
   }

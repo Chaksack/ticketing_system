@@ -1,44 +1,46 @@
 <script setup lang="ts">
-const { currentUser } = useAuth()
-const { pages, fetchPages, acknowledgePage } = useOnCall()
+import type { AppNotification, NotificationType } from '~/types/notification'
+
+const router = useRouter()
+const { notifications, fetchNotifications, markRead, markAllRead } = useNotifications()
 const { fetchTickets } = useTickets()
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
 onMounted(() => {
-  fetchPages()
-  pollTimer = setInterval(fetchPages, 20_000)
+  fetchNotifications()
+  pollTimer = setInterval(fetchNotifications, 20_000)
 })
 
 onUnmounted(() => {
   clearInterval(pollTimer)
 })
 
-const myNotifications = computed(() =>
-  pages.value
-    .filter(page => page.staffId === currentUser.value?.id)
-    .slice(0, 10),
-)
+const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
 
-const unreadCount = computed(() => myNotifications.value.filter(n => !n.acknowledged).length)
-
-async function acknowledgeAndRefresh(id: string) {
-  await acknowledgePage(id)
-  await fetchTickets()
+const TYPE_ICON: Record<NotificationType, string> = {
+  ticket_page: 'i-lucide-radio',
+  on_call_assigned: 'i-lucide-phone-call',
+  internal_note: 'i-lucide-sticky-note',
+  reply: 'i-lucide-message-square',
+  task_reminder: 'i-lucide-alarm-clock',
 }
 
-async function markAllRead() {
-  const unread = myNotifications.value.filter(n => !n.acknowledged)
-  if (!unread.length)
-    return
+async function onSelect(notification: AppNotification) {
+  await markRead(notification.id)
+  await fetchTickets()
+  if (notification.url)
+    router.push(notification.url)
+}
 
-  await Promise.all(unread.map(n => acknowledgePage(n.id)))
+async function onMarkAllRead() {
+  await markAllRead()
   await fetchTickets()
 }
 
 function onOpenChange(isOpen: boolean) {
   if (!isOpen)
-    markAllRead()
+    onMarkAllRead()
 }
 
 function formatDate(value: string) {
@@ -68,30 +70,31 @@ function formatDate(value: string) {
     <DropdownMenuContent align="end" class="w-80">
       <DropdownMenuLabel class="flex items-center justify-between gap-2">
         <span>Notifications</span>
-        <Button v-if="unreadCount > 0" variant="ghost" size="sm" class="h-6 px-2 text-xs" @click="markAllRead">
+        <Button v-if="unreadCount > 0" variant="ghost" size="sm" class="h-6 px-2 text-xs" @click="onMarkAllRead">
           Mark all read
         </Button>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
 
-      <div v-if="!myNotifications.length" class="px-2 py-6 text-center text-sm text-muted-foreground">
+      <div v-if="!notifications.length" class="px-2 py-6 text-center text-sm text-muted-foreground">
         You're all caught up.
       </div>
 
       <ScrollArea v-else class="max-h-80">
         <DropdownMenuItem
-          v-for="notification in myNotifications"
+          v-for="notification in notifications"
           :key="notification.id"
           class="flex flex-col items-start gap-1 whitespace-normal"
-          @select.prevent="acknowledgeAndRefresh(notification.id)"
+          @select.prevent="onSelect(notification)"
         >
           <div class="flex w-full items-center gap-2">
-            <span v-if="!notification.acknowledged" class="size-1.5 shrink-0 rounded-full bg-primary" />
-            <span class="truncate text-sm font-medium">{{ notification.ticketSubject }}</span>
+            <span v-if="!notification.read" class="size-1.5 shrink-0 rounded-full bg-primary" />
+            <Icon :name="TYPE_ICON[notification.type] ?? 'i-lucide-bell'" class="size-3.5 shrink-0 text-muted-foreground" />
+            <span class="truncate text-sm font-medium">{{ notification.title }}</span>
           </div>
-          <div class="flex w-full items-center justify-between text-xs text-muted-foreground">
-            <span class="font-mono">{{ notification.ticketId }}</span>
-            <span>{{ formatDate(notification.createdAt) }}</span>
+          <div class="flex w-full items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span class="truncate">{{ notification.body }}</span>
+            <span class="shrink-0">{{ formatDate(notification.createdAt) }}</span>
           </div>
         </DropdownMenuItem>
       </ScrollArea>

@@ -12,16 +12,28 @@ export async function pageOnCallForTicket(ticket: Ticket) {
   for (const member of onCallStaff) {
     const pageId = await nextPageId()
     const now = new Date().toISOString()
+    const url = `/tickets?open=${ticket.id}`
+    const title = `Paging ${member.name}`
+    const body = `[${ticket.priority.toUpperCase()}] ${ticket.id}: ${ticket.subject}`
 
     await db.prepare(`
       INSERT INTO pages (id, ticket_id, ticket_subject, staff_id, staff_name, created_at, acknowledged)
       VALUES (?, ?, ?, ?, ?, ?, 0)
     `).run(pageId, ticket.id, ticket.subject, member.id, member.name, now)
 
+    await createNotification({
+      staffId: member.id,
+      type: 'ticket_page',
+      title,
+      body,
+      url,
+      ticketId: ticket.id,
+    })
+
     await sendPushToStaff(member.id, {
-      title: `Paging ${member.name}`,
-      body: `[${ticket.priority.toUpperCase()}] ${ticket.id}: ${ticket.subject}`,
-      url: '/tickets',
+      title,
+      body,
+      url,
       type: 'page',
       tag: pageId,
     })
