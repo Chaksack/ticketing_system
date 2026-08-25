@@ -8,7 +8,7 @@ import {
   parseAbsoluteToLocal,
 } from '@internationalized/date'
 import { toast } from 'vue-sonner'
-import { epicColors, priorities, statuses } from './data'
+import { epicColors, priorities } from './data'
 
 const props = defineProps<{
   task?: Task | null
@@ -20,10 +20,13 @@ const open = defineModel<boolean>('open', { default: false })
 
 const { addTask, updateTask, epics } = useTasks()
 const { staff, fetchStaff } = useStaff()
+const { statuses, fetchStatuses } = useTaskStatuses()
 
 onMounted(() => {
   if (!staff.value.length)
     fetchStaff()
+  if (!statuses.value.length)
+    fetchStatuses()
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
@@ -78,6 +81,8 @@ const startField = useDateTimeField()
 const dueField = useDateTimeField()
 const remindField = useDateTimeField()
 
+const defaultStatusId = computed(() => statuses.value.find(s => s.id === 'todo')?.id ?? statuses.value[0]?.id ?? 'todo')
+
 const title = ref('')
 const description = ref('')
 const status = ref<TaskStatus>('todo')
@@ -89,7 +94,7 @@ const color = ref<string>(epicColors[0]!)
 function resetForm() {
   title.value = ''
   description.value = ''
-  status.value = 'todo'
+  status.value = defaultStatusId.value
   priority.value = 'medium'
   assigneeId.value = 'unassigned'
   epicId.value = 'none'
@@ -204,7 +209,7 @@ async function onSubmit() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="option in statuses" :key="option.value" :value="option.value">
+                <SelectItem v-for="option in statuses" :key="option.id" :value="option.id">
                   {{ option.label }}
                 </SelectItem>
               </SelectContent>

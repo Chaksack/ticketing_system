@@ -6,8 +6,12 @@ definePageMeta({
 })
 
 const { fetchTasks } = useTasks()
+const { fetchStatuses } = useTaskStatuses()
 
 onMounted(async () => {
+  // Sequential, not Promise.all — db0's postgresql connector shares a single client
+  // and warns on overlapping concurrent queries.
+  await fetchStatuses()
   await fetchTasks()
 })
 </script>

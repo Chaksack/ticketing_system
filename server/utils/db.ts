@@ -295,6 +295,16 @@ async function migrate() {
   `)
 
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS task_statuses (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS integration_state (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -405,4 +415,9 @@ export async function nextLeadActivityId() {
 export async function nextTaskId() {
   const n = await nextSequence('task')
   return `TASK-${n}`
+}
+
+export async function nextTaskStatusId() {
+  const n = await nextSequence('task_status')
+  return `STATUS-${n}`
 }

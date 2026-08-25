@@ -2,7 +2,6 @@
 import NumberFlow from '@number-flow/vue'
 import { stages } from '~/components/clients/data'
 import { leadStages } from '~/components/leads/data'
-import { statuses as taskStatuses } from '~/components/tasks/data'
 
 definePageMeta({
   middleware: 'bd',
@@ -11,12 +10,14 @@ definePageMeta({
 const { clients, upcomingRenewals, fetchClients, fetchUpcomingRenewals } = useClients()
 const { leads, fetchLeads } = useLeads()
 const { tasks, fetchTasks } = useTasks()
+const { statuses: taskStatuses, fetchStatuses } = useTaskStatuses()
 
 onMounted(() => {
   fetchClients()
   fetchUpcomingRenewals()
   fetchLeads()
   fetchTasks()
+  fetchStatuses()
 })
 
 const totalClients = computed(() => clients.value.length)
@@ -38,9 +39,9 @@ const leadStageData = computed(() => leadStages.map(stage => ({
 })).filter(row => row.count > 0))
 
 const openTasks = computed(() => tasks.value.filter(t => t.type === 'task' && t.status !== 'done').length)
-const taskStatusData = computed(() => taskStatuses.map(status => ({
+const taskStatusData = computed(() => taskStatuses.value.map(status => ({
   status: status.label,
-  count: tasks.value.filter(t => t.type === 'task' && t.status === status.value).length,
+  count: tasks.value.filter(t => t.type === 'task' && t.status === status.id).length,
 })).filter(row => row.count > 0))
 
 function formatDate(value: string) {

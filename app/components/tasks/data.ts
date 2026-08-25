@@ -1,34 +1,6 @@
 import { Icon } from '#components'
 import { h } from 'vue'
 
-export const statuses = [
-  {
-    value: 'backlog',
-    label: 'Backlog',
-    icon: h(Icon, { name: 'i-lucide-inbox' }),
-  },
-  {
-    value: 'todo',
-    label: 'To Do',
-    icon: h(Icon, { name: 'i-lucide-circle-dot' }),
-  },
-  {
-    value: 'in_progress',
-    label: 'In Progress',
-    icon: h(Icon, { name: 'i-lucide-clock' }),
-  },
-  {
-    value: 'in_review',
-    label: 'In Review',
-    icon: h(Icon, { name: 'i-lucide-eye' }),
-  },
-  {
-    value: 'done',
-    label: 'Done',
-    icon: h(Icon, { name: 'i-lucide-check-circle-2' }),
-  },
-]
-
 export const priorities = [
   {
     value: 'low',

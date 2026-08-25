@@ -1,38 +1,37 @@
 <script setup lang="ts">
-import type { Task, TaskStatus } from '~/types/task'
+import type { Task } from '~/types/task'
+import { toast } from 'vue-sonner'
 import Draggable from 'vuedraggable'
-import { priorities, statuses } from './data'
+import { priorities } from './data'
 import TaskFormSheet from './TaskFormSheet.vue'
 
 const { tasks, epics, updateTask, removeTask, subtasksOf } = useTasks()
-
-const STATUS_COLUMNS = statuses.map(s => ({ value: s.value as TaskStatus, label: s.label }))
+const { statuses, addStatus, renameStatus, removeStatus, reorderStatuses } = useTaskStatuses()
 
 const activeEpicFilter = ref<string | null>(null)
 
-const columnTasks = reactive<Record<TaskStatus, Task[]>>({
-  backlog: [],
-  todo: [],
-  in_progress: [],
-  in_review: [],
-  done: [],
-})
+const columnTasks = reactive<Record<string, Task[]>>({})
 
 function syncColumns() {
-  for (const col of STATUS_COLUMNS) {
-    columnTasks[col.value] = tasks.value.filter(t =>
+  const nextIds = new Set(statuses.value.map(s => s.id))
+  for (const key of Object.keys(columnTasks)) {
+    if (!nextIds.has(key))
+      delete columnTasks[key]
+  }
+  for (const col of statuses.value) {
+    columnTasks[col.id] = tasks.value.filter(t =>
       t.type === 'task'
-      && t.status === col.value
+      && t.status === col.id
       && (!activeEpicFilter.value || t.epicId === activeEpicFilter.value),
     )
   }
 }
 
-watch([tasks, activeEpicFilter], syncColumns, { immediate: true, deep: true })
+watch([tasks, activeEpicFilter, statuses], syncColumns, { immediate: true, deep: true })
 
-async function onChange(status: TaskStatus, evt: any) {
+async function onChange(statusId: string, evt: any) {
   if (evt.added)
-    await updateTask(evt.added.element.id, { status })
+    await updateTask(evt.added.element.id, { status: statusId })
 }
 
 function toggleEpicFilter(epicId: string) {
@@ -47,8 +46,13 @@ function toggleExpanded(taskId: string) {
     expanded.add(taskId)
 }
 
+const doneStatusId = computed(() => statuses.value.find(s => s.id === 'done')?.id ?? statuses.value.at(-1)?.id)
+const todoStatusId = computed(() => statuses.value.find(s => s.id === 'todo')?.id ?? statuses.value[0]?.id)
+
 async function toggleSubtaskDone(subtask: Task) {
-  await updateTask(subtask.id, { status: subtask.status === 'done' ? 'todo' : 'done' })
+  const nextStatus = subtask.status === doneStatusId.value ? todoStatusId.value : doneStatusId.value
+  if (nextStatus)
+    await updateTask(subtask.id, { status: nextStatus })
 }
 
 const formOpen = ref(false)
@@ -104,137 +108,258 @@ const DUE_BADGE_CLASS: Record<string, string> = {
   'due-soon': 'text-amber-600 dark:text-amber-400',
   'overdue': 'text-destructive',
 }
+
+// --- Column management ---
+const renamingColumnId = ref<string | null>(null)
+const renameValue = ref('')
+
+function startRename(col: { id: string, label: string }) {
+  renamingColumnId.value = col.id
+  renameValue.value = col.label
+}
+
+async function confirmRename() {
+  const id = renamingColumnId.value
+  if (!id)
+    return
+  renamingColumnId.value = null
+  if (!renameValue.value.trim())
+    return
+  await renameStatus(id, renameValue.value.trim())
+}
+
+async function onDeleteColumn(col: { id: string, label: string }) {
+  try {
+    await removeStatus(col.id)
+  }
+  catch (error: any) {
+    toast('Could not delete column', {
+      description: error?.data?.statusMessage ?? 'Move or delete its tasks first.',
+    })
+  }
+}
+
+const addingColumn = ref(false)
+const newColumnLabel = ref('')
+
+async function confirmAddColumn() {
+  if (!newColumnLabel.value.trim())
+    return
+  await addStatus(newColumnLabel.value.trim())
+  newColumnLabel.value = ''
+  addingColumn.value = false
+}
+
+async function onColumnsReordered() {
+  await reorderStatuses(statuses.value.map(c => c.id))
+}
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <Button size="sm" variant="outline" @click="openNewEpic">
-        <Icon name="i-lucide-flag" class="mr-1.5 h-4 w-4" />
-        New Epic
-      </Button>
-      <Button size="sm" @click="openNewTask">
-        <Icon name="i-lucide-plus" class="mr-1.5 h-4 w-4" />
-        New Task
-      </Button>
-      <Separator orientation="vertical" class="h-6 mx-1" />
-      <Button
-        v-for="epic in epics"
-        :key="epic.id"
-        size="sm"
-        variant="outline"
-        class="gap-1.5"
-        :class="activeEpicFilter === epic.id && 'border-2'"
-        :style="activeEpicFilter === epic.id ? { borderColor: epic.color } : {}"
-        @click="toggleEpicFilter(epic.id)"
+  <div class="flex gap-4 items-start">
+    <div class="w-56 shrink-0 flex flex-col gap-2 border-r pr-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-semibold text-sm">
+          Epics
+        </h3>
+        <Button size="sm" variant="ghost" class="h-7 px-2" @click="openNewEpic">
+          <Icon name="i-lucide-plus" class="mr-1 h-3.5 w-3.5" />
+          New
+        </Button>
+      </div>
+
+      <button
+        type="button"
+        class="text-left text-sm rounded-md px-2 py-1.5 hover:bg-accent"
+        :class="!activeEpicFilter && 'bg-accent font-medium'"
+        @click="activeEpicFilter = null"
       >
-        <span class="size-2 rounded-full" :style="{ backgroundColor: epic.color }" />
-        {{ epic.title }}
-        <Icon name="i-lucide-pencil" class="size-3 opacity-60" @click.stop="openEdit(epic)" />
-      </Button>
+        All epics
+      </button>
+
+      <div class="flex flex-col gap-0.5 overflow-y-auto max-h-[70vh]">
+        <div
+          v-for="epic in epics"
+          :key="epic.id"
+          class="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+          :class="activeEpicFilter === epic.id && 'bg-accent font-medium'"
+          @click="toggleEpicFilter(epic.id)"
+        >
+          <span class="size-2 rounded-full shrink-0" :style="{ backgroundColor: epic.color }" />
+          <span class="flex-1 truncate">{{ epic.title }}</span>
+          <Icon
+            name="i-lucide-pencil"
+            class="size-3 shrink-0 opacity-0 group-hover:opacity-60"
+            @click.stop="openEdit(epic)"
+          />
+        </div>
+        <p v-if="!epics.length" class="text-xs text-muted-foreground px-2 py-1">
+          No epics yet.
+        </p>
+      </div>
     </div>
 
-    <div class="flex gap-4 overflow-x-auto overflow-y-hidden pb-4">
-      <div v-for="col in STATUS_COLUMNS" :key="col.value" class="w-[280px] shrink-0 flex flex-col gap-2">
-        <div class="flex items-center gap-2 px-1">
-          <h3 class="font-semibold text-sm">
-            {{ col.label }}
-          </h3>
-          <Badge variant="secondary" class="h-5 min-w-5 px-1 font-mono tabular-nums">
-            {{ columnTasks[col.value].length }}
-          </Badge>
-          <Button size="icon-sm" variant="ghost" class="ml-auto size-6 text-muted-foreground" @click="openNewTask">
-            <Icon name="i-lucide-plus" />
-          </Button>
-        </div>
+    <div class="flex-1 min-w-0 flex flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <Button size="sm" @click="openNewTask">
+          <Icon name="i-lucide-plus" class="mr-1.5 h-4 w-4" />
+          New Task
+        </Button>
+      </div>
 
-        <Draggable
-          v-model="columnTasks[col.value]"
-          :group="{ name: 'task-board', pull: true, put: true }"
-          item-key="id"
-          :animation="180"
-          class="flex flex-col gap-3 min-h-6 p-0.5"
-          ghost-class="opacity-50"
-          @change="(evt: any) => onChange(col.value, evt)"
-        >
-          <template #item="{ element: task }: { element: Task }">
-            <div class="rounded-xl border bg-card px-3 py-2 shadow-sm hover:bg-accent/50">
-              <div class="flex items-start justify-between gap-2">
-                <span class="text-xs text-muted-foreground font-mono">{{ task.id }}</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground">
-                      <Icon name="i-lucide-ellipsis-vertical" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="openEdit(task)">
-                      <Icon name="i-lucide-edit-2" class="size-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="openNewSubtask(task.id)">
-                      <Icon name="i-lucide-git-branch-plus" class="size-4" />
-                      Add subtask
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" class="text-destructive" @click="removeTask(task.id)">
-                      <Icon name="i-lucide-trash-2" class="size-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              <p class="font-medium leading-5 mt-1 cursor-pointer" @click="openEdit(task)">
-                {{ task.title }}
-              </p>
-
-              <Badge v-if="task.epicTitle" variant="outline" class="mt-2 gap-1.5">
-                <span class="size-2 rounded-full" :style="{ backgroundColor: task.epicColor }" />
-                {{ task.epicTitle }}
+      <Draggable
+        v-model="statuses"
+        item-key="id"
+        handle=".column-drag-handle"
+        :animation="180"
+        class="flex gap-4 overflow-x-auto overflow-y-hidden pb-4 items-start"
+        @end="onColumnsReordered"
+      >
+        <template #item="{ element: col }: { element: { id: string, label: string } }">
+          <div class="w-[280px] shrink-0 flex flex-col gap-2">
+            <div class="column-drag-handle flex items-center gap-1 px-1 cursor-grab active:cursor-grabbing">
+              <Icon name="i-lucide-grip-vertical" class="size-3.5 text-muted-foreground/50" />
+              <Input
+                v-if="renamingColumnId === col.id"
+                v-model="renameValue"
+                aria-label="Rename column"
+                class="h-6 px-1 text-sm font-semibold"
+                autofocus
+                @keyup.enter="confirmRename"
+                @keyup.esc="renamingColumnId = null"
+                @blur="confirmRename"
+                @click.stop
+              />
+              <h3 v-else class="font-semibold text-sm">
+                {{ col.label }}
+              </h3>
+              <Badge variant="secondary" class="h-5 min-w-5 px-1 font-mono tabular-nums">
+                {{ columnTasks[col.id]?.length ?? 0 }}
               </Badge>
-
-              <div v-if="subtasksOf(task.id).length" class="mt-2">
-                <button type="button" class="text-xs text-muted-foreground flex items-center gap-1" @click="toggleExpanded(task.id)">
-                  <Icon name="i-lucide-chevron-right" class="size-3 transition-transform" :class="expanded.has(task.id) && 'rotate-90'" />
-                  Subtasks ({{ subtasksOf(task.id).filter(s => s.status === 'done').length }}/{{ subtasksOf(task.id).length }})
-                </button>
-                <div v-if="expanded.has(task.id)" class="flex flex-col gap-1 pl-4 mt-1">
-                  <label v-for="sub in subtasksOf(task.id)" :key="sub.id" class="flex items-center gap-2 text-xs">
-                    <Checkbox :model-value="sub.status === 'done'" :aria-label="sub.title" @update:model-value="toggleSubtaskDone(sub)" />
-                    <span :class="sub.status === 'done' && 'line-through text-muted-foreground'">{{ sub.title }}</span>
-                  </label>
-                </div>
-              </div>
-
-              <div class="mt-3 flex items-center justify-between gap-2">
-                <div v-if="task.dueDate" class="flex items-center gap-1 text-xs" :class="DUE_BADGE_CLASS[getTaskDueStatus(task) ?? 'on-track']">
-                  <Icon name="i-lucide-calendar" class="size-3" />
-                  {{ formatDueDate(task) }}
-                </div>
-                <div v-else />
-                <div class="flex items-center gap-2">
-                  <Badge v-if="priorityMeta(task.priority)" variant="outline" :class="priorityMeta(task.priority)?.badgeClass">
-                    <component :is="priorityMeta(task.priority)?.icon" class="size-3" />
-                  </Badge>
-                  <Tooltip v-if="task.assigneeName">
-                    <TooltipTrigger as-child>
-                      <Avatar class="size-6">
-                        <AvatarFallback class="text-[10px]">
-                          {{ initials(task.assigneeName) }}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ task.assigneeName }}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+              <div class="ml-auto flex items-center gap-0.5">
+                <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground" @click="startRename(col)">
+                  <Icon name="i-lucide-pencil" class="size-3" />
+                </Button>
+                <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground" @click="onDeleteColumn(col)">
+                  <Icon name="i-lucide-trash-2" class="size-3" />
+                </Button>
+                <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground" @click="openNewTask">
+                  <Icon name="i-lucide-plus" />
+                </Button>
               </div>
             </div>
-          </template>
-        </Draggable>
-      </div>
+
+            <Draggable
+              v-model="columnTasks[col.id]"
+              :group="{ name: 'task-board', pull: true, put: true }"
+              item-key="id"
+              :animation="180"
+              class="flex flex-col gap-3 min-h-6 p-0.5"
+              ghost-class="opacity-50"
+              @change="(evt: any) => onChange(col.id, evt)"
+            >
+              <template #item="{ element: task }: { element: Task }">
+                <div class="rounded-xl border bg-card px-3 py-2 shadow-sm hover:bg-accent/50">
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-xs text-muted-foreground font-mono">{{ task.id }}</span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger as-child>
+                        <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground">
+                          <Icon name="i-lucide-ellipsis-vertical" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem @click="openEdit(task)">
+                          <Icon name="i-lucide-edit-2" class="size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem @click="openNewSubtask(task.id)">
+                          <Icon name="i-lucide-git-branch-plus" class="size-4" />
+                          Add subtask
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" class="text-destructive" @click="removeTask(task.id)">
+                          <Icon name="i-lucide-trash-2" class="size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <p class="font-medium leading-5 mt-1 cursor-pointer" @click="openEdit(task)">
+                    {{ task.title }}
+                  </p>
+
+                  <Badge v-if="task.epicTitle" variant="outline" class="mt-2 gap-1.5">
+                    <span class="size-2 rounded-full" :style="{ backgroundColor: task.epicColor }" />
+                    {{ task.epicTitle }}
+                  </Badge>
+
+                  <div v-if="subtasksOf(task.id).length" class="mt-2">
+                    <button type="button" class="text-xs text-muted-foreground flex items-center gap-1" @click="toggleExpanded(task.id)">
+                      <Icon name="i-lucide-chevron-right" class="size-3 transition-transform" :class="expanded.has(task.id) && 'rotate-90'" />
+                      Subtasks ({{ subtasksOf(task.id).filter(s => s.status === doneStatusId).length }}/{{ subtasksOf(task.id).length }})
+                    </button>
+                    <div v-if="expanded.has(task.id)" class="flex flex-col gap-1 pl-4 mt-1">
+                      <label v-for="sub in subtasksOf(task.id)" :key="sub.id" class="flex items-center gap-2 text-xs">
+                        <Checkbox :model-value="sub.status === doneStatusId" :aria-label="sub.title" @update:model-value="toggleSubtaskDone(sub)" />
+                        <span :class="sub.status === doneStatusId && 'line-through text-muted-foreground'">{{ sub.title }}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 flex items-center justify-between gap-2">
+                    <div v-if="task.dueDate" class="flex items-center gap-1 text-xs" :class="DUE_BADGE_CLASS[getTaskDueStatus(task) ?? 'on-track']">
+                      <Icon name="i-lucide-calendar" class="size-3" />
+                      {{ formatDueDate(task) }}
+                    </div>
+                    <div v-else />
+                    <div class="flex items-center gap-2">
+                      <Badge v-if="priorityMeta(task.priority)" variant="outline" :class="priorityMeta(task.priority)?.badgeClass">
+                        <component :is="priorityMeta(task.priority)?.icon" class="size-3" />
+                      </Badge>
+                      <Tooltip v-if="task.assigneeName">
+                        <TooltipTrigger as-child>
+                          <Avatar class="size-6">
+                            <AvatarFallback class="text-[10px]">
+                              {{ initials(task.assigneeName) }}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {{ task.assigneeName }}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </Draggable>
+          </div>
+        </template>
+
+        <template #footer>
+          <div class="w-[280px] shrink-0">
+            <div v-if="!addingColumn">
+              <Button variant="ghost" class="w-full justify-start text-muted-foreground" @click="addingColumn = true">
+                <Icon name="i-lucide-plus" class="mr-1.5 h-4 w-4" />
+                Add Column
+              </Button>
+            </div>
+            <div v-else class="flex flex-col gap-2 rounded-lg border p-2">
+              <Input v-model="newColumnLabel" placeholder="Column name" aria-label="Column name" autofocus @keyup.enter="confirmAddColumn" @keyup.esc="addingColumn = false" />
+              <div class="flex gap-2">
+                <Button size="sm" @click="confirmAddColumn">
+                  Add
+                </Button>
+                <Button size="sm" variant="ghost" @click="addingColumn = false">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </Draggable>
     </div>
 
     <TaskFormSheet

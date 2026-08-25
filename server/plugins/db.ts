@@ -147,4 +147,28 @@ export default defineNitroPlugin(async () => {
 
     console.warn('[seed] Created 1 default automation rule.')
   }
+
+  const taskStatusCount = await db.prepare('SELECT COUNT(*) as count FROM task_statuses').get() as { count: number | string }
+
+  if (Number(taskStatusCount.count) === 0) {
+    const now = new Date().toISOString()
+    // Fixed ids matching the values already used by existing `tasks.status` rows —
+    // seeding with generated ids here would orphan every task created before this table existed.
+    const defaultStatuses = [
+      { id: 'backlog', label: 'Backlog' },
+      { id: 'todo', label: 'To Do' },
+      { id: 'in_progress', label: 'In Progress' },
+      { id: 'in_review', label: 'In Review' },
+      { id: 'done', label: 'Done' },
+    ]
+
+    for (const [index, statusDef] of defaultStatuses.entries()) {
+      await db.prepare(`
+        INSERT INTO task_statuses (id, label, position, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(statusDef.id, statusDef.label, index, now, now)
+    }
+
+    console.warn(`[seed] Created ${defaultStatuses.length} default task statuses.`)
+  }
 })

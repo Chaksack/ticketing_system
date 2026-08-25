@@ -1,5 +1,6 @@
 export type TaskType = 'epic' | 'task' | 'subtask'
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done'
+// Staff-defined board columns (see `task_statuses` table / useTaskStatuses) — not a fixed enum.
+export type TaskStatus = string
 export type TaskPriority = 'low' | 'medium' | 'high'
 
 export interface Task {
