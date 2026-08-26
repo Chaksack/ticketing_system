@@ -37,7 +37,7 @@ async function onToggleRole(value: 'admin' | 'agent' | 'bd' | 'sm', checked: boo
   const next = checked ? [...current, value] : current.filter(r => r !== value)
 
   if (next.length === 0) {
-    toast('Cannot remove last role', {
+    toast.error('Cannot remove last role', {
       description: 'A staff member needs at least one role.',
     })
     return

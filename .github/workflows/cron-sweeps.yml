@@ -34,6 +34,11 @@ jobs:
         run: >-
           curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/lead-reminders"
 
+      - name: AMC follow-ups
+        continue-on-error: true
+        run: >-
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/amc-follow-ups"
+
       - name: Prune read notifications
         continue-on-error: true
         run: >-

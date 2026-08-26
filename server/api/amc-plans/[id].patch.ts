@@ -5,6 +5,7 @@ interface UpdateAmcPlanBody {
   description?: string
   defaultDurationMonths?: number
   price?: number
+  currency?: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -29,9 +30,10 @@ export default defineEventHandler(async (event) => {
   const description = body.description !== undefined ? body.description : existing.description
   const defaultDurationMonths = body.defaultDurationMonths ?? existing.default_duration_months
   const price = body.price !== undefined ? body.price : existing.price
+  const currency = body.currency ?? existing.currency
 
-  await db.prepare('UPDATE amc_plans SET name = ?, description = ?, default_duration_months = ?, price = ? WHERE id = ?')
-    .run(name, description, defaultDurationMonths, price, id)
+  await db.prepare('UPDATE amc_plans SET name = ?, description = ?, default_duration_months = ?, price = ?, currency = ? WHERE id = ?')
+    .run(name, description, defaultDurationMonths, price, currency, id)
 
   const row = await db.prepare('SELECT * FROM amc_plans WHERE id = ?').get(id) as AmcPlanRow
   return { plan: mapAmcPlanRow(row) }

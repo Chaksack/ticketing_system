@@ -184,7 +184,7 @@ async function onDeleteColumn(col: { id: string, label: string }) {
     await removeStatus(col.id)
   }
   catch (error: any) {
-    toast('Could not delete column', {
+    toast.error('Could not delete column', {
       description: error?.data?.statusMessage ?? 'Move or delete its tasks first.',
     })
   }

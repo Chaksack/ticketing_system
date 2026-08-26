@@ -7,7 +7,7 @@ export interface NewClient {
   contactPhone?: string
   stage?: ClientStage
   notes?: string
-  assignedTo?: string
+  assigneeIds?: string[]
 }
 
 export interface ClientPatch {
@@ -17,7 +17,7 @@ export interface ClientPatch {
   contactPhone?: string
   stage?: ClientStage
   notes?: string
-  assignedTo?: string | null
+  assigneeIds?: string[]
 }
 
 export interface UpcomingRenewal {
@@ -72,16 +72,47 @@ export function useClients() {
     return client
   }
 
-  async function assignAmc(id: string, payload: { planId: string, startDate: string, endDate: string }) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/amc-contracts`, { method: 'POST', body: payload })
-    replaceClient(client)
-    return client
-  }
-
   async function removeClient(id: string) {
     await $fetch<{ success: true }>(`/api/clients/${id}`, { method: 'DELETE' })
     clients.value = clients.value.filter(c => c.id !== id)
   }
 
-  return { clients, upcomingRenewals, fetchClients, fetchUpcomingRenewals, fetchClient, addClient, updateClient, assignAmc, removeClient }
+  async function addContactEmail(id: string, payload: { email: string, label?: string }) {
+    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contact-emails`, { method: 'POST', body: payload })
+    replaceClient(client)
+    return client
+  }
+
+  async function removeContactEmail(id: string, emailId: string) {
+    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contact-emails/${emailId}`, { method: 'DELETE' })
+    replaceClient(client)
+    return client
+  }
+
+  async function addContactPhone(id: string, payload: { phone: string, label?: string }) {
+    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contact-phones`, { method: 'POST', body: payload })
+    replaceClient(client)
+    return client
+  }
+
+  async function removeContactPhone(id: string, phoneId: string) {
+    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contact-phones/${phoneId}`, { method: 'DELETE' })
+    replaceClient(client)
+    return client
+  }
+
+  return {
+    clients,
+    upcomingRenewals,
+    fetchClients,
+    fetchUpcomingRenewals,
+    fetchClient,
+    addClient,
+    updateClient,
+    removeClient,
+    addContactEmail,
+    removeContactEmail,
+    addContactPhone,
+    removeContactPhone,
+  }
 }

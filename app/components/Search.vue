@@ -6,7 +6,12 @@ interface SearchResults {
   clients: { id: string, name: string, contactName: string | null }[]
   staff: { id: string, name: string, email: string }[]
   amcPlans: { id: string, name: string }[]
+  leads: { id: string, name: string, contactName: string | null }[]
+  tasks: { id: string, title: string, type: string }[]
+  projects: { id: string, name: string, clientName: string | null }[]
 }
+
+const EMPTY_RESULTS: SearchResults = { tickets: [], clients: [], staff: [], amcPlans: [], leads: [], tasks: [], projects: [] }
 
 const visibleNavLinks = useVisibleNavLinks()
 
@@ -19,18 +24,21 @@ defineShortcuts({
 
 const query = ref('')
 const isSearching = ref(false)
-const results = ref<SearchResults>({ tickets: [], clients: [], staff: [], amcPlans: [] })
+const results = ref<SearchResults>({ ...EMPTY_RESULTS })
 
 const hasResults = computed(() =>
   results.value.tickets.length > 0
   || results.value.clients.length > 0
   || results.value.staff.length > 0
-  || results.value.amcPlans.length > 0,
+  || results.value.amcPlans.length > 0
+  || results.value.leads.length > 0
+  || results.value.tasks.length > 0
+  || results.value.projects.length > 0,
 )
 
 const runSearch = useDebounceFn(async (q: string) => {
   if (q.trim().length < 2) {
-    results.value = { tickets: [], clients: [], staff: [], amcPlans: [] }
+    results.value = { ...EMPTY_RESULTS }
     isSearching.value = false
     return
   }
@@ -38,7 +46,7 @@ const runSearch = useDebounceFn(async (q: string) => {
     results.value = await $fetch<SearchResults>('/api/search', { query: { q } })
   }
   catch {
-    results.value = { tickets: [], clients: [], staff: [], amcPlans: [] }
+    results.value = { ...EMPTY_RESULTS }
   }
   finally {
     isSearching.value = false
@@ -81,7 +89,7 @@ function handleSelectLink(link: string) {
       <input
         ref="inputRef"
         v-model="query"
-        placeholder="Search tickets, clients, staff..."
+        placeholder="Search tickets, clients, leads, tasks, projects, staff..."
         class="placeholder:text-muted-foreground flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
       >
     </div>
@@ -130,6 +138,54 @@ function handleSelectLink(link: string) {
             <span class="flex flex-col">
               <span>{{ client.name }}</span>
               <span v-if="client.contactName" class="text-xs text-muted-foreground">{{ client.contactName }}</span>
+            </span>
+          </CommandItem>
+        </CommandGroup>
+
+        <CommandGroup v-if="results.leads.length" heading="Leads">
+          <CommandItem
+            v-for="lead in results.leads"
+            :key="lead.id"
+            :value="`lead-${lead.id}`"
+            class="gap-2"
+            @select="handleSelectLink(`/leads?open=${lead.id}`)"
+          >
+            <Icon name="i-lucide-target" />
+            <span class="flex flex-col">
+              <span>{{ lead.name }}</span>
+              <span v-if="lead.contactName" class="text-xs text-muted-foreground">{{ lead.contactName }}</span>
+            </span>
+          </CommandItem>
+        </CommandGroup>
+
+        <CommandGroup v-if="results.tasks.length" heading="Tasks">
+          <CommandItem
+            v-for="task in results.tasks"
+            :key="task.id"
+            :value="`task-${task.id}`"
+            class="gap-2"
+            @select="handleSelectLink('/tasks')"
+          >
+            <Icon name="i-lucide-calendar-check-2" />
+            <span class="flex flex-col">
+              <span>{{ task.title }}</span>
+              <span class="text-xs text-muted-foreground capitalize">{{ task.id }} · {{ task.type }}</span>
+            </span>
+          </CommandItem>
+        </CommandGroup>
+
+        <CommandGroup v-if="results.projects.length" heading="Projects">
+          <CommandItem
+            v-for="project in results.projects"
+            :key="project.id"
+            :value="`project-${project.id}`"
+            class="gap-2"
+            @select="handleSelectLink(`/projects?open=${project.id}`)"
+          >
+            <Icon name="i-lucide-folder-kanban" />
+            <span class="flex flex-col">
+              <span>{{ project.name }}</span>
+              <span v-if="project.clientName" class="text-xs text-muted-foreground">{{ project.clientName }}</span>
             </span>
           </CommandItem>
         </CommandGroup>

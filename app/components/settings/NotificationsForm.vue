@@ -27,7 +27,7 @@ async function onToggle(enable: boolean) {
     }
   }
   catch (error: any) {
-    toast('Could not update notifications', {
+    toast.error('Could not update notifications', {
       description: error?.message ?? 'Something went wrong. Please try again.',
     })
   }

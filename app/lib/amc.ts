@@ -3,8 +3,8 @@ import type { AmcContract, AmcContractDisplayStatus } from '../types/amc'
 const EXPIRING_SOON_DAYS = 30
 
 export function getContractDisplayStatus(contract: Pick<AmcContract, 'status' | 'endDate'>): AmcContractDisplayStatus {
-  if (contract.status === 'cancelled')
-    return 'cancelled'
+  if (contract.status !== 'active')
+    return contract.status
 
   const now = Date.now()
   const end = new Date(contract.endDate).getTime()

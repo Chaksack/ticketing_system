@@ -72,5 +72,41 @@ export function useLeads() {
     leads.value = leads.value.filter(l => l.id !== id)
   }
 
-  return { leads, fetchLeads, fetchLead, addLead, updateLead, convertLead, removeLead }
+  async function addContactEmail(id: string, payload: { email: string, label?: string }) {
+    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/contact-emails`, { method: 'POST', body: payload })
+    replaceLead(lead)
+    return lead
+  }
+
+  async function removeContactEmail(id: string, emailId: string) {
+    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/contact-emails/${emailId}`, { method: 'DELETE' })
+    replaceLead(lead)
+    return lead
+  }
+
+  async function addContactPhone(id: string, payload: { phone: string, label?: string }) {
+    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/contact-phones`, { method: 'POST', body: payload })
+    replaceLead(lead)
+    return lead
+  }
+
+  async function removeContactPhone(id: string, phoneId: string) {
+    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/contact-phones/${phoneId}`, { method: 'DELETE' })
+    replaceLead(lead)
+    return lead
+  }
+
+  return {
+    leads,
+    fetchLeads,
+    fetchLead,
+    addLead,
+    updateLead,
+    convertLead,
+    removeLead,
+    addContactEmail,
+    removeContactEmail,
+    addContactPhone,
+    removeContactPhone,
+  }
 }

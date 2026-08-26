@@ -85,7 +85,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not submit your request', {
+    toast.error('Could not submit your request', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }

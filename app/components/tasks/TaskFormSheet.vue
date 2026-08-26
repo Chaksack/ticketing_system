@@ -118,7 +118,7 @@ async function onSubmit() {
     open.value = false
   }
   catch (error: any) {
-    toast('Could not save', {
+    toast.error('Could not save', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }

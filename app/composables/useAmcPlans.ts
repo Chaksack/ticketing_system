@@ -5,6 +5,7 @@ export interface NewAmcPlan {
   description?: string
   defaultDurationMonths?: number
   price?: number
+  currency?: string
 }
 
 export function useAmcPlans() {

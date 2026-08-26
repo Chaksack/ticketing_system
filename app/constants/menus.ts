@@ -30,13 +30,13 @@ export const navMenu: NavMenu[] = [
       },
       {
         title: 'AMC Plans',
-        icon: 'i-lucide-users',
+        icon: 'i-lucide-construction',
         link: '/amc-plans',
         roles: ['bd', 'sm'],
       },
       {
         title: 'Projects',
-        icon: 'i-lucide-users',
+        icon: 'i-lucide-folder-kanban',
         link: '/projects',
         roles: ['bd', 'sm'],
       },
@@ -84,6 +84,12 @@ export const navMenu: NavMenu[] = [
         title: 'Automations',
         icon: 'i-lucide-workflow',
         link: '/admin/automations',
+        adminOnly: true,
+      },
+      {
+        title: 'Activity Log',
+        icon: 'i-lucide-history',
+        link: '/admin/activity',
         adminOnly: true,
       },
     ],

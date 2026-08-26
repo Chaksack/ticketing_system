@@ -197,4 +197,15 @@ export default defineNitroPlugin(async () => {
 
     console.warn('[migrate] Backfilled lead assignees from the legacy assigned_to column.')
   }
+
+  const clientAssigneeCount = await db.prepare('SELECT COUNT(*) as count FROM client_assignees').get() as { count: number | string }
+
+  if (Number(clientAssigneeCount.count) === 0) {
+    await db.prepare(`
+      INSERT INTO client_assignees (client_id, staff_id)
+      SELECT id, assigned_to FROM clients WHERE assigned_to IS NOT NULL
+    `).run()
+
+    console.warn('[migrate] Backfilled client assignees from the legacy assigned_to column.')
+  }
 })

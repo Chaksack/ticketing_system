@@ -65,7 +65,7 @@ const onReportSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not report ticket', {
+    toast.error('Could not report ticket', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }

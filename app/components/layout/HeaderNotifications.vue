@@ -6,6 +6,7 @@ const { notifications, fetchNotifications, markRead, markAllRead } = useNotifica
 const { fetchTickets } = useTickets()
 const { fetchTasks } = useTasks()
 const { fetchLeads } = useLeads()
+const { fetchClients } = useClients()
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
@@ -28,16 +29,19 @@ const TYPE_ICON: Record<NotificationType, string> = {
   task_reminder: 'i-lucide-alarm-clock',
   task_assigned: 'i-lucide-user-check',
   lead_reminder: 'i-lucide-target',
+  amc_follow_up: 'i-lucide-file-clock',
 }
 
 async function onSelect(notification: AppNotification) {
   await markRead(notification.id)
   // Refetch whichever list this notification actually affects, not always tickets —
-  // otherwise a task/lead notification leaves that page showing stale data.
+  // otherwise a task/lead/AMC notification leaves that page showing stale data.
   if (notification.taskId)
     await fetchTasks()
   else if (notification.leadId)
     await fetchLeads()
+  else if (notification.contractId)
+    await fetchClients()
   else
     await fetchTickets()
   if (notification.url)
@@ -51,6 +55,7 @@ async function onMarkAllRead() {
   await fetchTickets()
   await fetchTasks()
   await fetchLeads()
+  await fetchClients()
 }
 
 function onOpenChange(isOpen: boolean) {

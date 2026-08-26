@@ -46,7 +46,7 @@ async function save(policy: SlaPolicy) {
     })
   }
   catch (error: any) {
-    toast('Could not update policy', {
+    toast.error('Could not update policy', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }

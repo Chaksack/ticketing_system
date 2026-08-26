@@ -78,3 +78,32 @@ export async function setLeadAssignees(leadId: string, staffIds: string[]) {
   for (const staffId of staffIds)
     await db.prepare('INSERT INTO lead_assignees (lead_id, staff_id) VALUES (?, ?)').run(leadId, staffId)
 }
+
+export async function getClientAssignees(clientId: string): Promise<AssigneeRef[]> {
+  const db = useDatabase()
+  return await db.prepare(`
+    SELECT staff.id, staff.name
+    FROM client_assignees
+    JOIN staff ON staff.id = client_assignees.staff_id
+    WHERE client_assignees.client_id = ?
+    ORDER BY staff.name ASC
+  `).all(clientId) as AssigneeRef[]
+}
+
+export async function getAllClientAssignees(): Promise<Map<string, AssigneeRef[]>> {
+  const db = useDatabase()
+  const rows = await db.prepare(`
+    SELECT client_assignees.client_id AS entity_id, staff.id, staff.name
+    FROM client_assignees
+    JOIN staff ON staff.id = client_assignees.staff_id
+    ORDER BY staff.name ASC
+  `).all() as AssigneeJoinRow[]
+  return groupAssignees(rows)
+}
+
+export async function setClientAssignees(clientId: string, staffIds: string[]) {
+  const db = useDatabase()
+  await db.prepare('DELETE FROM client_assignees WHERE client_id = ?').run(clientId)
+  for (const staffId of staffIds)
+    await db.prepare('INSERT INTO client_assignees (client_id, staff_id) VALUES (?, ?)').run(clientId, staffId)
+}

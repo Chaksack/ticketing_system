@@ -18,6 +18,24 @@ onMounted(async () => {
     await fetchStaff()
 })
 
+const searchQuery = ref('')
+const roleFilter = ref('all')
+const statusFilter = ref('all')
+
+const filteredStaff = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+
+  return staff.value.filter((member) => {
+    if (roleFilter.value !== 'all' && !member.roles.includes(roleFilter.value as StaffMember['roles'][number]))
+      return false
+    if (statusFilter.value !== 'all' && member.status !== statusFilter.value)
+      return false
+    if (query && !member.name.toLowerCase().includes(query) && !member.email.toLowerCase().includes(query))
+      return false
+    return true
+  })
+})
+
 const isAddOpen = ref(false)
 
 const isDetailOpen = ref(false)
@@ -76,7 +94,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not add staff member', {
+    toast.error('Could not add staff member', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
@@ -166,6 +184,45 @@ function formatDate(value: string) {
 
     <AdminOnCallPanel />
 
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <Icon name="i-lucide-search" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input v-model="searchQuery" placeholder="Search staff..." class="pl-8" />
+      </div>
+      <Select v-model="roleFilter">
+        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">
+            All roles
+          </SelectItem>
+          <SelectItem v-for="option in roleOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Select v-model="statusFilter">
+        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">
+            All statuses
+          </SelectItem>
+          <SelectItem value="active">
+            Active
+          </SelectItem>
+          <SelectItem value="pending">
+            Pending
+          </SelectItem>
+          <SelectItem value="disabled">
+            Disabled
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
     <div class="border rounded-md">
       <Table>
         <TableHeader>
@@ -179,9 +236,9 @@ function formatDate(value: string) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <template v-if="staff.length">
+          <template v-if="filteredStaff.length">
             <TableRow
-              v-for="member in staff"
+              v-for="member in filteredStaff"
               :key="member.id"
               class="cursor-pointer"
               @click="openStaff(member)"
@@ -218,7 +275,7 @@ function formatDate(value: string) {
           </template>
           <TableRow v-else>
             <TableCell :colspan="6" class="h-24 text-center">
-              No staff members yet.
+              No staff members match your filters.
             </TableCell>
           </TableRow>
         </TableBody>

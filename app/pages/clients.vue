@@ -29,6 +29,29 @@ function stageBadgeClass(value: string) {
   return stages.find(s => s.value === value)?.badgeClass
 }
 
+const searchQuery = ref('')
+const stageFilter = ref('all')
+const assigneeFilter = ref('all')
+
+const filteredClients = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+
+  return clients.value.filter((client) => {
+    if (stageFilter.value !== 'all' && client.stage !== stageFilter.value)
+      return false
+    if (assigneeFilter.value === 'unassigned' && client.assignees.length)
+      return false
+    else if (assigneeFilter.value !== 'all' && assigneeFilter.value !== 'unassigned' && !client.assignees.some(a => a.id === assigneeFilter.value))
+      return false
+    if (query) {
+      const haystack = `${client.name} ${client.contactName ?? ''} ${client.contactEmail ?? ''}`.toLowerCase()
+      if (!haystack.includes(query))
+        return false
+    }
+    return true
+  })
+})
+
 const isDetailOpen = ref(false)
 const selectedClientId = ref<string | null>(null)
 const selectedClient = computed(() => clients.value.find(c => c.id === selectedClientId.value) ?? null)
@@ -52,17 +75,17 @@ const clientFormSchema = toTypedSchema(z.object({
   contactEmail: z.string().email({ message: 'Please enter a valid email address.' }).optional().or(z.literal('')),
   contactPhone: z.string().optional(),
   stage: z.enum(['lead', 'contacted', 'proposal', 'negotiation', 'active', 'lost']),
-  assignedTo: z.string().optional(),
+  assigneeIds: z.array(z.string()).optional(),
 }))
 
 const { handleSubmit, resetForm } = useForm({
   validationSchema: clientFormSchema,
-  initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', stage: 'lead', assignedTo: undefined },
+  initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', stage: 'lead', assigneeIds: [] },
 })
 
 const onSubmit = handleSubmit(async (values) => {
   try {
-    const client = await addClient({ ...values, assignedTo: values.assignedTo || undefined })
+    const client = await addClient(values)
     resetForm()
     isAddOpen.value = false
     toast('Client added', {
@@ -70,7 +93,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not add client', {
+    toast.error('Could not add client', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
@@ -168,21 +191,12 @@ const onSubmit = handleSubmit(async (values) => {
               </FormField>
             </div>
 
-            <FormField v-slot="{ componentField }" name="assignedTo">
+            <FormField v-slot="{ componentField }" name="assigneeIds">
               <FormItem>
                 <FormLabel>Assign to (optional)</FormLabel>
-                <Select v-bind="componentField">
-                  <FormControl>
-                    <SelectTrigger class="w-full">
-                      <SelectValue placeholder="Leave unassigned" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-                      {{ member.name }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <StaffAssigneePicker v-bind="componentField" :staff="activeStaff" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             </FormField>
@@ -197,6 +211,42 @@ const onSubmit = handleSubmit(async (values) => {
       </Sheet>
     </div>
 
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <Icon name="i-lucide-search" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input v-model="searchQuery" placeholder="Search clients..." class="pl-8" />
+      </div>
+      <Select v-model="stageFilter">
+        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">
+            All stages
+          </SelectItem>
+          <SelectItem v-for="option in stages" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Select v-model="assigneeFilter">
+        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">
+            All assignees
+          </SelectItem>
+          <SelectItem value="unassigned">
+            Unassigned
+          </SelectItem>
+          <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
+            {{ member.name }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
     <div class="border rounded-md">
       <Table>
         <TableHeader>
@@ -209,9 +259,9 @@ const onSubmit = handleSubmit(async (values) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <template v-if="clients.length">
+          <template v-if="filteredClients.length">
             <TableRow
-              v-for="client in clients"
+              v-for="client in filteredClients"
               :key="client.id"
               class="cursor-pointer"
               @click="openClient(client)"
@@ -228,14 +278,14 @@ const onSubmit = handleSubmit(async (values) => {
                 </Badge>
               </TableCell>
               <TableCell class="text-muted-foreground">
-                {{ client.assignedToName || 'Unassigned' }}
+                {{ client.assignees.length ? client.assignees.map(a => a.name).join(', ') : 'Unassigned' }}
               </TableCell>
               <TableCell>{{ client.activeContractCount ?? 0 }}</TableCell>
             </TableRow>
           </template>
           <TableRow v-else>
             <TableCell :colspan="5" class="h-24 text-center">
-              No clients yet.
+              No clients match your filters.
             </TableCell>
           </TableRow>
         </TableBody>

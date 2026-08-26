@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { AcceptableValue } from 'reka-ui'
-import type { AmcContractDisplayStatus } from '~/types/amc'
 import type { Client, ClientActivity, ClientStage } from '~/types/client'
+import type { Project, ProjectStatus } from '~/types/project'
 import { toast } from 'vue-sonner'
+import AmcContractCard from '~/components/projects/AmcContractCard.vue'
+import { projectStatuses } from '~/components/projects/data'
 import { stages } from './data'
 
 const props = defineProps<{
@@ -10,18 +12,45 @@ const props = defineProps<{
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
+const router = useRouter()
 
-const { updateClient, assignAmc } = useClients()
-const { cancelContract } = useAmcContracts()
+const { updateClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone } = useClients()
 const { staff, fetchStaff } = useStaff()
-const { plans, fetchPlans } = useAmcPlans()
+const { projectsForClient, fetchProjects, addProject } = useProjects()
 
 onMounted(() => {
   if (!staff.value.length)
     fetchStaff()
-  if (!plans.value.length)
-    fetchPlans()
+  fetchProjects()
 })
+
+const clientProjects = computed(() => props.client ? projectsForClient(props.client.id) : [])
+
+function projectStatusBadgeClass(status: ProjectStatus) {
+  return projectStatuses.find(s => s.value === status)?.badgeClass
+}
+
+function projectStatusLabel(status: ProjectStatus) {
+  return projectStatuses.find(s => s.value === status)?.label ?? status
+}
+
+function openProject(project: Project) {
+  router.push(`/projects?open=${project.id}`)
+}
+
+const isAddProjectOpen = ref(false)
+const newProject = reactive({ name: '', status: 'planned' as ProjectStatus })
+
+async function onAddProject() {
+  if (!props.client || !newProject.name.trim())
+    return
+
+  await addProject({ clientId: props.client.id, name: newProject.name.trim(), status: newProject.status })
+  newProject.name = ''
+  newProject.status = 'planned'
+  isAddProjectOpen.value = false
+  toast('Project created')
+}
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
 const stage = computed(() => stages.find(s => s.value === props.client?.stage))
@@ -36,17 +65,11 @@ async function onStageChange(value: AcceptableValue) {
   })
 }
 
-async function onAssigneeChange(value: AcceptableValue) {
+async function onAssigneesChange(assigneeIds: string[]) {
   if (!props.client)
     return
 
-  const assignedTo = value === 'unassigned' ? null : value as string
-  await updateClient(props.client.id, { assignedTo })
-
-  const name = staff.value.find(s => s.id === assignedTo)?.name
-  toast('Assignee updated', {
-    description: name ? `Assigned to ${name}.` : 'Client unassigned.',
-  })
+  await updateClient(props.client.id, { assigneeIds })
 }
 
 const notesDraft = ref('')
@@ -62,67 +85,64 @@ async function saveNotes() {
   toast('Notes saved')
 }
 
-const isAssignAmcOpen = ref(false)
-const newContract = reactive({ planId: '', startDate: '', endDate: '' })
+const nameDraft = ref('')
+const contactNameDraft = ref('')
+const contactEmailDraft = ref('')
+const contactPhoneDraft = ref('')
 
-function resetContractForm() {
-  newContract.planId = ''
-  const today = new Date()
-  newContract.startDate = today.toISOString().slice(0, 10)
-  const end = new Date(today)
-  end.setMonth(end.getMonth() + 12)
-  newContract.endDate = end.toISOString().slice(0, 10)
-}
+watch(() => props.client?.id, () => {
+  nameDraft.value = props.client?.name ?? ''
+  contactNameDraft.value = props.client?.contactName ?? ''
+  contactEmailDraft.value = props.client?.contactEmail ?? ''
+  contactPhoneDraft.value = props.client?.contactPhone ?? ''
+}, { immediate: true })
 
-watch(isAssignAmcOpen, (isOpen) => {
-  if (isOpen)
-    resetContractForm()
-})
-
-watch(() => newContract.planId, (planId) => {
-  const plan = plans.value.find(p => p.id === planId)
-  if (!plan || !newContract.startDate)
-    return
-  const end = new Date(newContract.startDate)
-  end.setMonth(end.getMonth() + plan.defaultDurationMonths)
-  newContract.endDate = end.toISOString().slice(0, 10)
-})
-
-async function onAssignAmc() {
-  if (!props.client || !newContract.planId || !newContract.startDate || !newContract.endDate)
+async function saveDetails() {
+  if (!props.client || !nameDraft.value.trim())
     return
 
-  try {
-    await assignAmc(props.client.id, { ...newContract })
-    isAssignAmcOpen.value = false
-    toast('AMC plan assigned', {
-      description: `Assigned to ${props.client.name}.`,
-    })
-  }
-  catch (error: any) {
-    toast('Could not assign plan', {
-      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
-    })
-  }
+  await updateClient(props.client.id, {
+    name: nameDraft.value.trim(),
+    contactName: contactNameDraft.value.trim(),
+    contactEmail: contactEmailDraft.value.trim(),
+    contactPhone: contactPhoneDraft.value.trim(),
+  })
+  toast('Details saved')
 }
 
-async function onCancelContract(contractId: string) {
-  await cancelContract(contractId)
-  toast('Contract cancelled')
+const newEmail = ref('')
+const newEmailLabel = ref('')
+const newPhone = ref('')
+const newPhoneLabel = ref('')
+
+async function onAddEmail() {
+  if (!props.client || !newEmail.value.trim())
+    return
+
+  await addContactEmail(props.client.id, { email: newEmail.value.trim(), label: newEmailLabel.value.trim() || undefined })
+  newEmail.value = ''
+  newEmailLabel.value = ''
 }
 
-const CONTRACT_STATUS_BADGE_CLASS: Record<AmcContractDisplayStatus, string> = {
-  active: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30',
-  expiring: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
-  expired: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
-  cancelled: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30',
+async function onRemoveEmail(emailId: string) {
+  if (!props.client)
+    return
+  await removeContactEmail(props.client.id, emailId)
 }
 
-const CONTRACT_STATUS_LABEL: Record<AmcContractDisplayStatus, string> = {
-  active: 'Active',
-  expiring: 'Expiring soon',
-  expired: 'Expired',
-  cancelled: 'Cancelled',
+async function onAddPhone() {
+  if (!props.client || !newPhone.value.trim())
+    return
+
+  await addContactPhone(props.client.id, { phone: newPhone.value.trim(), label: newPhoneLabel.value.trim() || undefined })
+  newPhone.value = ''
+  newPhoneLabel.value = ''
+}
+
+async function onRemovePhone(phoneId: string) {
+  if (!props.client)
+    return
+  await removeContactPhone(props.client.id, phoneId)
 }
 
 function activityLabel(activity: ClientActivity) {
@@ -140,10 +160,6 @@ function activityLabel(activity: ClientActivity) {
     default:
       return activity.message ?? `${actor} updated this client`
   }
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function formatDateTime(value: string) {
@@ -184,19 +200,7 @@ function formatDateTime(value: string) {
           </div>
           <div class="flex flex-wrap items-center gap-2 pt-2">
             <span class="text-xs text-muted-foreground">Assigned to</span>
-            <Select :model-value="client.assignedTo ?? 'unassigned'" @update:model-value="onAssigneeChange">
-              <SelectTrigger class="h-7 w-auto gap-1.5 px-2 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">
-                  Unassigned
-                </SelectItem>
-                <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-                  {{ member.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <StaffAssigneePicker :model-value="client.assignees.map(a => a.id)" :staff="activeStaff" @update:model-value="onAssigneesChange" />
           </div>
           <div class="text-sm text-muted-foreground pt-1 flex flex-col gap-0.5">
             <span v-if="client.contactName">{{ client.contactName }}</span>
@@ -207,6 +211,88 @@ function formatDateTime(value: string) {
 
         <ScrollArea class="flex-1 min-h-0">
           <div class="flex flex-col gap-6 px-6 pt-4 pb-6">
+            <div class="flex flex-col gap-2">
+              <h4 class="text-sm font-medium">
+                Details
+              </h4>
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Client Name</Label>
+                <Input v-model="nameDraft" placeholder="Company name" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Contact Name</Label>
+                <Input v-model="contactNameDraft" placeholder="Jane Doe" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <Label class="text-xs text-muted-foreground">Primary Email</Label>
+                  <Input v-model="contactEmailDraft" type="email" placeholder="jane@acme.com" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label class="text-xs text-muted-foreground">Primary Phone</Label>
+                  <Input v-model="contactPhoneDraft" placeholder="Optional" />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <Button size="sm" variant="outline" :disabled="!nameDraft.trim()" @click="saveDetails">
+                  Save Details
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div class="flex flex-col gap-3">
+              <h4 class="text-sm font-medium">
+                Additional Contact Info
+              </h4>
+              <p class="text-xs text-muted-foreground -mt-1">
+                Extra emails/phones for the same contact person (e.g. work + personal).
+              </p>
+
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Emails</Label>
+                <div v-for="email in client.additionalEmails" :key="email.id" class="flex items-center gap-2 text-sm">
+                  <span class="flex-1 truncate">{{ email.email }}</span>
+                  <Badge v-if="email.label" variant="outline" class="text-[10px]">
+                    {{ email.label }}
+                  </Badge>
+                  <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground" @click="onRemoveEmail(email.id)">
+                    <Icon name="i-lucide-x" class="size-3" />
+                  </Button>
+                </div>
+                <div class="flex gap-2">
+                  <Input v-model="newEmail" type="email" placeholder="another@acme.com" class="flex-1" />
+                  <Input v-model="newEmailLabel" placeholder="Label (optional)" class="w-32" />
+                  <Button size="icon-sm" variant="outline" class="shrink-0" :disabled="!newEmail.trim()" @click="onAddEmail">
+                    <Icon name="i-lucide-plus" class="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Phone Numbers</Label>
+                <div v-for="phone in client.additionalPhones" :key="phone.id" class="flex items-center gap-2 text-sm">
+                  <span class="flex-1 truncate">{{ phone.phone }}</span>
+                  <Badge v-if="phone.label" variant="outline" class="text-[10px]">
+                    {{ phone.label }}
+                  </Badge>
+                  <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground" @click="onRemovePhone(phone.id)">
+                    <Icon name="i-lucide-x" class="size-3" />
+                  </Button>
+                </div>
+                <div class="flex gap-2">
+                  <Input v-model="newPhone" placeholder="+233 24 000 0000" class="flex-1" />
+                  <Input v-model="newPhoneLabel" placeholder="Label (optional)" class="w-32" />
+                  <Button size="icon-sm" variant="outline" class="shrink-0" :disabled="!newPhone.trim()" @click="onAddPhone">
+                    <Icon name="i-lucide-plus" class="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
             <div class="flex flex-col gap-2">
               <h4 class="text-sm font-medium">
                 Notes
@@ -224,65 +310,75 @@ function formatDateTime(value: string) {
             <div class="flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <h4 class="text-sm font-medium">
-                  AMC Contracts
+                  Projects
                 </h4>
-                <Popover v-model:open="isAssignAmcOpen">
+                <Popover v-model:open="isAddProjectOpen">
                   <PopoverTrigger as-child>
                     <Button size="sm" variant="outline" class="gap-1.5">
                       <Icon name="i-lucide-plus" class="h-3.5 w-3.5" />
-                      Assign AMC
+                      New Project
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent class="w-[280px] flex flex-col gap-3" align="end">
+                  <PopoverContent class="w-[260px] flex flex-col gap-3" align="end">
                     <div class="flex flex-col gap-1.5">
-                      <Label class="text-xs">Plan</Label>
-                      <Select v-model="newContract.planId">
+                      <Label class="text-xs">Name</Label>
+                      <Input v-model="newProject.name" placeholder="Project name" class="h-8 text-xs" />
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <Label class="text-xs">Status</Label>
+                      <Select v-model="newProject.status">
                         <SelectTrigger class="w-full h-8 text-xs">
-                          <SelectValue placeholder="Select a plan" />
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem v-for="plan in plans" :key="plan.id" :value="plan.id">
-                            {{ plan.name }}
+                          <SelectItem v-for="option in projectStatuses" :key="option.value" :value="option.value">
+                            {{ option.label }}
                           </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div class="flex flex-col gap-1.5">
-                      <Label class="text-xs">Start date</Label>
-                      <Input v-model="newContract.startDate" type="date" class="h-8 text-xs" />
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                      <Label class="text-xs">End date</Label>
-                      <Input v-model="newContract.endDate" type="date" class="h-8 text-xs" />
-                    </div>
-                    <Button size="sm" :disabled="!newContract.planId" @click="onAssignAmc">
-                      Assign
+                    <Button size="sm" :disabled="!newProject.name.trim()" @click="onAddProject">
+                      Create
                     </Button>
                   </PopoverContent>
                 </Popover>
               </div>
 
-              <p v-if="!client.contracts.length" class="text-sm text-muted-foreground">
-                No AMC contracts yet.
+              <p v-if="!clientProjects.length" class="text-sm text-muted-foreground">
+                No projects yet.
               </p>
 
-              <div v-for="contract in client.contracts" :key="contract.id" class="flex flex-col gap-1 rounded-md border p-3">
+              <div
+                v-for="project in clientProjects"
+                :key="project.id"
+                class="flex flex-col gap-1 rounded-md border p-3 cursor-pointer hover:bg-accent/50"
+                @click="openProject(project)"
+              >
                 <div class="flex items-center justify-between">
-                  <span class="text-sm font-medium">{{ contract.planName }}</span>
-                  <Badge variant="outline" :class="CONTRACT_STATUS_BADGE_CLASS[getContractDisplayStatus(contract)]">
-                    {{ CONTRACT_STATUS_LABEL[getContractDisplayStatus(contract)] }}
+                  <span class="text-sm font-medium">{{ project.name }}</span>
+                  <Badge variant="outline" :class="projectStatusBadgeClass(project.status)">
+                    {{ projectStatusLabel(project.status) }}
                   </Badge>
                 </div>
                 <p class="text-xs text-muted-foreground">
-                  {{ formatDate(contract.startDate) }} – {{ formatDate(contract.endDate) }}
+                  {{ project.contracts.length }} AMC contract{{ project.contracts.length === 1 ? '' : 's' }}
                 </p>
-                <div v-if="contract.status === 'active'" class="flex justify-end">
-                  <Button size="sm" variant="ghost" class="text-destructive h-7" @click="onCancelContract(contract.id)">
-                    Cancel
-                  </Button>
-                </div>
               </div>
             </div>
+
+            <template v-if="client.contracts.length">
+              <Separator />
+
+              <div class="flex flex-col gap-3">
+                <h4 class="text-sm font-medium">
+                  Legacy AMC Contracts
+                </h4>
+                <p class="text-xs text-muted-foreground -mt-1">
+                  Assigned before Projects existed — not linked to any project.
+                </p>
+                <AmcContractCard v-for="contract in client.contracts" :key="contract.id" :contract="contract" />
+              </div>
+            </template>
 
             <Separator />
 

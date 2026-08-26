@@ -29,6 +29,29 @@ function stageBadgeClass(value: string) {
   return leadStages.find(s => s.value === value)?.badgeClass
 }
 
+const searchQuery = ref('')
+const stageFilter = ref('all')
+const assigneeFilter = ref('all')
+
+const filteredLeads = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+
+  return leads.value.filter((lead) => {
+    if (stageFilter.value !== 'all' && lead.stage !== stageFilter.value)
+      return false
+    if (assigneeFilter.value === 'unassigned' && lead.assignees.length)
+      return false
+    else if (assigneeFilter.value !== 'all' && assigneeFilter.value !== 'unassigned' && !lead.assignees.some(a => a.id === assigneeFilter.value))
+      return false
+    if (query) {
+      const haystack = `${lead.name} ${lead.contactName ?? ''} ${lead.contactEmail ?? ''} ${lead.source ?? ''}`.toLowerCase()
+      if (!haystack.includes(query))
+        return false
+    }
+    return true
+  })
+})
+
 const isDetailOpen = ref(false)
 const selectedLeadId = ref<string | null>(null)
 const selectedLead = computed(() => leads.value.find(l => l.id === selectedLeadId.value) ?? null)
@@ -71,7 +94,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not add lead', {
+    toast.error('Could not add lead', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
@@ -199,6 +222,42 @@ const onSubmit = handleSubmit(async (values) => {
       </Sheet>
     </div>
 
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <Icon name="i-lucide-search" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input v-model="searchQuery" placeholder="Search leads..." class="pl-8" />
+      </div>
+      <Select v-model="stageFilter">
+        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">
+            All stages
+          </SelectItem>
+          <SelectItem v-for="option in leadStages" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Select v-model="assigneeFilter">
+        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">
+            All assignees
+          </SelectItem>
+          <SelectItem value="unassigned">
+            Unassigned
+          </SelectItem>
+          <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
+            {{ member.name }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
     <div class="border rounded-md">
       <Table>
         <TableHeader>
@@ -211,9 +270,9 @@ const onSubmit = handleSubmit(async (values) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <template v-if="leads.length">
+          <template v-if="filteredLeads.length">
             <TableRow
-              v-for="lead in leads"
+              v-for="lead in filteredLeads"
               :key="lead.id"
               class="cursor-pointer"
               @click="openLead(lead)"
@@ -242,7 +301,7 @@ const onSubmit = handleSubmit(async (values) => {
           </template>
           <TableRow v-else>
             <TableCell :colspan="5" class="h-24 text-center">
-              No leads yet.
+              No leads match your filters.
             </TableCell>
           </TableRow>
         </TableBody>

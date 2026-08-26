@@ -44,7 +44,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not update profile', {
+    toast.error('Could not update profile', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }

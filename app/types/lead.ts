@@ -16,12 +16,26 @@ export interface LeadActivity {
   createdAt: string
 }
 
+export interface LeadContactEmail {
+  id: string
+  email: string
+  label?: string
+}
+
+export interface LeadContactPhone {
+  id: string
+  phone: string
+  label?: string
+}
+
 export interface Lead {
   id: string
   name: string
   contactName?: string
   contactEmail?: string
   contactPhone?: string
+  additionalEmails: LeadContactEmail[]
+  additionalPhones: LeadContactPhone[]
   source?: string
   stage: LeadStage
   notes?: string

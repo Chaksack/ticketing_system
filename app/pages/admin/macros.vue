@@ -23,6 +23,14 @@ onMounted(() => {
   fetchMacros()
 })
 
+const searchQuery = ref('')
+const filteredMacros = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query)
+    return macros.value
+  return macros.value.filter(m => m.name.toLowerCase().includes(query) || m.body.toLowerCase().includes(query))
+})
+
 const isAddOpen = ref(false)
 
 const macroFormSchema = toTypedSchema(z.object({
@@ -47,7 +55,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not create macro', {
+    toast.error('Could not create macro', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
@@ -157,6 +165,11 @@ async function onDelete(id: string, name: string) {
       </Sheet>
     </div>
 
+    <div class="relative max-w-sm">
+      <Icon name="i-lucide-search" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input v-model="searchQuery" placeholder="Search macros..." class="pl-8" />
+    </div>
+
     <div class="border rounded-md">
       <Table>
         <TableHeader>
@@ -168,8 +181,8 @@ async function onDelete(id: string, name: string) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <template v-if="macros.length">
-            <TableRow v-for="macro in macros" :key="macro.id">
+          <template v-if="filteredMacros.length">
+            <TableRow v-for="macro in filteredMacros" :key="macro.id">
               <TableCell class="font-medium">
                 {{ macro.name }}
               </TableCell>
@@ -195,7 +208,7 @@ async function onDelete(id: string, name: string) {
           </template>
           <TableRow v-else>
             <TableCell :colspan="4" class="h-24 text-center">
-              No macros yet.
+              No macros match your search.
             </TableCell>
           </TableRow>
         </TableBody>

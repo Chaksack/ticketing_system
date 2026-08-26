@@ -27,6 +27,14 @@ onMounted(() => {
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
 
+const searchQuery = ref('')
+const filteredRules = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query)
+    return rules.value
+  return rules.value.filter(r => r.name.toLowerCase().includes(query))
+})
+
 const isAddOpen = ref(false)
 
 const ruleFormSchema = toTypedSchema(z.object({
@@ -54,7 +62,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not create rule', {
+    toast.error('Could not create rule', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
@@ -233,6 +241,11 @@ async function onDelete(id: string, name: string) {
       </Sheet>
     </div>
 
+    <div class="relative max-w-sm">
+      <Icon name="i-lucide-search" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input v-model="searchQuery" placeholder="Search automations..." class="pl-8" />
+    </div>
+
     <div class="border rounded-md">
       <Table>
         <TableHeader>
@@ -245,8 +258,8 @@ async function onDelete(id: string, name: string) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <template v-if="rules.length">
-            <TableRow v-for="rule in rules" :key="rule.id">
+          <template v-if="filteredRules.length">
+            <TableRow v-for="rule in filteredRules" :key="rule.id">
               <TableCell class="font-medium">
                 {{ rule.name }}
               </TableCell>
@@ -278,7 +291,7 @@ async function onDelete(id: string, name: string) {
           </template>
           <TableRow v-else>
             <TableCell :colspan="5" class="h-24 text-center">
-              No automation rules yet.
+              No automation rules match your search.
             </TableCell>
           </TableRow>
         </TableBody>

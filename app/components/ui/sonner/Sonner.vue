@@ -13,6 +13,9 @@ const props = defineProps<ToasterProps>()
       '--normal-bg': '#16a34a',
       '--normal-text': '#ffffff',
       '--normal-border': '#15803d',
+      '--error-bg': '#7f1d1d',
+      '--error-text': '#ffffff',
+      '--error-border': '#450a0a',
     }"
   />
 </template>

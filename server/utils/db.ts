@@ -170,6 +170,7 @@ async function migrate() {
   await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS task_id TEXT')
   await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS lead_id TEXT')
   await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TEXT')
+  await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS contract_id TEXT')
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -205,6 +206,34 @@ async function migrate() {
   `)
 
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS client_assignees (
+      client_id TEXT NOT NULL,
+      staff_id TEXT NOT NULL,
+      PRIMARY KEY (client_id, staff_id)
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS lead_contact_emails (
+      id TEXT PRIMARY KEY,
+      lead_id TEXT NOT NULL,
+      email TEXT NOT NULL,
+      label TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS lead_contact_phones (
+      id TEXT PRIMARY KEY,
+      lead_id TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      label TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS client_activity (
       id TEXT PRIMARY KEY,
       client_id TEXT NOT NULL,
@@ -229,6 +258,24 @@ async function migrate() {
     )
   `)
 
+  await db.exec('ALTER TABLE amc_plans ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT \'GHS\'')
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'planned',
+      start_date TEXT,
+      end_date TEXT,
+      erp_project_id TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS client_amc_contracts (
       id TEXT PRIMARY KEY,
@@ -239,6 +286,35 @@ async function migrate() {
       status TEXT NOT NULL DEFAULT 'active',
       reminder_30d_sent INTEGER NOT NULL DEFAULT 0,
       reminder_7d_sent INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  // Nullable: existing contracts predate Projects and stay client-level ("legacy"); every new
+  // contract is created through a project going forward.
+  await db.exec('ALTER TABLE client_amc_contracts ADD COLUMN IF NOT EXISTS project_id TEXT')
+
+  // Follow-up tracking, mirroring leads' next_step / next_step_at / reminder pattern.
+  await db.exec('ALTER TABLE client_amc_contracts ADD COLUMN IF NOT EXISTS next_step TEXT')
+  await db.exec('ALTER TABLE client_amc_contracts ADD COLUMN IF NOT EXISTS next_step_at TEXT')
+  await db.exec('ALTER TABLE client_amc_contracts ADD COLUMN IF NOT EXISTS next_step_reminder_sent INTEGER NOT NULL DEFAULT 0')
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS client_contact_emails (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      email TEXT NOT NULL,
+      label TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS client_contact_phones (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      label TEXT,
       created_at TEXT NOT NULL
     )
   `)
@@ -442,4 +518,29 @@ export async function nextTaskId() {
 export async function nextTaskStatusId() {
   const n = await nextSequence('task_status')
   return `STATUS-${n}`
+}
+
+export async function nextProjectId() {
+  const n = await nextSequence('project')
+  return `PROJECT-${n}`
+}
+
+export async function nextClientContactEmailId() {
+  const n = await nextSequence('client_contact_email')
+  return `CCE-${n}`
+}
+
+export async function nextClientContactPhoneId() {
+  const n = await nextSequence('client_contact_phone')
+  return `CCP-${n}`
+}
+
+export async function nextLeadContactEmailId() {
+  const n = await nextSequence('lead_contact_email')
+  return `LCE-${n}`
+}
+
+export async function nextLeadContactPhoneId() {
+  const n = await nextSequence('lead_contact_phone')
+  return `LCP-${n}`
 }

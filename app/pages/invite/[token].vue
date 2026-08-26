@@ -58,7 +58,7 @@ const onSubmit = handleSubmit(async (values) => {
     await navigateTo('/tickets')
   }
   catch (error: any) {
-    toast('Could not set your password', {
+    toast.error('Could not set your password', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }

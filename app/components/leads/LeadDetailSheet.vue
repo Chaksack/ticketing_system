@@ -16,7 +16,7 @@ const emit = defineEmits<{
 const open = defineModel<boolean>('open', { default: false })
 
 const router = useRouter()
-const { updateLead, convertLead, removeLead } = useLeads()
+const { updateLead, convertLead, removeLead, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone } = useLeads()
 const { staff, fetchStaff } = useStaff()
 
 onMounted(() => {
@@ -78,6 +78,41 @@ async function saveDetails() {
     contactPhone: contactPhoneDraft.value.trim(),
   })
   toast('Details saved')
+}
+
+const newEmail = ref('')
+const newEmailLabel = ref('')
+const newPhone = ref('')
+const newPhoneLabel = ref('')
+
+async function onAddEmail() {
+  if (!props.lead || !newEmail.value.trim())
+    return
+
+  await addContactEmail(props.lead.id, { email: newEmail.value.trim(), label: newEmailLabel.value.trim() || undefined })
+  newEmail.value = ''
+  newEmailLabel.value = ''
+}
+
+async function onRemoveEmail(emailId: string) {
+  if (!props.lead)
+    return
+  await removeContactEmail(props.lead.id, emailId)
+}
+
+async function onAddPhone() {
+  if (!props.lead || !newPhone.value.trim())
+    return
+
+  await addContactPhone(props.lead.id, { phone: newPhone.value.trim(), label: newPhoneLabel.value.trim() || undefined })
+  newPhone.value = ''
+  newPhoneLabel.value = ''
+}
+
+async function onRemovePhone(phoneId: string) {
+  if (!props.lead)
+    return
+  await removeContactPhone(props.lead.id, phoneId)
 }
 
 const isDeleting = ref(false)
@@ -142,7 +177,7 @@ async function onConvert() {
     router.push(`/clients?open=${client.id}`)
   }
   catch (error: any) {
-    toast('Could not convert lead', {
+    toast.error('Could not convert lead', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
@@ -249,6 +284,57 @@ function formatDateTime(value: string) {
                 <Button size="sm" variant="outline" :disabled="!nameDraft.trim()" @click="saveDetails">
                   Save Details
                 </Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div class="flex flex-col gap-3">
+              <h4 class="text-sm font-medium">
+                Additional Contact Info
+              </h4>
+              <p class="text-xs text-muted-foreground -mt-1">
+                Extra emails/phones for the same contact person (e.g. work + personal).
+              </p>
+
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Emails</Label>
+                <div v-for="email in lead.additionalEmails" :key="email.id" class="flex items-center gap-2 text-sm">
+                  <span class="flex-1 truncate">{{ email.email }}</span>
+                  <Badge v-if="email.label" variant="outline" class="text-[10px]">
+                    {{ email.label }}
+                  </Badge>
+                  <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground" @click="onRemoveEmail(email.id)">
+                    <Icon name="i-lucide-x" class="size-3" />
+                  </Button>
+                </div>
+                <div class="flex gap-2">
+                  <Input v-model="newEmail" type="email" placeholder="another@acme.com" class="flex-1" />
+                  <Input v-model="newEmailLabel" placeholder="Label (optional)" class="w-32" />
+                  <Button size="icon-sm" variant="outline" class="shrink-0" :disabled="!newEmail.trim()" @click="onAddEmail">
+                    <Icon name="i-lucide-plus" class="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Phone Numbers</Label>
+                <div v-for="phone in lead.additionalPhones" :key="phone.id" class="flex items-center gap-2 text-sm">
+                  <span class="flex-1 truncate">{{ phone.phone }}</span>
+                  <Badge v-if="phone.label" variant="outline" class="text-[10px]">
+                    {{ phone.label }}
+                  </Badge>
+                  <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground" @click="onRemovePhone(phone.id)">
+                    <Icon name="i-lucide-x" class="size-3" />
+                  </Button>
+                </div>
+                <div class="flex gap-2">
+                  <Input v-model="newPhone" placeholder="+233 24 000 0000" class="flex-1" />
+                  <Input v-model="newPhoneLabel" placeholder="Label (optional)" class="w-32" />
+                  <Button size="icon-sm" variant="outline" class="shrink-0" :disabled="!newPhone.trim()" @click="onAddPhone">
+                    <Icon name="i-lucide-plus" class="size-3.5" />
+                  </Button>
+                </div>
               </div>
             </div>
 

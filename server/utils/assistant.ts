@@ -187,7 +187,7 @@ async function contractCounts(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT status, end_date FROM client_amc_contracts').all() as { status: string, end_date: string }[]
 
-  const tally: Record<AmcContractDisplayStatus, number> = { active: 0, expiring: 0, expired: 0, cancelled: 0 }
+  const tally: Record<AmcContractDisplayStatus, number> = { submitted: 0, negotiating: 0, active: 0, expiring: 0, lost: 0, expired: 0, cancelled: 0 }
   for (const row of rows) {
     const display = getContractDisplayStatus({ status: row.status as AmcContractStatus, endDate: row.end_date })
     tally[display] += 1
@@ -196,8 +196,11 @@ async function contractCounts(): Promise<AssistantSection[]> {
   return [{
     heading: 'AMC contracts',
     stats: [
+      { label: 'Submitted', value: tally.submitted },
+      { label: 'Negotiating', value: tally.negotiating },
       { label: 'Active', value: tally.active },
       { label: 'Expiring soon', value: tally.expiring },
+      { label: 'Lost', value: tally.lost },
       { label: 'Expired', value: tally.expired },
       { label: 'Cancelled', value: tally.cancelled },
     ],

@@ -36,7 +36,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
   }
   catch (error: any) {
-    toast('Could not update password', {
+    toast.error('Could not update password', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }

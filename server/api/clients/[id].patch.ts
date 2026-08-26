@@ -8,7 +8,7 @@ interface UpdateClientBody {
   contactPhone?: string
   stage?: ClientStage
   notes?: string
-  assignedTo?: string | null
+  assigneeIds?: string[]
 }
 
 const STAGE_LABELS: Record<ClientStage, string> = {
@@ -44,14 +44,13 @@ export default defineEventHandler(async (event) => {
   const contactPhone = body.contactPhone !== undefined ? body.contactPhone : existing.contact_phone
   const stage = body.stage ?? existing.stage as ClientStage
   const notes = body.notes !== undefined ? body.notes : existing.notes
-  const assignedTo = body.assignedTo !== undefined ? body.assignedTo : existing.assigned_to
   const now = new Date().toISOString()
 
   await db.prepare(`
     UPDATE clients
-    SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, stage = ?, notes = ?, assigned_to = ?, updated_at = ?
+    SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, stage = ?, notes = ?, updated_at = ?
     WHERE id = ?
-  `).run(name, contactName, contactEmail, contactPhone, stage, notes, assignedTo, now, id)
+  `).run(name, contactName, contactEmail, contactPhone, stage, notes, now, id)
 
   if (stage !== existing.stage) {
     await logClientActivity({
@@ -64,20 +63,24 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (assignedTo !== existing.assigned_to) {
-    let assigneeName: string | undefined
-    if (assignedTo) {
-      const staffRow = await db.prepare('SELECT name FROM staff WHERE id = ?').get(assignedTo) as { name: string } | undefined
-      assigneeName = staffRow?.name
-    }
+  if (body.assigneeIds !== undefined) {
+    const before = await getClientAssignees(id)
+    const beforeIds = new Set(before.map(a => a.id))
+    const afterIds = new Set(body.assigneeIds)
+    const changed = beforeIds.size !== afterIds.size || [...beforeIds].some(assigneeId => !afterIds.has(assigneeId))
 
-    await logClientActivity({
-      clientId: id,
-      type: 'assignee_changed',
-      actorId: user.id,
-      actorName: user.name,
-      toValue: assigneeName ?? 'Unassigned',
-    })
+    if (changed) {
+      await setClientAssignees(id, body.assigneeIds)
+      const after = await getClientAssignees(id)
+
+      await logClientActivity({
+        clientId: id,
+        type: 'assignee_changed',
+        actorId: user.id,
+        actorName: user.name,
+        toValue: after.length ? after.map(a => a.name).join(', ') : 'Unassigned',
+      })
+    }
   }
 
   if (body.notes !== undefined && body.notes !== existing.notes) {

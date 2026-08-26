@@ -1,8 +1,9 @@
 import type { AmcContract, AmcPlan } from '../../app/types/amc'
 import type { Assignee } from '../../app/types/assignee'
 import type { Macro } from '../../app/types/automation'
-import type { Client, ClientActivity } from '../../app/types/client'
-import type { Lead, LeadActivity } from '../../app/types/lead'
+import type { Client, ClientActivity, ClientContactEmail, ClientContactPhone } from '../../app/types/client'
+import type { Lead, LeadActivity, LeadContactEmail, LeadContactPhone } from '../../app/types/lead'
+import type { Project } from '../../app/types/project'
 import type { StaffMember, StaffRole } from '../../app/types/staff'
 import type { Task } from '../../app/types/task'
 import type { Ticket, TicketActivity, TicketReply, TicketTag } from '../../app/types/ticket'
@@ -199,8 +200,6 @@ export interface ClientRow {
   contact_phone: string | null
   stage: string
   notes: string | null
-  assigned_to: string | null
-  assigned_to_name?: string | null
   created_at: string
   updated_at: string
 }
@@ -209,6 +208,10 @@ export function mapClientRow(
   row: ClientRow,
   activity: ClientActivity[] = [],
   contracts: AmcContract[] = [],
+  projects: Project[] = [],
+  additionalEmails: ClientContactEmail[] = [],
+  additionalPhones: ClientContactPhone[] = [],
+  assignees: Assignee[] = [],
 ): Client {
   return {
     id: row.id,
@@ -216,13 +219,72 @@ export function mapClientRow(
     contactName: row.contact_name ?? undefined,
     contactEmail: row.contact_email ?? undefined,
     contactPhone: row.contact_phone ?? undefined,
+    additionalEmails,
+    additionalPhones,
     stage: row.stage as Client['stage'],
     notes: row.notes ?? undefined,
-    assignedTo: row.assigned_to ?? undefined,
-    assignedToName: row.assigned_to_name ?? undefined,
+    assignees,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     activity,
+    projects,
+    contracts,
+  }
+}
+
+export interface ClientContactEmailRow {
+  id: string
+  client_id: string
+  email: string
+  label: string | null
+  created_at: string
+}
+
+export function mapClientContactEmailRow(row: ClientContactEmailRow): ClientContactEmail {
+  return { id: row.id, email: row.email, label: row.label ?? undefined }
+}
+
+export interface ClientContactPhoneRow {
+  id: string
+  client_id: string
+  phone: string
+  label: string | null
+  created_at: string
+}
+
+export function mapClientContactPhoneRow(row: ClientContactPhoneRow): ClientContactPhone {
+  return { id: row.id, phone: row.phone, label: row.label ?? undefined }
+}
+
+export interface ProjectRow {
+  id: string
+  client_id: string
+  client_name?: string | null
+  name: string
+  description: string | null
+  status: string
+  start_date: string | null
+  end_date: string | null
+  erp_project_id: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function mapProjectRow(row: ProjectRow, contracts: AmcContract[] = []): Project {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    clientName: row.client_name ?? undefined,
+    name: row.name,
+    description: row.description ?? undefined,
+    status: row.status as Project['status'],
+    startDate: row.start_date ?? undefined,
+    endDate: row.end_date ?? undefined,
+    erpProjectId: row.erp_project_id ?? undefined,
+    createdBy: row.created_by ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
     contracts,
   }
 }
@@ -259,6 +321,7 @@ export interface AmcPlanRow {
   description: string | null
   default_duration_months: number
   price: number | string | null
+  currency: string
   created_at: string
 }
 
@@ -269,6 +332,7 @@ export function mapAmcPlanRow(row: AmcPlanRow): AmcPlan {
     description: row.description ?? undefined,
     defaultDurationMonths: row.default_duration_months,
     price: row.price === null ? undefined : Number(row.price),
+    currency: row.currency,
     createdAt: row.created_at,
   }
 }
@@ -276,6 +340,7 @@ export function mapAmcPlanRow(row: AmcPlanRow): AmcPlan {
 export interface ContractRow {
   id: string
   client_id: string
+  project_id: string | null
   plan_id: string
   plan_name?: string | null
   start_date: string
@@ -283,6 +348,9 @@ export interface ContractRow {
   status: string
   reminder_30d_sent: number
   reminder_7d_sent: number
+  next_step: string | null
+  next_step_at: string | null
+  next_step_reminder_sent: number
   created_at: string
 }
 
@@ -290,6 +358,7 @@ export function mapContractRow(row: ContractRow): AmcContract {
   return {
     id: row.id,
     clientId: row.client_id,
+    projectId: row.project_id ?? undefined,
     planId: row.plan_id,
     planName: row.plan_name ?? undefined,
     startDate: row.start_date,
@@ -297,6 +366,9 @@ export function mapContractRow(row: ContractRow): AmcContract {
     status: row.status as AmcContract['status'],
     reminder30dSent: !!row.reminder_30d_sent,
     reminder7dSent: !!row.reminder_7d_sent,
+    nextStep: row.next_step ?? undefined,
+    nextStepAt: row.next_step_at ?? undefined,
+    nextStepReminderSent: !!row.next_step_reminder_sent,
     createdAt: row.created_at,
   }
 }
@@ -318,13 +390,21 @@ export interface LeadRow {
   updated_at: string
 }
 
-export function mapLeadRow(row: LeadRow, activity: LeadActivity[] = [], assignees: Assignee[] = []): Lead {
+export function mapLeadRow(
+  row: LeadRow,
+  activity: LeadActivity[] = [],
+  assignees: Assignee[] = [],
+  additionalEmails: LeadContactEmail[] = [],
+  additionalPhones: LeadContactPhone[] = [],
+): Lead {
   return {
     id: row.id,
     name: row.name,
     contactName: row.contact_name ?? undefined,
     contactEmail: row.contact_email ?? undefined,
     contactPhone: row.contact_phone ?? undefined,
+    additionalEmails,
+    additionalPhones,
     source: row.source ?? undefined,
     stage: row.stage as Lead['stage'],
     notes: row.notes ?? undefined,
@@ -337,6 +417,30 @@ export function mapLeadRow(row: LeadRow, activity: LeadActivity[] = [], assignee
     updatedAt: row.updated_at,
     activity,
   }
+}
+
+export interface LeadContactEmailRow {
+  id: string
+  lead_id: string
+  email: string
+  label: string | null
+  created_at: string
+}
+
+export function mapLeadContactEmailRow(row: LeadContactEmailRow): LeadContactEmail {
+  return { id: row.id, email: row.email, label: row.label ?? undefined }
+}
+
+export interface LeadContactPhoneRow {
+  id: string
+  lead_id: string
+  phone: string
+  label: string | null
+  created_at: string
+}
+
+export function mapLeadContactPhoneRow(row: LeadContactPhoneRow): LeadContactPhone {
+  return { id: row.id, phone: row.phone, label: row.label ?? undefined }
 }
 
 export interface LeadActivityRow {

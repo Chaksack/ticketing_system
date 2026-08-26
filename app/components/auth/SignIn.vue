@@ -25,7 +25,7 @@ async function onSubmit(event: Event) {
     await navigateTo(redirect)
   }
   catch {
-    toast('Login failed', {
+    toast.error('Login failed', {
       description: 'Check your email and password and try again.',
     })
   }

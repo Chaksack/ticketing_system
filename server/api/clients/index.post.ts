@@ -7,7 +7,7 @@ interface NewClientBody {
   contactPhone?: string
   stage?: ClientStage
   notes?: string
-  assignedTo?: string
+  assigneeIds?: string[]
 }
 
 export default defineEventHandler(async (event) => {
@@ -26,8 +26,8 @@ export default defineEventHandler(async (event) => {
   const now = new Date().toISOString()
 
   await db.prepare(`
-    INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, notes, assigned_to, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     body.name,
@@ -36,10 +36,11 @@ export default defineEventHandler(async (event) => {
     body.contactPhone ?? null,
     body.stage ?? 'lead',
     body.notes ?? null,
-    body.assignedTo ?? null,
     now,
     now,
   )
+
+  await setClientAssignees(id, body.assigneeIds ?? [])
 
   const client = await loadFullClient(id)
 

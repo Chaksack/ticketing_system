@@ -21,6 +21,8 @@ export default defineNitroPlugin(async () => {
 
     checkLeadReminders().catch(error => console.error('Lead reminder sweep failed', error))
 
+    checkAmcFollowUps().catch(error => console.error('AMC follow-up sweep failed', error))
+
     pruneReadNotifications().catch(error => console.error('Notification prune failed', error))
 
     checkGmailInbox().catch((error) => {
