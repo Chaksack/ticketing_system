@@ -55,6 +55,73 @@ function formatDate(value?: string) {
     return '—'
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
+
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024
+const ALLOWED_AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+
+const avatarInput = ref<HTMLInputElement>()
+const isUploadingAvatar = ref(false)
+
+const initials = computed(() => currentUser.value?.name.split(' ').map(n => n[0]).join('') ?? '')
+
+function onAvatarButtonClick() {
+  avatarInput.value?.click()
+}
+
+async function onAvatarChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file)
+    return
+
+  if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+    toast.error('Could not update photo', {
+      description: 'Please choose a PNG, JPEG, WEBP, or GIF image.',
+    })
+    input.value = ''
+    return
+  }
+
+  if (file.size > MAX_AVATAR_SIZE) {
+    toast.error('Could not update photo', {
+      description: 'Image must be smaller than 2MB.',
+    })
+    input.value = ''
+    return
+  }
+
+  isUploadingAvatar.value = true
+  try {
+    const formData = new FormData()
+    formData.append('avatar', file)
+
+    const { user } = await $fetch('/api/auth/profile/avatar', { method: 'POST', body: formData })
+    currentUser.value = user
+    toast('Profile photo updated')
+  }
+  catch (error: any) {
+    toast.error('Could not update photo', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    isUploadingAvatar.value = false
+    input.value = ''
+  }
+}
+
+async function onRemoveAvatar() {
+  try {
+    const { user } = await $fetch('/api/auth/profile/avatar', { method: 'DELETE' })
+    currentUser.value = user
+    toast('Profile photo removed')
+  }
+  catch (error: any) {
+    toast.error('Could not remove photo', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+}
 </script>
 
 <template>
@@ -68,6 +135,27 @@ function formatDate(value?: string) {
   </div>
   <Separator />
   <form class="space-y-8" @submit="onSubmit">
+    <div class="flex items-center gap-4">
+      <Avatar class="h-16 w-16">
+        <AvatarImage v-if="currentUser?.avatarUrl" :src="currentUser.avatarUrl" :alt="currentUser.name" />
+        <AvatarFallback class="text-lg">
+          {{ initials }}
+        </AvatarFallback>
+      </Avatar>
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2">
+          <Button type="button" size="sm" variant="outline" :disabled="isUploadingAvatar" @click="onAvatarButtonClick">
+            {{ isUploadingAvatar ? 'Uploading…' : 'Change photo' }}
+          </Button>
+          <Button v-if="currentUser?.avatarUrl" type="button" size="sm" variant="ghost" @click="onRemoveAvatar">
+            Remove
+          </Button>
+        </div>
+        <span class="text-xs text-muted-foreground">PNG, JPEG, WEBP, or GIF. Up to 2MB.</span>
+      </div>
+      <input ref="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" @change="onAvatarChange">
+    </div>
+
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
         <FormLabel>Name</FormLabel>

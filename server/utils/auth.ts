@@ -6,6 +6,7 @@ export interface SessionUser {
   name: string
   email: string
   roles: StaffRole[]
+  avatarUrl?: string
 }
 
 interface SessionData {

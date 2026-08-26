@@ -8,5 +8,6 @@ export interface StaffMember {
   roles: StaffRole[]
   status: StaffStatus
   onCall: boolean
+  avatarUrl?: string
   createdAt: string
 }

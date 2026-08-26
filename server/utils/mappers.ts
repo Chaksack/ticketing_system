@@ -21,6 +21,7 @@ export interface StaffRow {
   invite_expires_at: string | null
   reset_token: string | null
   reset_expires_at: string | null
+  avatar_url: string | null
   created_at: string
 }
 
@@ -36,6 +37,7 @@ export function mapStaffRow(row: StaffRow): StaffMember {
     roles: parseStaffRoles(row),
     status: row.status as StaffMember['status'],
     onCall: !!row.on_call,
+    avatarUrl: row.avatar_url ?? undefined,
     createdAt: row.created_at,
   }
 }

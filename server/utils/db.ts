@@ -33,6 +33,8 @@ async function migrate() {
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS roles TEXT')
   await db.exec(`UPDATE staff SET roles = '["' || role || '"]' WHERE roles IS NULL`)
 
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS avatar_url TEXT')
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS tickets (
       id TEXT PRIMARY KEY,

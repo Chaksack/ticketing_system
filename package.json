@@ -59,6 +59,7 @@
     "@tanstack/vue-table": "^8.21.3",
     "@unovis/ts": "^1.6.1",
     "@unovis/vue": "^1.6.1",
+    "@vercel/blob": "^2.8.0",
     "embla-carousel": "^8.6.0",
     "embla-carousel-vue": "^8.6.0",
     "google-auth-library": "^11.0.2",

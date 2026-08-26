@@ -4,6 +4,9 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
+import DataTable from '~/components/data-table/DataTable.vue'
+import { columns } from '~/components/leads/components/columns'
+import DataTableToolbar from '~/components/leads/components/DataTableToolbar.vue'
 import { leadStages } from '~/components/leads/data'
 import LeadDetailSheet from '~/components/leads/LeadDetailSheet.vue'
 
@@ -20,37 +23,6 @@ onMounted(async () => {
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
-
-function stageLabel(value: string) {
-  return leadStages.find(s => s.value === value)?.label ?? value
-}
-
-function stageBadgeClass(value: string) {
-  return leadStages.find(s => s.value === value)?.badgeClass
-}
-
-const searchQuery = ref('')
-const stageFilter = ref('all')
-const assigneeFilter = ref('all')
-
-const filteredLeads = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
-
-  return leads.value.filter((lead) => {
-    if (stageFilter.value !== 'all' && lead.stage !== stageFilter.value)
-      return false
-    if (assigneeFilter.value === 'unassigned' && lead.assignees.length)
-      return false
-    else if (assigneeFilter.value !== 'all' && assigneeFilter.value !== 'unassigned' && !lead.assignees.some(a => a.id === assigneeFilter.value))
-      return false
-    if (query) {
-      const haystack = `${lead.name} ${lead.contactName ?? ''} ${lead.contactEmail ?? ''} ${lead.source ?? ''}`.toLowerCase()
-      if (!haystack.includes(query))
-        return false
-    }
-    return true
-  })
-})
 
 const isDetailOpen = ref(false)
 const selectedLeadId = ref<string | null>(null)
@@ -222,91 +194,11 @@ const onSubmit = handleSubmit(async (values) => {
       </Sheet>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="relative flex-1 min-w-[200px] max-w-sm">
-        <Icon name="i-lucide-search" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input v-model="searchQuery" placeholder="Search leads..." class="pl-8" />
-      </div>
-      <Select v-model="stageFilter">
-        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">
-            All stages
-          </SelectItem>
-          <SelectItem v-for="option in leadStages" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-      <Select v-model="assigneeFilter">
-        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">
-            All assignees
-          </SelectItem>
-          <SelectItem value="unassigned">
-            Unassigned
-          </SelectItem>
-          <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-            {{ member.name }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
-    <div class="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead>Stage</TableHead>
-            <TableHead>Assigned To</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <template v-if="filteredLeads.length">
-            <TableRow
-              v-for="lead in filteredLeads"
-              :key="lead.id"
-              class="cursor-pointer"
-              @click="openLead(lead)"
-            >
-              <TableCell class="font-medium">
-                {{ lead.name }}
-              </TableCell>
-              <TableCell class="text-muted-foreground">
-                {{ lead.contactName || lead.contactEmail || '—' }}
-              </TableCell>
-              <TableCell class="text-muted-foreground">
-                {{ lead.source || '—' }}
-              </TableCell>
-              <TableCell>
-                <Badge v-if="lead.convertedClientId" variant="outline" class="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
-                  Converted
-                </Badge>
-                <Badge v-else variant="outline" :class="stageBadgeClass(lead.stage)">
-                  {{ stageLabel(lead.stage) }}
-                </Badge>
-              </TableCell>
-              <TableCell class="text-muted-foreground">
-                {{ lead.assignees.length ? lead.assignees.map(a => a.name).join(', ') : 'Unassigned' }}
-              </TableCell>
-            </TableRow>
-          </template>
-          <TableRow v-else>
-            <TableCell :colspan="5" class="h-24 text-center">
-              No leads match your filters.
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable :data="leads" :columns="columns" @select="openLead">
+      <template #toolbar="{ table }">
+        <DataTableToolbar :table="table" />
+      </template>
+    </DataTable>
 
     <LeadDetailSheet v-model:open="isDetailOpen" :lead="selectedLead" />
   </div>

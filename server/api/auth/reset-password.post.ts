@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
     name: row.name,
     email: row.email,
     roles: parseStaffRoles(row),
+    avatarUrl: row.avatar_url ?? undefined,
   }
 
   const session = await useAuthSession(event)

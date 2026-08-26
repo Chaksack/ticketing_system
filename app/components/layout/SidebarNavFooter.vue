@@ -6,7 +6,7 @@ defineProps<{
   user: {
     name: string
     email: string
-    avatar?: string
+    avatarUrl?: string
   }
 }>()
 
@@ -58,7 +58,7 @@ const showModalTheme = ref(false)
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
             <Avatar class="h-8 w-8 rounded-lg">
-              <AvatarImage v-if="user.avatar" :src="user.avatar" :alt="user.name" />
+              <AvatarImage v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.name" />
               <AvatarFallback class="rounded-lg">
                 {{ user.name.split(' ').map((n) => n[0]).join('') }}
               </AvatarFallback>

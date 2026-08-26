@@ -5,7 +5,10 @@ import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
 import ClientDetailSheet from '~/components/clients/ClientDetailSheet.vue'
+import { columns } from '~/components/clients/components/columns'
+import DataTableToolbar from '~/components/clients/components/DataTableToolbar.vue'
 import { stages } from '~/components/clients/data'
+import DataTable from '~/components/data-table/DataTable.vue'
 
 definePageMeta({
   middleware: 'bd',
@@ -20,37 +23,6 @@ onMounted(async () => {
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
-
-function stageLabel(value: string) {
-  return stages.find(s => s.value === value)?.label ?? value
-}
-
-function stageBadgeClass(value: string) {
-  return stages.find(s => s.value === value)?.badgeClass
-}
-
-const searchQuery = ref('')
-const stageFilter = ref('all')
-const assigneeFilter = ref('all')
-
-const filteredClients = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
-
-  return clients.value.filter((client) => {
-    if (stageFilter.value !== 'all' && client.stage !== stageFilter.value)
-      return false
-    if (assigneeFilter.value === 'unassigned' && client.assignees.length)
-      return false
-    else if (assigneeFilter.value !== 'all' && assigneeFilter.value !== 'unassigned' && !client.assignees.some(a => a.id === assigneeFilter.value))
-      return false
-    if (query) {
-      const haystack = `${client.name} ${client.contactName ?? ''} ${client.contactEmail ?? ''}`.toLowerCase()
-      if (!haystack.includes(query))
-        return false
-    }
-    return true
-  })
-})
 
 const isDetailOpen = ref(false)
 const selectedClientId = ref<string | null>(null)
@@ -211,86 +183,11 @@ const onSubmit = handleSubmit(async (values) => {
       </Sheet>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="relative flex-1 min-w-[200px] max-w-sm">
-        <Icon name="i-lucide-search" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input v-model="searchQuery" placeholder="Search clients..." class="pl-8" />
-      </div>
-      <Select v-model="stageFilter">
-        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">
-            All stages
-          </SelectItem>
-          <SelectItem v-for="option in stages" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-      <Select v-model="assigneeFilter">
-        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">
-            All assignees
-          </SelectItem>
-          <SelectItem value="unassigned">
-            Unassigned
-          </SelectItem>
-          <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-            {{ member.name }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
-    <div class="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Stage</TableHead>
-            <TableHead>Assigned To</TableHead>
-            <TableHead>Active AMC</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <template v-if="filteredClients.length">
-            <TableRow
-              v-for="client in filteredClients"
-              :key="client.id"
-              class="cursor-pointer"
-              @click="openClient(client)"
-            >
-              <TableCell class="font-medium">
-                {{ client.name }}
-              </TableCell>
-              <TableCell class="text-muted-foreground">
-                {{ client.contactName || client.contactEmail || '—' }}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" :class="stageBadgeClass(client.stage)">
-                  {{ stageLabel(client.stage) }}
-                </Badge>
-              </TableCell>
-              <TableCell class="text-muted-foreground">
-                {{ client.assignees.length ? client.assignees.map(a => a.name).join(', ') : 'Unassigned' }}
-              </TableCell>
-              <TableCell>{{ client.activeContractCount ?? 0 }}</TableCell>
-            </TableRow>
-          </template>
-          <TableRow v-else>
-            <TableCell :colspan="5" class="h-24 text-center">
-              No clients match your filters.
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable :data="clients" :columns="columns" @select="openClient">
+      <template #toolbar="{ table }">
+        <DataTableToolbar :table="table" />
+      </template>
+    </DataTable>
 
     <ClientDetailSheet v-model:open="isDetailOpen" :client="selectedClient" />
   </div>

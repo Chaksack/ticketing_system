@@ -5,6 +5,7 @@ export interface AuthUser {
   name: string
   email: string
   roles: StaffRole[]
+  avatarUrl?: string
 }
 
 export function useAuth() {

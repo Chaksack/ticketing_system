@@ -36,6 +36,10 @@ const faqs = [
     q: 'Can a customer reply to a ticket by email?',
     a: 'If inbound email is configured (ask an admin), yes — replying to any ticket-reply email adds that reply directly to the ticket, and reopens it automatically if it was resolved or closed. If it isn\'t configured, customers can only continue the conversation by submitting a new request through the portal.',
   },
+  {
+    q: 'How do I add or change my profile picture?',
+    a: 'Go to Settings → Profile, click "Change photo" under your name, and choose a PNG, JPEG, WEBP, or GIF up to 2MB. It updates everywhere your name appears — the sidebar, activity timelines, and assignee pickers. Click "Remove" to go back to your initials.',
+  },
 ]
 </script>
 
@@ -54,6 +58,9 @@ const faqs = [
       <TabsList class="flex-wrap h-auto">
         <TabsTrigger value="overview">
           Overview
+        </TabsTrigger>
+        <TabsTrigger value="bdsm">
+          BD &amp; SM
         </TabsTrigger>
         <TabsTrigger value="portal">
           Submitting a Ticket
@@ -137,6 +144,96 @@ const faqs = [
             </div>
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="bdsm" class="mt-4">
+        <div class="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Leads</CardTitle>
+              <CardDescription>
+                Track prospects before there's a signed deal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Each lead moves through New → Contacted → Qualified → Proposal Sent → Won/Lost.
+              Assign one or more staff, set a next step with a reminder date/time (you'll get
+              a push and in-app notification when it's due), and log multiple emails/phone
+              numbers for the same contact. When the deal is ready, click
+              <strong>Convert to Client</strong> — this creates a real client record carrying
+              over the lead's assignees and marks the lead "Won."
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Clients</CardTitle>
+              <CardDescription>
+                Everything about a client lives in one place.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Clients move through their own stage pipeline (Lead → Contacted → Proposal Sent
+              → Negotiation → Active → Lost), support multiple assignees, and can have several
+              contact emails/phones for the same person. A client's Projects and legacy AMC
+              contracts are nested right in its detail view, alongside an activity timeline of
+              every stage/assignee/AMC change.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Projects</CardTitle>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              A project belongs to one client and is where AMC contracts get assigned going
+              forward — open a client and use "New Project," or manage all projects from the
+              <NuxtLink to="/projects" class="underline">
+                Projects
+              </NuxtLink> page.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>AMC Plans &amp; Contracts</CardTitle>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              <p>
+                AMC Plans (default duration + currency) are the templates you assign to a
+                project as a contract. Each contract has its own status pipeline — Submitted →
+                Negotiating → Active → Lost, or Cancelled/Expired — plus a follow-up field with
+                its own reminder, separate from the pipeline status.
+              </p>
+              <p class="mt-2">
+                Active contracts get an automatic renewal-reminder push 30 and 7 days before
+                their end date, and flip to "Expiring soon" in the UI during that window.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tasks</CardTitle>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              A Jira-style board — Epics group Tasks, Tasks can have Subtasks. Assign one or
+              more staff, drag between status columns, and set a "remind me at" time to get
+              paged before something's due.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Finding things fast</CardTitle>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Every list (Leads, Clients, Projects, Tasks) has a search box, sortable columns,
+              and dropdown filters — click a column header to sort, or the filter chips above
+              the table to narrow by stage/status/assignee.
+            </CardContent>
+          </Card>
+        </div>
       </TabsContent>
 
       <TabsContent value="portal" class="mt-4">
@@ -338,6 +435,15 @@ const faqs = [
               Ticket volume over the last 30 days, breakdowns by status and priority, SLA
               compliance rate, average first-response and resolution time, and a
               per-agent table of tickets resolved and average resolution time.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Activity Log (Admin)</CardTitle>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              A merged, filterable feed of activity across tickets, clients, and leads — filter
+              by staff member to audit what a specific person has been doing.
             </CardContent>
           </Card>
         </div>
