@@ -173,8 +173,8 @@ function formatDateTime(value: string) {
           </div>
         </SheetHeader>
 
-        <ScrollArea class="h-[calc(100vh-2px)]">
-          <div class="flex flex-col gap-6 px-6 pt-4">
+        <ScrollArea class="flex-1 min-h-0">
+          <div class="flex flex-col gap-6 px-6 pt-4 pb-6">
             <div v-if="!isConverted" class="rounded-md border p-3 flex items-center justify-between gap-2">
               <div class="flex flex-col">
                 <span class="text-sm font-medium">Ready to start the project?</span>

@@ -65,6 +65,24 @@ export default defineEventHandler(async (event) => {
     WHERE tasks.id = ?
   `).get(id) as TaskRow
 
+  // Don't notify someone for assigning a task to themselves — they already know.
+  if (body.assigneeId && body.assigneeId !== user.id) {
+    const title = 'Task assigned to you'
+    const notifBody = body.title
+    const url = '/tasks'
+
+    await createNotification({
+      staffId: body.assigneeId,
+      type: 'task_assigned',
+      title,
+      body: notifBody,
+      url,
+      taskId: id,
+    })
+
+    await sendPushToStaff(body.assigneeId, { title, body: notifBody, url })
+  }
+
   setResponseStatus(event, 201)
   return { task: mapTaskRow(row) }
 })

@@ -7,8 +7,56 @@ import TaskFormSheet from './TaskFormSheet.vue'
 
 const { tasks, epics, updateTask, removeTask, subtasksOf } = useTasks()
 const { statuses, addStatus, renameStatus, removeStatus, reorderStatuses } = useTaskStatuses()
+const { staff, fetchStaff } = useStaff()
+
+onMounted(() => {
+  if (!staff.value.length)
+    fetchStaff()
+})
+
+const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
 
 const activeEpicFilter = ref<string | null>(null)
+const assigneeFilter = ref('all')
+const priorityFilter = ref('all')
+const dueFilter = ref('all')
+
+const hasActiveFilters = computed(() =>
+  !!activeEpicFilter.value || assigneeFilter.value !== 'all' || priorityFilter.value !== 'all' || dueFilter.value !== 'all',
+)
+
+function resetFilters() {
+  activeEpicFilter.value = null
+  assigneeFilter.value = 'all'
+  priorityFilter.value = 'all'
+  dueFilter.value = 'all'
+}
+
+function matchesFilters(task: Task) {
+  if (activeEpicFilter.value && task.epicId !== activeEpicFilter.value)
+    return false
+
+  if (assigneeFilter.value === 'unassigned') {
+    if (task.assigneeId)
+      return false
+  }
+  else if (assigneeFilter.value !== 'all' && task.assigneeId !== assigneeFilter.value) {
+    return false
+  }
+
+  if (priorityFilter.value !== 'all' && task.priority !== priorityFilter.value)
+    return false
+
+  if (dueFilter.value === 'none') {
+    if (task.dueDate)
+      return false
+  }
+  else if (dueFilter.value !== 'all' && getTaskDueStatus(task) !== dueFilter.value) {
+    return false
+  }
+
+  return true
+}
 
 const columnTasks = reactive<Record<string, Task[]>>({})
 
@@ -19,15 +67,18 @@ function syncColumns() {
       delete columnTasks[key]
   }
   for (const col of statuses.value) {
-    columnTasks[col.id] = tasks.value.filter(t =>
-      t.type === 'task'
-      && t.status === col.id
-      && (!activeEpicFilter.value || t.epicId === activeEpicFilter.value),
-    )
+    columnTasks[col.id] = tasks.value.filter(t => t.type === 'task' && t.status === col.id && matchesFilters(t))
   }
 }
 
-watch([tasks, activeEpicFilter, statuses], syncColumns, { immediate: true, deep: true })
+watch([tasks, activeEpicFilter, assigneeFilter, priorityFilter, dueFilter, statuses], syncColumns, { immediate: true, deep: true })
+
+// Bound the board to the remaining viewport height (below the header, page title, and
+// toolbar) so each column scrolls its own tasks instead of growing the whole page.
+const boardRoot = ref<HTMLElement>()
+const { top: boardTop } = useElementBounding(boardRoot)
+const { height: windowHeight } = useWindowSize()
+const boardHeight = computed(() => `${Math.max(windowHeight.value - boardTop.value - 16, 240)}px`)
 
 async function onChange(statusId: string, evt: any) {
   if (evt.added)
@@ -156,8 +207,8 @@ async function onColumnsReordered() {
 </script>
 
 <template>
-  <div class="flex gap-4 items-start">
-    <div class="w-56 shrink-0 flex flex-col gap-2 border-r pr-4">
+  <div ref="boardRoot" class="flex gap-4" :style="{ height: boardHeight }">
+    <div class="w-56 shrink-0 min-h-0 flex flex-col gap-2 border-r pr-4">
       <div class="flex items-center justify-between">
         <h3 class="font-semibold text-sm">
           Epics
@@ -177,7 +228,7 @@ async function onColumnsReordered() {
         All epics
       </button>
 
-      <div class="flex flex-col gap-0.5 overflow-y-auto max-h-[70vh]">
+      <div class="flex-1 min-h-0 flex flex-col gap-0.5 overflow-y-auto">
         <div
           v-for="epic in epics"
           :key="epic.id"
@@ -199,11 +250,72 @@ async function onColumnsReordered() {
       </div>
     </div>
 
-    <div class="flex-1 min-w-0 flex flex-col gap-4">
+    <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-4">
       <div class="flex flex-wrap items-center gap-2">
         <Button size="sm" @click="openNewTask">
           <Icon name="i-lucide-plus" class="mr-1.5 h-4 w-4" />
           New Task
+        </Button>
+
+        <Separator orientation="vertical" class="h-6 mx-1" />
+
+        <Select v-model="assigneeFilter">
+          <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
+            <Icon name="i-lucide-user" class="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              All assignees
+            </SelectItem>
+            <SelectItem value="unassigned">
+              Unassigned
+            </SelectItem>
+            <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
+              {{ member.name }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select v-model="priorityFilter">
+          <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
+            <Icon name="i-lucide-flag" class="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              All priorities
+            </SelectItem>
+            <SelectItem v-for="option in priorities" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select v-model="dueFilter">
+          <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
+            <Icon name="i-lucide-calendar-clock" class="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              Any due date
+            </SelectItem>
+            <SelectItem value="overdue">
+              Overdue
+            </SelectItem>
+            <SelectItem value="due-soon">
+              Due soon
+            </SelectItem>
+            <SelectItem value="none">
+              No due date
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button v-if="hasActiveFilters" size="sm" variant="ghost" class="text-muted-foreground" @click="resetFilters">
+          <Icon name="i-lucide-x" class="mr-1 h-3.5 w-3.5" />
+          Clear filters
         </Button>
       </div>
 
@@ -212,11 +324,11 @@ async function onColumnsReordered() {
         item-key="id"
         handle=".column-drag-handle"
         :animation="180"
-        class="flex gap-4 overflow-x-auto overflow-y-hidden pb-4 items-start"
+        class="flex-1 min-h-0 flex gap-4 overflow-x-auto overflow-y-hidden pb-4"
         @end="onColumnsReordered"
       >
         <template #item="{ element: col }: { element: { id: string, label: string } }">
-          <div class="w-[280px] shrink-0 flex flex-col gap-2">
+          <div class="w-[280px] shrink-0 min-h-0 flex flex-col gap-2">
             <div class="column-drag-handle flex items-center gap-1 px-1 cursor-grab active:cursor-grabbing">
               <Icon name="i-lucide-grip-vertical" class="size-3.5 text-muted-foreground/50" />
               <Input
@@ -254,7 +366,7 @@ async function onColumnsReordered() {
               :group="{ name: 'task-board', pull: true, put: true }"
               item-key="id"
               :animation="180"
-              class="flex flex-col gap-3 min-h-6 p-0.5"
+              class="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto p-0.5"
               ghost-class="opacity-50"
               @change="(evt: any) => onChange(col.id, evt)"
             >
@@ -289,6 +401,17 @@ async function onColumnsReordered() {
                   <p class="font-medium leading-5 mt-1 cursor-pointer" @click="openEdit(task)">
                     {{ task.title }}
                   </p>
+
+                  <div v-if="task.description" class="group/desc relative mt-1">
+                    <p class="text-xs text-muted-foreground line-clamp-2 whitespace-pre-line">
+                      {{ task.description }}
+                    </p>
+                    <div
+                      class="invisible absolute inset-x-0 top-0 z-20 rounded-lg border bg-card p-2 text-xs whitespace-pre-line text-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover/desc:visible group-hover/desc:opacity-100"
+                    >
+                      {{ task.description }}
+                    </div>
+                  </div>
 
                   <Badge v-if="task.epicTitle" variant="outline" class="mt-2 gap-1.5">
                     <span class="size-2 rounded-full" :style="{ backgroundColor: task.epicColor }" />
@@ -339,7 +462,7 @@ async function onColumnsReordered() {
         </template>
 
         <template #footer>
-          <div class="w-[280px] shrink-0">
+          <div class="w-[280px] shrink-0 self-start">
             <div v-if="!addingColumn">
               <Button variant="ghost" class="w-full justify-start text-muted-foreground" @click="addingColumn = true">
                 <Icon name="i-lucide-plus" class="mr-1.5 h-4 w-4" />

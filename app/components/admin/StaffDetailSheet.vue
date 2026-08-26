@@ -123,71 +123,73 @@ function formatDate(value: string) {
           </div>
         </SheetHeader>
 
-        <div class="flex flex-col gap-6 px-6 pt-4">
-          <div class="flex flex-col gap-1">
-            <span class="text-sm text-muted-foreground">Email</span>
-            <span class="text-sm font-medium">{{ staff.email }}</span>
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <span class="text-sm text-muted-foreground">Roles</span>
-            <label v-for="option in roleOptions" :key="option.value" :for="`staff-role-${option.value}`" class="flex items-center gap-2 text-sm">
-              <Checkbox
-                :id="`staff-role-${option.value}`"
-                :model-value="staff.roles.includes(option.value)"
-                @update:model-value="(checked) => onToggleRole(option.value, !!checked)"
-              />
-              {{ option.label }}
-            </label>
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <span class="text-sm text-muted-foreground">Joined</span>
-            <span class="text-sm font-medium">{{ formatDate(staff.createdAt) }}</span>
-          </div>
-
-          <Separator />
-
-          <div class="flex items-center justify-between">
-            <div class="flex flex-col gap-0.5">
-              <Label for="on-call">On-call</Label>
-              <span class="text-xs text-muted-foreground">
-                Page this staff member when a new ticket is reported.
-              </span>
+        <ScrollArea class="flex-1 min-h-0">
+          <div class="flex flex-col gap-6 px-6 pt-4 pb-6">
+            <div class="flex flex-col gap-1">
+              <span class="text-sm text-muted-foreground">Email</span>
+              <span class="text-sm font-medium">{{ staff.email }}</span>
             </div>
-            <Switch
-              id="on-call"
-              :model-value="staff.onCall"
-              :disabled="staff.status === 'disabled'"
-              @update:model-value="onOnCallChange"
-            />
+
+            <div class="flex flex-col gap-2">
+              <span class="text-sm text-muted-foreground">Roles</span>
+              <label v-for="option in roleOptions" :key="option.value" :for="`staff-role-${option.value}`" class="flex items-center gap-2 text-sm">
+                <Checkbox
+                  :id="`staff-role-${option.value}`"
+                  :model-value="staff.roles.includes(option.value)"
+                  @update:model-value="(checked) => onToggleRole(option.value, !!checked)"
+                />
+                {{ option.label }}
+              </label>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <span class="text-sm text-muted-foreground">Joined</span>
+              <span class="text-sm font-medium">{{ formatDate(staff.createdAt) }}</span>
+            </div>
+
+            <Separator />
+
+            <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-0.5">
+                <Label for="on-call">On-call</Label>
+                <span class="text-xs text-muted-foreground">
+                  Page this staff member when a new ticket is reported.
+                </span>
+              </div>
+              <Switch
+                id="on-call"
+                :model-value="staff.onCall"
+                :disabled="staff.status === 'disabled'"
+                @update:model-value="onOnCallChange"
+              />
+            </div>
+
+            <Separator />
+
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button variant="destructive">
+                  <Icon name="i-lucide-trash-2" class="mr-2 h-4 w-4" />
+                  Delete Staff Member
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {{ staff.name }}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently remove this staff member and revoke their access to the platform. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction @click="onDelete">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-
-          <Separator />
-
-          <AlertDialog>
-            <AlertDialogTrigger as-child>
-              <Button variant="destructive">
-                <Icon name="i-lucide-trash-2" class="mr-2 h-4 w-4" />
-                Delete Staff Member
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete {{ staff.name }}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently remove this staff member and revoke their access to the platform. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction @click="onDelete">
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        </ScrollArea>
       </template>
     </SheetContent>
   </Sheet>

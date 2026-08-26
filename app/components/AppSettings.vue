@@ -79,8 +79,8 @@ function handleChangeDirection(dir: 'ltr' | 'rtl') {
         <SheetTitle>Template Customizer</SheetTitle>
         <SheetDescription>Customize & Preview in Real Time</SheetDescription>
       </SheetHeader>
-      <ScrollArea class="h-[calc(100vh-100px)]">
-        <div class="flex flex-col gap-6 px-6">
+      <ScrollArea class="flex-1 min-h-0">
+        <div class="flex flex-col gap-6 px-6 pb-6">
           <div class="space-y-3">
             <Badge>Theming</Badge>
             <ThemeCustomize />

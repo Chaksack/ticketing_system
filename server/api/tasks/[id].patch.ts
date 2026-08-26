@@ -16,7 +16,7 @@ interface UpdateTaskBody {
 }
 
 export default defineEventHandler(async (event) => {
-  await requireBd(event)
+  const user = await requireBd(event)
 
   const id = getRouterParam(event, 'id')
   const body = await readBody<UpdateTaskBody>(event)
@@ -54,6 +54,25 @@ export default defineEventHandler(async (event) => {
         parent_task_id = ?, start_date = ?, due_date = ?, remind_at = ?, reminder_sent = ?, updated_at = ?
     WHERE id = ?
   `).run(title, description, status, priority, color, assigneeId, epicId, parentTaskId, startDate, dueDate, remindAt, reminderSent, now, id)
+
+  // Only notify when the assignee actually changed to someone new — not on unrelated edits,
+  // and never for assigning a task to yourself.
+  if (assigneeId && assigneeId !== existing.assignee_id && assigneeId !== user.id) {
+    const notifTitle = 'Task assigned to you'
+    const notifBody = title
+    const url = '/tasks'
+
+    await createNotification({
+      staffId: assigneeId,
+      type: 'task_assigned',
+      title: notifTitle,
+      body: notifBody,
+      url,
+      taskId: id,
+    })
+
+    await sendPushToStaff(assigneeId, { title: notifTitle, body: notifBody, url })
+  }
 
   const row = await db.prepare(`
     SELECT tasks.*, staff.name AS assignee_name, epics.title AS epic_title, epics.color AS epic_color

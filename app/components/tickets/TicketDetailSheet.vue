@@ -302,8 +302,8 @@ function formatDate(value: string) {
           </p>
         </SheetHeader>
 
-        <ScrollArea class="h-[calc(100vh-2px)]">
-          <div class="flex flex-col gap-6 px-6 pt-4">
+        <ScrollArea class="flex-1 min-h-0">
+          <div class="flex flex-col gap-6 px-6 pt-4 pb-6">
             <p class="text-sm leading-relaxed">
               {{ ticket.description }}
             </p>
