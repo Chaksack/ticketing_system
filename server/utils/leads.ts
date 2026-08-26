@@ -1,12 +1,7 @@
 import type { Lead, LeadActivityType } from '../../app/types/lead'
 import type { LeadActivityRow, LeadRow } from './mappers'
 
-const LEAD_SELECT = `
-  SELECT leads.*, staff.name AS assigned_to_name
-  FROM leads
-  LEFT JOIN staff ON staff.id = leads.assigned_to
-  WHERE leads.id = ?
-`
+const LEAD_SELECT = 'SELECT * FROM leads WHERE id = ?'
 
 export async function loadFullLead(id: string): Promise<Lead> {
   const db = useDatabase()
@@ -17,8 +12,9 @@ export async function loadFullLead(id: string): Promise<Lead> {
   }
 
   const activityRows = await db.prepare('SELECT * FROM lead_activity WHERE lead_id = ? ORDER BY created_at ASC').all(id) as LeadActivityRow[]
+  const assignees = await getLeadAssignees(id)
 
-  return mapLeadRow(row, activityRows.map(activityRow => mapLeadActivityRow(activityRow)))
+  return mapLeadRow(row, activityRows.map(activityRow => mapLeadActivityRow(activityRow)), assignees)
 }
 
 export async function logLeadActivity(options: {

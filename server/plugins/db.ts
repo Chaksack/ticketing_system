@@ -171,4 +171,30 @@ export default defineNitroPlugin(async () => {
 
     console.warn(`[seed] Created ${defaultStatuses.length} default task statuses.`)
   }
+
+  // One-time backfill of the old single `assignee_id` / `assigned_to` columns into the new
+  // many-to-many tables — guarded so it only ever runs once. Running this unconditionally on
+  // every boot would resurrect an assignment someone deliberately removed, since the old
+  // columns are frozen in place (no longer written to) rather than dropped.
+  const taskAssigneeCount = await db.prepare('SELECT COUNT(*) as count FROM task_assignees').get() as { count: number | string }
+
+  if (Number(taskAssigneeCount.count) === 0) {
+    await db.prepare(`
+      INSERT INTO task_assignees (task_id, staff_id)
+      SELECT id, assignee_id FROM tasks WHERE assignee_id IS NOT NULL
+    `).run()
+
+    console.warn('[migrate] Backfilled task assignees from the legacy assignee_id column.')
+  }
+
+  const leadAssigneeCount = await db.prepare('SELECT COUNT(*) as count FROM lead_assignees').get() as { count: number | string }
+
+  if (Number(leadAssigneeCount.count) === 0) {
+    await db.prepare(`
+      INSERT INTO lead_assignees (lead_id, staff_id)
+      SELECT id, assigned_to FROM leads WHERE assigned_to IS NOT NULL
+    `).run()
+
+    console.warn('[migrate] Backfilled lead assignees from the legacy assigned_to column.')
+  }
 })

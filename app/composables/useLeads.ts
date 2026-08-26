@@ -9,7 +9,9 @@ export interface NewLead {
   source?: string
   stage?: LeadStage
   notes?: string
-  assignedTo?: string
+  assigneeIds?: string[]
+  nextStep?: string
+  nextStepAt?: string
 }
 
 export interface LeadPatch {
@@ -20,7 +22,9 @@ export interface LeadPatch {
   source?: string
   stage?: LeadStage
   notes?: string
-  assignedTo?: string | null
+  assigneeIds?: string[]
+  nextStep?: string | null
+  nextStepAt?: string | null
 }
 
 export function useLeads() {

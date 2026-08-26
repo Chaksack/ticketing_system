@@ -28,3 +28,13 @@ jobs:
         continue-on-error: true
         run: >-
           curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/task-reminders"
+
+      - name: Lead reminders
+        continue-on-error: true
+        run: >-
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/lead-reminders"
+
+      - name: Prune read notifications
+        continue-on-error: true
+        run: >-
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/prune-notifications"

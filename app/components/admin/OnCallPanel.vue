@@ -43,7 +43,7 @@ function formatDate(value: string) {
               <span class="text-sm font-medium">{{ member.name }}</span>
               <span class="text-xs text-muted-foreground">{{ member.email }}</span>
             </div>
-            <Badge variant="secondary" class="ml-auto gap-1">
+            <Badge variant="outline" class="ml-auto gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
               <Icon name="i-lucide-radio" class="h-3 w-3" />
               On-call
             </Badge>
@@ -72,7 +72,7 @@ function formatDate(value: string) {
               </span>
               <span class="text-xs text-muted-foreground">{{ formatDate(page.createdAt) }}</span>
             </div>
-            <Badge v-if="page.acknowledged" variant="secondary">
+            <Badge v-if="page.acknowledged" variant="outline" class="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
               Acknowledged
             </Badge>
             <Button v-else size="sm" variant="outline" @click="acknowledgePage(page.id)">

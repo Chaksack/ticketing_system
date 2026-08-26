@@ -34,6 +34,12 @@ export const navMenu: NavMenu[] = [
         link: '/amc-plans',
         roles: ['bd', 'sm'],
       },
+      {
+        title: 'Projects',
+        icon: 'i-lucide-users',
+        link: '/projects',
+        roles: ['bd', 'sm'],
+      },
     ],
   },
   {

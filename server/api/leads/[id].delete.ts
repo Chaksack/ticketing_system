@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
   const db = useDatabase()
 
   await db.prepare('DELETE FROM lead_activity WHERE lead_id = ?').run(id)
+  await db.prepare('DELETE FROM lead_assignees WHERE lead_id = ?').run(id)
   await db.prepare('DELETE FROM leads WHERE id = ?').run(id)
 
   return { success: true }

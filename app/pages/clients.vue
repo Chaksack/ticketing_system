@@ -25,6 +25,10 @@ function stageLabel(value: string) {
   return stages.find(s => s.value === value)?.label ?? value
 }
 
+function stageBadgeClass(value: string) {
+  return stages.find(s => s.value === value)?.badgeClass
+}
+
 const isDetailOpen = ref(false)
 const selectedClientId = ref<string | null>(null)
 const selectedClient = computed(() => clients.value.find(c => c.id === selectedClientId.value) ?? null)
@@ -219,7 +223,7 @@ const onSubmit = handleSubmit(async (values) => {
                 {{ client.contactName || client.contactEmail || '—' }}
               </TableCell>
               <TableCell>
-                <Badge variant="outline">
+                <Badge variant="outline" :class="stageBadgeClass(client.stage)">
                   {{ stageLabel(client.stage) }}
                 </Badge>
               </TableCell>

@@ -22,6 +22,9 @@ export default defineEventHandler(async (event) => {
 
   const clientId = await nextClientId()
   const now = new Date().toISOString()
+  // Clients still take a single assignee — carry over the first of the lead's (possibly
+  // multiple) assignees, if any.
+  const leadAssignees = await getLeadAssignees(id)
 
   await db.prepare(`
     INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, notes, assigned_to, created_at, updated_at)
@@ -33,7 +36,7 @@ export default defineEventHandler(async (event) => {
     lead.contact_email,
     lead.contact_phone,
     lead.notes,
-    lead.assigned_to,
+    leadAssignees[0]?.id ?? null,
     now,
     now,
   )

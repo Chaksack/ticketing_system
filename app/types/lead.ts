@@ -1,6 +1,8 @@
+import type { Assignee } from './assignee'
+
 export type LeadStage = 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
 
-export type LeadActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted'
+export type LeadActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'next_step_updated'
 
 export interface LeadActivity {
   id: string
@@ -23,9 +25,11 @@ export interface Lead {
   source?: string
   stage: LeadStage
   notes?: string
-  assignedTo?: string
-  assignedToName?: string
+  assignees: Assignee[]
   convertedClientId?: string
+  nextStep?: string
+  nextStepAt?: string
+  nextStepReminderSent: boolean
   createdAt: string
   updatedAt: string
   activity: LeadActivity[]

@@ -5,6 +5,7 @@ const router = useRouter()
 const { notifications, fetchNotifications, markRead, markAllRead } = useNotifications()
 const { fetchTickets } = useTickets()
 const { fetchTasks } = useTasks()
+const { fetchLeads } = useLeads()
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
@@ -26,14 +27,17 @@ const TYPE_ICON: Record<NotificationType, string> = {
   reply: 'i-lucide-message-square',
   task_reminder: 'i-lucide-alarm-clock',
   task_assigned: 'i-lucide-user-check',
+  lead_reminder: 'i-lucide-target',
 }
 
 async function onSelect(notification: AppNotification) {
   await markRead(notification.id)
   // Refetch whichever list this notification actually affects, not always tickets —
-  // otherwise a task notification leaves the Tasks page showing stale data.
+  // otherwise a task/lead notification leaves that page showing stale data.
   if (notification.taskId)
     await fetchTasks()
+  else if (notification.leadId)
+    await fetchLeads()
   else
     await fetchTickets()
   if (notification.url)
@@ -46,6 +50,7 @@ async function onMarkAllRead() {
   // and warns (and can wedge) on overlapping concurrent queries.
   await fetchTickets()
   await fetchTasks()
+  await fetchLeads()
 }
 
 function onOpenChange(isOpen: boolean) {

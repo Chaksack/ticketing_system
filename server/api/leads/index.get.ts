@@ -6,11 +6,10 @@ export default defineEventHandler(async (event) => {
 
   const db = useDatabase()
   const rows = await db.prepare(`
-    SELECT leads.*, staff.name AS assigned_to_name
-    FROM leads
-    LEFT JOIN staff ON staff.id = leads.assigned_to
-    ORDER BY leads.created_at DESC
+    SELECT * FROM leads ORDER BY created_at DESC
   `).all() as LeadRow[]
 
-  return { leads: rows.map(row => mapLeadRow(row)) }
+  const assigneesByLead = await getAllLeadAssignees()
+
+  return { leads: rows.map(row => mapLeadRow(row, [], assigneesByLead.get(row.id) ?? [])) }
 })

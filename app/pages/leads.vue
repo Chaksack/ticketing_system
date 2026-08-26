@@ -25,6 +25,10 @@ function stageLabel(value: string) {
   return leadStages.find(s => s.value === value)?.label ?? value
 }
 
+function stageBadgeClass(value: string) {
+  return leadStages.find(s => s.value === value)?.badgeClass
+}
+
 const isDetailOpen = ref(false)
 const selectedLeadId = ref<string | null>(null)
 const selectedLead = computed(() => leads.value.find(l => l.id === selectedLeadId.value) ?? null)
@@ -49,17 +53,17 @@ const leadFormSchema = toTypedSchema(z.object({
   contactPhone: z.string().optional(),
   source: z.string().optional(),
   stage: z.enum(['new', 'contacted', 'qualified', 'proposal', 'won', 'lost']),
-  assignedTo: z.string().optional(),
+  assigneeIds: z.array(z.string()).optional(),
 }))
 
 const { handleSubmit, resetForm } = useForm({
   validationSchema: leadFormSchema,
-  initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'new', assignedTo: undefined },
+  initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'new', assigneeIds: [] },
 })
 
 const onSubmit = handleSubmit(async (values) => {
   try {
-    const lead = await addLead({ ...values, assignedTo: values.assignedTo || undefined })
+    const lead = await addLead(values)
     resetForm()
     isAddOpen.value = false
     toast('Lead added', {
@@ -156,45 +160,34 @@ const onSubmit = handleSubmit(async (values) => {
               </FormField>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <FormField v-slot="{ componentField }" name="stage">
-                <FormItem>
-                  <FormLabel>Stage</FormLabel>
-                  <Select v-bind="componentField">
-                    <FormControl>
-                      <SelectTrigger class="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem v-for="option in leadStages" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
+            <FormField v-slot="{ componentField }" name="stage">
+              <FormItem>
+                <FormLabel>Stage</FormLabel>
+                <Select v-bind="componentField">
+                  <FormControl>
+                    <SelectTrigger class="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem v-for="option in leadStages" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            </FormField>
 
-              <FormField v-slot="{ componentField }" name="assignedTo">
-                <FormItem>
-                  <FormLabel>Assign to (optional)</FormLabel>
-                  <Select v-bind="componentField">
-                    <FormControl>
-                      <SelectTrigger class="w-full">
-                        <SelectValue placeholder="Leave unassigned" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-                        {{ member.name }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-            </div>
+            <FormField v-slot="{ componentField }" name="assigneeIds">
+              <FormItem>
+                <FormLabel>Assign to (optional)</FormLabel>
+                <FormControl>
+                  <StaffAssigneePicker v-bind="componentField" :staff="activeStaff" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            </FormField>
 
             <SheetFooter class="p-0">
               <Button type="submit">
@@ -235,15 +228,15 @@ const onSubmit = handleSubmit(async (values) => {
                 {{ lead.source || '—' }}
               </TableCell>
               <TableCell>
-                <Badge v-if="lead.convertedClientId" variant="secondary">
+                <Badge v-if="lead.convertedClientId" variant="outline" class="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
                   Converted
                 </Badge>
-                <Badge v-else variant="outline">
+                <Badge v-else variant="outline" :class="stageBadgeClass(lead.stage)">
                   {{ stageLabel(lead.stage) }}
                 </Badge>
               </TableCell>
               <TableCell class="text-muted-foreground">
-                {{ lead.assignedToName || 'Unassigned' }}
+                {{ lead.assignees.length ? lead.assignees.map(a => a.name).join(', ') : 'Unassigned' }}
               </TableCell>
             </TableRow>
           </template>

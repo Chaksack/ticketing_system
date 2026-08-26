@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
   const db = useDatabase()
 
-  await db.prepare('UPDATE notifications SET read = 1 WHERE id = ? AND staff_id = ?').run(id, user.id)
+  await db.prepare('UPDATE notifications SET read = 1, read_at = ? WHERE id = ? AND staff_id = ? AND read = 0').run(new Date().toISOString(), id, user.id)
 
   return { success: true }
 })

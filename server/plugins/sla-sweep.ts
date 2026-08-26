@@ -19,6 +19,10 @@ export default defineNitroPlugin(async () => {
 
     checkTaskReminders().catch(error => console.error('Task reminder sweep failed', error))
 
+    checkLeadReminders().catch(error => console.error('Lead reminder sweep failed', error))
+
+    pruneReadNotifications().catch(error => console.error('Notification prune failed', error))
+
     checkGmailInbox().catch((error) => {
       // Not configured is expected until NUXT_GMAIL_REFRESH_TOKEN is set — don't spam logs for it.
       if (!(error instanceof Error) || !error.message.includes('not configured'))

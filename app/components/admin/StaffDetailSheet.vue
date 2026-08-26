@@ -2,6 +2,7 @@
 import type { AcceptableValue } from 'reka-ui'
 import type { StaffMember, StaffStatus } from '~/types/staff'
 import { toast } from 'vue-sonner'
+import { roleBadgeClass } from './data'
 
 const props = defineProps<{
   staff: StaffMember | null
@@ -107,7 +108,7 @@ function formatDate(value: string) {
           </SheetDescription>
           <SheetTitle>{{ staff.name }}</SheetTitle>
           <div class="flex flex-wrap items-center gap-2 pt-1">
-            <Badge v-for="role in staff.roles" :key="role" :variant="role === 'admin' ? 'default' : 'secondary'" class="capitalize">
+            <Badge v-for="role in staff.roles" :key="role" variant="outline" class="capitalize" :class="roleBadgeClass[role]">
               {{ role }}
             </Badge>
             <Select :model-value="staff.status" @update:model-value="onStatusChange">

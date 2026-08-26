@@ -1,4 +1,5 @@
 import type { AmcContract, AmcPlan } from '../../app/types/amc'
+import type { Assignee } from '../../app/types/assignee'
 import type { Macro } from '../../app/types/automation'
 import type { Client, ClientActivity } from '../../app/types/client'
 import type { Lead, LeadActivity } from '../../app/types/lead'
@@ -309,14 +310,15 @@ export interface LeadRow {
   source: string | null
   stage: string
   notes: string | null
-  assigned_to: string | null
-  assigned_to_name?: string | null
   converted_client_id: string | null
+  next_step: string | null
+  next_step_at: string | null
+  next_step_reminder_sent: number
   created_at: string
   updated_at: string
 }
 
-export function mapLeadRow(row: LeadRow, activity: LeadActivity[] = []): Lead {
+export function mapLeadRow(row: LeadRow, activity: LeadActivity[] = [], assignees: Assignee[] = []): Lead {
   return {
     id: row.id,
     name: row.name,
@@ -326,9 +328,11 @@ export function mapLeadRow(row: LeadRow, activity: LeadActivity[] = []): Lead {
     source: row.source ?? undefined,
     stage: row.stage as Lead['stage'],
     notes: row.notes ?? undefined,
-    assignedTo: row.assigned_to ?? undefined,
-    assignedToName: row.assigned_to_name ?? undefined,
+    assignees,
     convertedClientId: row.converted_client_id ?? undefined,
+    nextStep: row.next_step ?? undefined,
+    nextStepAt: row.next_step_at ?? undefined,
+    nextStepReminderSent: !!row.next_step_reminder_sent,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     activity,
@@ -369,8 +373,6 @@ export interface TaskRow {
   status: string
   priority: string
   color: string | null
-  assignee_id: string | null
-  assignee_name?: string | null
   epic_id: string | null
   epic_title?: string | null
   epic_color?: string | null
@@ -384,7 +386,7 @@ export interface TaskRow {
   updated_at: string
 }
 
-export function mapTaskRow(row: TaskRow): Task {
+export function mapTaskRow(row: TaskRow, assignees: Assignee[] = []): Task {
   return {
     id: row.id,
     type: row.type as Task['type'],
@@ -393,8 +395,7 @@ export function mapTaskRow(row: TaskRow): Task {
     status: row.status as Task['status'],
     priority: row.priority as Task['priority'],
     color: row.color ?? undefined,
-    assigneeId: row.assignee_id ?? undefined,
-    assigneeName: row.assignee_name ?? undefined,
+    assignees,
     epicId: row.epic_id ?? undefined,
     epicTitle: row.epic_title ?? undefined,
     epicColor: row.epic_color ?? undefined,

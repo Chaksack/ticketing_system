@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { SlaPolicy } from '~/types/automation'
 import { toast } from 'vue-sonner'
+import { priorities } from '~/components/tickets/data/data'
+
+function priorityBadgeClass(value: string) {
+  return priorities.find(p => p.value === value)?.badgeClass
+}
 
 definePageMeta({
   middleware: 'admin',
@@ -72,7 +77,7 @@ async function save(policy: SlaPolicy) {
         <TableBody>
           <TableRow v-for="policy in policies" :key="policy.id">
             <TableCell>
-              <Badge variant="secondary" class="capitalize">
+              <Badge variant="outline" class="capitalize" :class="priorityBadgeClass(policy.priority)">
                 {{ policy.priority }}
               </Badge>
             </TableCell>

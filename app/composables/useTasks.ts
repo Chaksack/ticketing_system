@@ -7,7 +7,7 @@ export interface NewTask {
   status?: TaskStatus
   priority?: TaskPriority
   color?: string
-  assigneeId?: string
+  assigneeIds?: string[]
   epicId?: string
   parentTaskId?: string
   startDate?: string
@@ -21,7 +21,7 @@ export interface TaskPatch {
   status?: TaskStatus
   priority?: TaskPriority
   color?: string | null
-  assigneeId?: string | null
+  assigneeIds?: string[]
   epicId?: string | null
   parentTaskId?: string | null
   startDate?: string | null

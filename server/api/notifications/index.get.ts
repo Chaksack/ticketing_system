@@ -9,6 +9,7 @@ interface NotificationRow {
   url: string | null
   ticket_id: string | null
   task_id: string | null
+  lead_id: string | null
   read: number
   created_at: string
 }
@@ -32,6 +33,7 @@ export default defineEventHandler(async (event) => {
       url: row.url ?? undefined,
       ticketId: row.ticket_id ?? undefined,
       taskId: row.task_id ?? undefined,
+      leadId: row.lead_id ?? undefined,
       read: !!row.read,
       createdAt: row.created_at,
     })),

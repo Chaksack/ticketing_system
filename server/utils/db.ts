@@ -168,6 +168,8 @@ async function migrate() {
   `)
 
   await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS task_id TEXT')
+  await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS lead_id TEXT')
+  await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TEXT')
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -258,6 +260,10 @@ async function migrate() {
     )
   `)
 
+  await db.exec('ALTER TABLE leads ADD COLUMN IF NOT EXISTS next_step TEXT')
+  await db.exec('ALTER TABLE leads ADD COLUMN IF NOT EXISTS next_step_at TEXT')
+  await db.exec('ALTER TABLE leads ADD COLUMN IF NOT EXISTS next_step_reminder_sent INTEGER NOT NULL DEFAULT 0')
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS lead_activity (
       id TEXT PRIMARY KEY,
@@ -291,6 +297,22 @@ async function migrate() {
       created_by TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS task_assignees (
+      task_id TEXT NOT NULL,
+      staff_id TEXT NOT NULL,
+      PRIMARY KEY (task_id, staff_id)
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS lead_assignees (
+      lead_id TEXT NOT NULL,
+      staff_id TEXT NOT NULL,
+      PRIMARY KEY (lead_id, staff_id)
     )
   `)
 

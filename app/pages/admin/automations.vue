@@ -5,6 +5,14 @@ import { toast } from 'vue-sonner'
 import * as z from 'zod'
 import { priorities, statuses } from '~/components/tickets/data/data'
 
+function statusBadgeClass(value: string) {
+  return statuses.find(s => s.value === value)?.badgeClass
+}
+
+function priorityBadgeClass(value: string) {
+  return priorities.find(p => p.value === value)?.badgeClass
+}
+
 definePageMeta({
   middleware: 'admin',
 })
@@ -247,10 +255,10 @@ async function onDelete(id: string, name: string) {
               </TableCell>
               <TableCell>
                 <div class="flex gap-1">
-                  <Badge v-if="rule.setStatus" variant="outline" class="capitalize">
+                  <Badge v-if="rule.setStatus" variant="outline" class="capitalize" :class="statusBadgeClass(rule.setStatus)">
                     {{ rule.setStatus }}
                   </Badge>
-                  <Badge v-if="rule.setPriority" variant="outline" class="capitalize">
+                  <Badge v-if="rule.setPriority" variant="outline" class="capitalize" :class="priorityBadgeClass(rule.setPriority)">
                     {{ rule.setPriority }}
                   </Badge>
                   <Badge v-if="rule.setAssigneeId" variant="outline">

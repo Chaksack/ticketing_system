@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AcceptableValue } from 'reka-ui'
 import type { Lead, LeadActivity, LeadStage } from '~/types/lead'
+import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
 import { toast } from 'vue-sonner'
 import { leadStages } from './data'
 
@@ -8,10 +9,14 @@ const props = defineProps<{
   lead: Lead | null
 }>()
 
+const emit = defineEmits<{
+  (e: 'deleted'): void
+}>()
+
 const open = defineModel<boolean>('open', { default: false })
 
 const router = useRouter()
-const { updateLead, convertLead } = useLeads()
+const { updateLead, convertLead, removeLead } = useLeads()
 const { staff, fetchStaff } = useStaff()
 
 onMounted(() => {
@@ -34,25 +39,65 @@ async function onStageChange(value: AcceptableValue) {
   })
 }
 
-async function onAssigneeChange(value: AcceptableValue) {
+async function onAssigneesChange(assigneeIds: string[]) {
   if (!props.lead)
     return
 
-  const assignedTo = value === 'unassigned' ? null : value as string
-  await updateLead(props.lead.id, { assignedTo })
-
-  const name = staff.value.find(s => s.id === assignedTo)?.name
-  toast('Assignee updated', {
-    description: name ? `Assigned to ${name}.` : 'Lead unassigned.',
-  })
+  await updateLead(props.lead.id, { assigneeIds })
 }
 
 const notesDraft = ref('')
 const sourceDraft = ref('')
+const nextStepDraft = ref('')
+const nameDraft = ref('')
+const contactNameDraft = ref('')
+const contactEmailDraft = ref('')
+const contactPhoneDraft = ref('')
+const df = new DateFormatter('en-US', { dateStyle: 'medium' })
+const nextStepReminderField = useDateTimeField()
+
 watch(() => props.lead?.id, () => {
   notesDraft.value = props.lead?.notes ?? ''
   sourceDraft.value = props.lead?.source ?? ''
+  nextStepDraft.value = props.lead?.nextStep ?? ''
+  nextStepReminderField.setFromIso(props.lead?.nextStepAt)
+  nameDraft.value = props.lead?.name ?? ''
+  contactNameDraft.value = props.lead?.contactName ?? ''
+  contactEmailDraft.value = props.lead?.contactEmail ?? ''
+  contactPhoneDraft.value = props.lead?.contactPhone ?? ''
 }, { immediate: true })
+
+async function saveDetails() {
+  if (!props.lead || !nameDraft.value.trim())
+    return
+
+  await updateLead(props.lead.id, {
+    name: nameDraft.value.trim(),
+    contactName: contactNameDraft.value.trim(),
+    contactEmail: contactEmailDraft.value.trim(),
+    contactPhone: contactPhoneDraft.value.trim(),
+  })
+  toast('Details saved')
+}
+
+const isDeleting = ref(false)
+
+async function onDelete() {
+  if (!props.lead)
+    return
+
+  isDeleting.value = true
+  try {
+    const name = props.lead.name
+    await removeLead(props.lead.id)
+    open.value = false
+    emit('deleted')
+    toast('Lead deleted', { description: `${name} was removed.` })
+  }
+  finally {
+    isDeleting.value = false
+  }
+}
 
 async function saveNotes() {
   if (!props.lead)
@@ -68,6 +113,19 @@ async function saveSource() {
 
   await updateLead(props.lead.id, { source: sourceDraft.value })
   toast('Source saved')
+}
+
+async function saveNextStep() {
+  if (!props.lead)
+    return
+
+  await updateLead(props.lead.id, {
+    nextStep: nextStepDraft.value || null,
+    nextStepAt: nextStepReminderField.toIso() ?? null,
+  })
+  toast('Next step saved', {
+    description: nextStepReminderField.toIso() ? 'A reminder will notify you when it\'s due.' : undefined,
+  })
 }
 
 async function onConvert() {
@@ -103,6 +161,8 @@ function activityLabel(activity: LeadActivity) {
       return `${actor} assigned to ${activity.toValue}`
     case 'note_updated':
       return `${actor} updated the notes`
+    case 'next_step_updated':
+      return activity.toValue ? `${actor} set the next step: ${activity.toValue}` : `${actor} updated the next step`
     case 'converted':
       return `${actor} converted this lead to client ${activity.toValue}`
     default:
@@ -131,7 +191,7 @@ function formatDateTime(value: string) {
           </SheetDescription>
           <SheetTitle>{{ lead.name }}</SheetTitle>
           <div class="flex flex-wrap items-center gap-2 pt-1">
-            <Badge v-if="isConverted" variant="secondary" class="gap-1">
+            <Badge v-if="isConverted" variant="outline" class="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
               <Icon name="i-lucide-trophy" class="h-3.5 w-3.5" />
               Converted
             </Badge>
@@ -152,19 +212,7 @@ function formatDateTime(value: string) {
           </div>
           <div class="flex flex-wrap items-center gap-2 pt-2">
             <span class="text-xs text-muted-foreground">Assigned to</span>
-            <Select :model-value="lead.assignedTo ?? 'unassigned'" @update:model-value="onAssigneeChange">
-              <SelectTrigger class="h-7 w-auto gap-1.5 px-2 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">
-                  Unassigned
-                </SelectItem>
-                <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-                  {{ member.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <StaffAssigneePicker :model-value="lead.assignees.map(a => a.id)" :staff="activeStaff" @update:model-value="onAssigneesChange" />
           </div>
           <div class="text-sm text-muted-foreground pt-1 flex flex-col gap-0.5">
             <span v-if="lead.contactName">{{ lead.contactName }}</span>
@@ -175,6 +223,37 @@ function formatDateTime(value: string) {
 
         <ScrollArea class="flex-1 min-h-0">
           <div class="flex flex-col gap-6 px-6 pt-4 pb-6">
+            <div class="flex flex-col gap-2">
+              <h4 class="text-sm font-medium">
+                Details
+              </h4>
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Lead / Company Name</Label>
+                <Input v-model="nameDraft" placeholder="Company name" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Contact Name</Label>
+                <Input v-model="contactNameDraft" placeholder="Jane Doe" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <Label class="text-xs text-muted-foreground">Contact Email</Label>
+                  <Input v-model="contactEmailDraft" type="email" placeholder="jane@acme.com" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label class="text-xs text-muted-foreground">Contact Phone</Label>
+                  <Input v-model="contactPhoneDraft" placeholder="Optional" />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <Button size="sm" variant="outline" :disabled="!nameDraft.trim()" @click="saveDetails">
+                  Save Details
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
+
             <div v-if="!isConverted" class="rounded-md border p-3 flex items-center justify-between gap-2">
               <div class="flex flex-col">
                 <span class="text-sm font-medium">Ready to start the project?</span>
@@ -193,6 +272,40 @@ function formatDateTime(value: string) {
                 </NuxtLink>
               </Button>
             </div>
+
+            <div class="flex flex-col gap-2">
+              <h4 class="text-sm font-medium flex items-center gap-1.5">
+                <Icon name="i-lucide-alarm-clock" class="h-3.5 w-3.5 text-muted-foreground" />
+                Next Step
+              </h4>
+              <Textarea v-model="nextStepDraft" rows="2" placeholder="What's the next action on this lead?" />
+              <div class="flex items-center gap-1">
+                <Popover>
+                  <PopoverTrigger as-child>
+                    <Button variant="outline" :class="cn('flex-1 justify-start text-left font-normal px-3', !nextStepReminderField.date.value && 'text-muted-foreground')">
+                      <Icon name="i-lucide-calendar" class="mr-2 h-4 w-4" />
+                      {{ nextStepReminderField.date.value ? df.format(nextStepReminderField.date.value.toDate(getLocalTimeZone())) : 'Remind me at' }}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent class="w-auto p-0">
+                    <Calendar v-model="nextStepReminderField.date.value" initial-focus />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  v-model="nextStepReminderField.time.value"
+                  type="time"
+                  step="60"
+                  class="w-28 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                />
+              </div>
+              <div class="flex justify-end">
+                <Button size="sm" variant="outline" @click="saveNextStep">
+                  Save Next Step
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
 
             <div class="flex flex-col gap-2">
               <h4 class="text-sm font-medium">
@@ -235,6 +348,31 @@ function formatDateTime(value: string) {
                 <span>{{ formatDateTime(activity.createdAt) }}</span>
               </div>
             </div>
+
+            <Separator />
+
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button variant="destructive">
+                  <Icon name="i-lucide-trash-2" class="mr-2 h-4 w-4" />
+                  Delete Lead
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {{ lead.name }}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently remove this lead and its activity history. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction :disabled="isDeleting" @click="onDelete">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </ScrollArea>
       </template>

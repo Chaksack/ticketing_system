@@ -9,7 +9,9 @@ interface UpdateLeadBody {
   source?: string
   stage?: LeadStage
   notes?: string
-  assignedTo?: string | null
+  assigneeIds?: string[]
+  nextStep?: string | null
+  nextStepAt?: string | null
 }
 
 const STAGE_LABELS: Record<LeadStage, string> = {
@@ -46,14 +48,18 @@ export default defineEventHandler(async (event) => {
   const source = body.source !== undefined ? body.source : existing.source
   const stage = body.stage ?? existing.stage as LeadStage
   const notes = body.notes !== undefined ? body.notes : existing.notes
-  const assignedTo = body.assignedTo !== undefined ? body.assignedTo : existing.assigned_to
+  const nextStep = body.nextStep !== undefined ? body.nextStep : existing.next_step
+  const nextStepAt = body.nextStepAt !== undefined ? body.nextStepAt : existing.next_step_at
+  // Changing the reminder time re-arms it so a new push can fire for the new time.
+  const nextStepReminderSent = body.nextStepAt !== undefined && body.nextStepAt !== existing.next_step_at ? 0 : existing.next_step_reminder_sent
   const now = new Date().toISOString()
 
   await db.prepare(`
     UPDATE leads
-    SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, source = ?, stage = ?, notes = ?, assigned_to = ?, updated_at = ?
+    SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, source = ?, stage = ?, notes = ?,
+        next_step = ?, next_step_at = ?, next_step_reminder_sent = ?, updated_at = ?
     WHERE id = ?
-  `).run(name, contactName, contactEmail, contactPhone, source, stage, notes, assignedTo, now, id)
+  `).run(name, contactName, contactEmail, contactPhone, source, stage, notes, nextStep, nextStepAt, nextStepReminderSent, now, id)
 
   if (stage !== existing.stage) {
     await logLeadActivity({
@@ -66,20 +72,24 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (assignedTo !== existing.assigned_to) {
-    let assigneeName: string | undefined
-    if (assignedTo) {
-      const staffRow = await db.prepare('SELECT name FROM staff WHERE id = ?').get(assignedTo) as { name: string } | undefined
-      assigneeName = staffRow?.name
-    }
+  if (body.assigneeIds !== undefined) {
+    const before = await getLeadAssignees(id)
+    const beforeIds = new Set(before.map(a => a.id))
+    const afterIds = new Set(body.assigneeIds)
+    const changed = beforeIds.size !== afterIds.size || [...beforeIds].some(assigneeId => !afterIds.has(assigneeId))
 
-    await logLeadActivity({
-      leadId: id,
-      type: 'assignee_changed',
-      actorId: user.id,
-      actorName: user.name,
-      toValue: assigneeName ?? 'Unassigned',
-    })
+    if (changed) {
+      await setLeadAssignees(id, body.assigneeIds)
+      const after = await getLeadAssignees(id)
+
+      await logLeadActivity({
+        leadId: id,
+        type: 'assignee_changed',
+        actorId: user.id,
+        actorName: user.name,
+        toValue: after.length ? after.map(a => a.name).join(', ') : 'Unassigned',
+      })
+    }
   }
 
   if (body.notes !== undefined && body.notes !== existing.notes) {
@@ -88,6 +98,16 @@ export default defineEventHandler(async (event) => {
       type: 'note_updated',
       actorId: user.id,
       actorName: user.name,
+    })
+  }
+
+  if ((body.nextStep !== undefined && body.nextStep !== existing.next_step) || (body.nextStepAt !== undefined && body.nextStepAt !== existing.next_step_at)) {
+    await logLeadActivity({
+      leadId: id,
+      type: 'next_step_updated',
+      actorId: user.id,
+      actorName: user.name,
+      toValue: nextStep ?? undefined,
     })
   }
 

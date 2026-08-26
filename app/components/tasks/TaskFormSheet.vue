@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import type { DateValue } from '@internationalized/date'
 import type { Task, TaskPriority, TaskStatus, TaskType } from '~/types/task'
-import {
-  CalendarDateTime,
-  DateFormatter,
-  getLocalTimeZone,
-  parseAbsoluteToLocal,
-} from '@internationalized/date'
+import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
 import { toast } from 'vue-sonner'
 import { epicColors, priorities } from './data'
 
@@ -43,40 +37,6 @@ const titleLabel = computed(() => {
 
 const df = new DateFormatter('en-US', { dateStyle: 'medium' })
 
-function useDateTimeField() {
-  const date = ref<DateValue>()
-  const time = ref('00:00')
-
-  watch(time, (newVal) => {
-    if (!newVal || !date.value)
-      return
-    const [hours, minutes] = newVal.split(':').map(Number)
-    date.value = new CalendarDateTime(date.value.year, date.value.month, date.value.day, hours, minutes)
-  })
-
-  function setFromIso(iso?: string) {
-    if (!iso) {
-      date.value = undefined
-      time.value = '00:00'
-      return
-    }
-    const parsed = parseAbsoluteToLocal(iso)
-    date.value = parsed
-    time.value = `${parsed.hour < 10 ? `0${parsed.hour}` : parsed.hour}:${parsed.minute < 10 ? `0${parsed.minute}` : parsed.minute}`
-  }
-
-  function toIso() {
-    return date.value?.toDate(getLocalTimeZone()).toISOString()
-  }
-
-  function reset() {
-    date.value = undefined
-    time.value = '00:00'
-  }
-
-  return { date, time, setFromIso, toIso, reset }
-}
-
 const startField = useDateTimeField()
 const dueField = useDateTimeField()
 const remindField = useDateTimeField()
@@ -87,7 +47,7 @@ const title = ref('')
 const description = ref('')
 const status = ref<TaskStatus>('todo')
 const priority = ref<TaskPriority>('medium')
-const assigneeId = ref('unassigned')
+const assigneeIds = ref<string[]>([])
 const epicId = ref('none')
 const color = ref<string>(epicColors[0]!)
 
@@ -96,7 +56,7 @@ function resetForm() {
   description.value = ''
   status.value = defaultStatusId.value
   priority.value = 'medium'
-  assigneeId.value = 'unassigned'
+  assigneeIds.value = []
   epicId.value = 'none'
   color.value = epicColors[0]!
   startField.reset()
@@ -113,7 +73,7 @@ watch(open, (isOpen) => {
     description.value = props.task.description ?? ''
     status.value = props.task.status
     priority.value = props.task.priority
-    assigneeId.value = props.task.assigneeId ?? 'unassigned'
+    assigneeIds.value = props.task.assignees.map(a => a.id)
     epicId.value = props.task.epicId ?? 'none'
     color.value = props.task.color ?? epicColors[0]!
     startField.setFromIso(props.task.startDate)
@@ -135,7 +95,7 @@ async function onSubmit() {
     status: status.value,
     priority: priority.value,
     color: effectiveType.value === 'epic' ? color.value : undefined,
-    assigneeId: assigneeId.value !== 'unassigned' ? assigneeId.value : undefined,
+    assigneeIds: assigneeIds.value,
     epicId: effectiveType.value === 'task' && epicId.value !== 'none' ? epicId.value : undefined,
     startDate: startField.toIso(),
     dueDate: dueField.toIso(),
@@ -251,20 +211,8 @@ async function onSubmit() {
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <Label>Assignee</Label>
-          <Select v-model="assigneeId">
-            <SelectTrigger class="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">
-                Unassigned
-              </SelectItem>
-              <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-                {{ member.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <Label>Assignees</Label>
+          <StaffAssigneePicker v-model="assigneeIds" :staff="activeStaff" />
         </div>
 
         <div class="flex flex-col gap-1.5">

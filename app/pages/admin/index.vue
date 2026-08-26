@@ -4,6 +4,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
+import { roleBadgeClass, statusBadgeClass } from '~/components/admin/data'
 
 definePageMeta({
   middleware: 'admin',
@@ -193,21 +194,18 @@ function formatDate(value: string) {
               </TableCell>
               <TableCell>
                 <div class="flex flex-wrap gap-1">
-                  <Badge v-for="role in member.roles" :key="role" :variant="role === 'admin' ? 'default' : 'secondary'" class="capitalize">
+                  <Badge v-for="role in member.roles" :key="role" variant="outline" class="capitalize" :class="roleBadgeClass[role]">
                     {{ role }}
                   </Badge>
                 </div>
               </TableCell>
               <TableCell>
-                <Badge
-                  :variant="member.status === 'active' ? 'secondary' : member.status === 'pending' ? 'outline' : 'destructive'"
-                  class="capitalize"
-                >
+                <Badge variant="outline" class="capitalize" :class="statusBadgeClass[member.status]">
                   {{ member.status }}
                 </Badge>
               </TableCell>
               <TableCell>
-                <Badge v-if="member.onCall" variant="secondary" class="gap-1">
+                <Badge v-if="member.onCall" variant="outline" class="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
                   <Icon name="i-lucide-radio" class="h-3 w-3" />
                   On-call
                 </Badge>

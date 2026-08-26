@@ -37,10 +37,10 @@ function matchesFilters(task: Task) {
     return false
 
   if (assigneeFilter.value === 'unassigned') {
-    if (task.assigneeId)
+    if (task.assignees.length)
       return false
   }
-  else if (assigneeFilter.value !== 'all' && task.assigneeId !== assigneeFilter.value) {
+  else if (assigneeFilter.value !== 'all' && !task.assignees.some(a => a.id === assigneeFilter.value)) {
     return false
   }
 
@@ -441,18 +441,23 @@ async function onColumnsReordered() {
                       <Badge v-if="priorityMeta(task.priority)" variant="outline" :class="priorityMeta(task.priority)?.badgeClass">
                         <component :is="priorityMeta(task.priority)?.icon" class="size-3" />
                       </Badge>
-                      <Tooltip v-if="task.assigneeName">
-                        <TooltipTrigger as-child>
-                          <Avatar class="size-6">
-                            <AvatarFallback class="text-[10px]">
-                              {{ initials(task.assigneeName) }}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{ task.assigneeName }}
-                        </TooltipContent>
-                      </Tooltip>
+                      <div v-if="task.assignees.length" class="flex items-center -space-x-2">
+                        <Tooltip v-for="assignee in task.assignees.slice(0, 3)" :key="assignee.id">
+                          <TooltipTrigger as-child>
+                            <Avatar class="size-6 border-2 border-card">
+                              <AvatarFallback class="text-[10px]">
+                                {{ initials(assignee.name) }}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ assignee.name }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <div v-if="task.assignees.length > 3" class="flex size-6 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium">
+                          +{{ task.assignees.length - 3 }}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

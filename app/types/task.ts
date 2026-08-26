@@ -1,3 +1,5 @@
+import type { Assignee } from './assignee'
+
 export type TaskType = 'epic' | 'task' | 'subtask'
 // Staff-defined board columns (see `task_statuses` table / useTaskStatuses) — not a fixed enum.
 export type TaskStatus = string
@@ -11,8 +13,7 @@ export interface Task {
   status: TaskStatus
   priority: TaskPriority
   color?: string
-  assigneeId?: string
-  assigneeName?: string
+  assignees: Assignee[]
   epicId?: string
   epicTitle?: string
   epicColor?: string

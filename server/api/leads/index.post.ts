@@ -8,7 +8,9 @@ interface NewLeadBody {
   source?: string
   stage?: LeadStage
   notes?: string
-  assignedTo?: string
+  assigneeIds?: string[]
+  nextStep?: string
+  nextStepAt?: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -27,8 +29,8 @@ export default defineEventHandler(async (event) => {
   const now = new Date().toISOString()
 
   await db.prepare(`
-    INSERT INTO leads (id, name, contact_name, contact_email, contact_phone, source, stage, notes, assigned_to, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO leads (id, name, contact_name, contact_email, contact_phone, source, stage, notes, next_step, next_step_at, next_step_reminder_sent, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
   `).run(
     id,
     body.name,
@@ -38,10 +40,13 @@ export default defineEventHandler(async (event) => {
     body.source ?? null,
     body.stage ?? 'new',
     body.notes ?? null,
-    body.assignedTo ?? null,
+    body.nextStep ?? null,
+    body.nextStepAt ?? null,
     now,
     now,
   )
+
+  await setLeadAssignees(id, body.assigneeIds ?? [])
 
   const lead = await loadFullLead(id)
 

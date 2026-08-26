@@ -111,11 +111,11 @@ async function onCancelContract(contractId: string) {
   toast('Contract cancelled')
 }
 
-const CONTRACT_STATUS_VARIANT: Record<AmcContractDisplayStatus, 'secondary' | 'outline' | 'destructive'> = {
-  active: 'secondary',
-  expiring: 'outline',
-  expired: 'destructive',
-  cancelled: 'outline',
+const CONTRACT_STATUS_BADGE_CLASS: Record<AmcContractDisplayStatus, string> = {
+  active: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30',
+  expiring: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
+  expired: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
+  cancelled: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30',
 }
 
 const CONTRACT_STATUS_LABEL: Record<AmcContractDisplayStatus, string> = {
@@ -269,7 +269,7 @@ function formatDateTime(value: string) {
               <div v-for="contract in client.contracts" :key="contract.id" class="flex flex-col gap-1 rounded-md border p-3">
                 <div class="flex items-center justify-between">
                   <span class="text-sm font-medium">{{ contract.planName }}</span>
-                  <Badge :variant="CONTRACT_STATUS_VARIANT[getContractDisplayStatus(contract)]">
+                  <Badge variant="outline" :class="CONTRACT_STATUS_BADGE_CLASS[getContractDisplayStatus(contract)]">
                     {{ CONTRACT_STATUS_LABEL[getContractDisplayStatus(contract)] }}
                   </Badge>
                 </div>
