@@ -63,6 +63,8 @@
     "embla-carousel": "^8.6.0",
     "embla-carousel-vue": "^8.6.0",
     "google-auth-library": "^11.0.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "nanoid": "^5.1.6",
     "pg": "^8.23.0",
     "reka-ui": "^2.5.1",

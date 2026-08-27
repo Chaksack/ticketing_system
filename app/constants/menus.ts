@@ -40,6 +40,12 @@ export const navMenu: NavMenu[] = [
         link: '/projects',
         roles: ['bd', 'sm'],
       },
+      {
+        title: 'Reports',
+        icon: 'i-lucide-bar-chart-3',
+        link: '/bd-reports',
+        roles: ['bd', 'sm'],
+      },
     ],
   },
   {
