@@ -12,12 +12,14 @@ const { leads, fetchLeads } = useLeads()
 const { tasks, fetchTasks } = useTasks()
 const { statuses: taskStatuses, fetchStatuses } = useTaskStatuses()
 
-onMounted(() => {
-  fetchClients()
-  fetchUpcomingRenewals()
-  fetchLeads()
-  fetchTasks()
-  fetchStatuses()
+onMounted(async () => {
+  // Sequential, not concurrent — db0's postgresql connector shares a single client and warns
+  // (and can wedge) on overlapping concurrent queries.
+  await fetchClients()
+  await fetchUpcomingRenewals()
+  await fetchLeads()
+  await fetchTasks()
+  await fetchStatuses()
 })
 
 const totalClients = computed(() => clients.value.length)

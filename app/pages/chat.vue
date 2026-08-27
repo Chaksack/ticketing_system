@@ -6,6 +6,7 @@ import ReferencePicker from '~/components/chat/ReferencePicker.vue'
 const { currentUser } = useAuth()
 const { staff, fetchStaff } = useStaff()
 const { channels, messagesByChannel, fetchChannels, openDirectChannel, createGroupChannel, updateChannel, fetchMessages, sendMessage, markRead } = useChat()
+const { getPresence, fetchPresences } = usePresence()
 const route = useRoute()
 const router = useRouter()
 
@@ -13,12 +14,19 @@ const activeChannelId = ref<string | null>(null)
 const activeMessages = computed(() => activeChannelId.value ? (messagesByChannel.value[activeChannelId.value] ?? []) : [])
 const activeChannel = computed(() => channels.value.find(c => c.id === activeChannelId.value) ?? null)
 
+function otherMember(channel: typeof channels.value[number]) {
+  return channel.type === 'direct' ? channel.members.find(m => m.id !== currentUser.value?.id) : undefined
+}
+
 function channelDisplayName(channel: typeof channels.value[number]) {
   if (channel.type === 'group')
     return channel.name ?? 'Group chat'
 
-  const other = channel.members.find(m => m.id !== currentUser.value?.id)
-  return other?.name ?? 'Direct message'
+  return otherMember(channel)?.name ?? 'Direct message'
+}
+
+function channelPresence(channel: typeof channels.value[number]) {
+  return getPresence(otherMember(channel)?.id)
 }
 
 function channelInitials(channel: typeof channels.value[number]) {
@@ -44,6 +52,7 @@ onMounted(async () => {
   if (!staff.value.length)
     await fetchStaff()
   await fetchChannels()
+  await fetchPresences()
 
   const openId = typeof route.query.channel === 'string' ? route.query.channel : null
   if (openId) {
@@ -160,9 +169,11 @@ function formatMessageTime(value: string) {
               <CommandInput placeholder="Find a staff member…" />
               <CommandList>
                 <CommandEmpty>No staff found.</CommandEmpty>
-                <CommandItem v-for="member in activeStaff" :key="member.id" :value="member.name" @select="onStartDirectMessage(member.id)">
-                  {{ member.name }}
-                </CommandItem>
+                <CommandGroup>
+                  <CommandItem v-for="member in activeStaff" :key="member.id" :value="member.name" @select="onStartDirectMessage(member.id)">
+                    {{ member.name }}
+                  </CommandItem>
+                </CommandGroup>
               </CommandList>
             </Command>
           </PopoverContent>
@@ -183,11 +194,14 @@ function formatMessageTime(value: string) {
             :class="{ 'bg-accent': channel.id === activeChannelId }"
             @click="selectChannel(channel.id)"
           >
-            <Avatar class="size-8">
-              <AvatarFallback class="text-xs">
-                {{ channelInitials(channel) }}
-              </AvatarFallback>
-            </Avatar>
+            <div class="relative shrink-0">
+              <Avatar class="size-8">
+                <AvatarFallback class="text-xs">
+                  {{ channelInitials(channel) }}
+                </AvatarFallback>
+              </Avatar>
+              <PresenceDot :state="channelPresence(channel)?.state" class="absolute -bottom-0.5 -right-0.5" />
+            </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-1">
                 <span class="truncate font-medium">{{ channelDisplayName(channel) }}</span>
@@ -215,6 +229,15 @@ function formatMessageTime(value: string) {
             <span v-if="activeChannel.type === 'group'" class="text-xs text-muted-foreground">
               {{ activeChannel.members.length }} members
             </span>
+            <template v-else-if="channelPresence(activeChannel)">
+              <PresenceDot :state="channelPresence(activeChannel)?.state" size="md" />
+              <span class="text-xs text-muted-foreground">
+                <template v-if="channelPresence(activeChannel)?.statusText">
+                  <span v-if="channelPresence(activeChannel)?.statusEmoji">{{ channelPresence(activeChannel)?.statusEmoji }}</span>
+                  {{ channelPresence(activeChannel)?.statusText }}
+                </template>
+              </span>
+            </template>
           </div>
           <Button v-if="activeChannel.type === 'group'" size="sm" variant="ghost" @click="openEditGroup">
             <Icon name="i-lucide-settings" class="size-4" />

@@ -42,6 +42,16 @@ async function migrate() {
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS gmail_refresh_token TEXT')
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS gmail_connected_at TEXT')
 
+  // Presence: last_active_at drives auto online/away detection (client heartbeat), while
+  // presence_override lets a staff member explicitly force "in a meeting" / "offline" — an
+  // override always wins over the auto-detected state. Custom status (emoji + text, with an
+  // optional expiry) layers on top independently, same as Slack.
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS last_active_at TEXT')
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS presence_override TEXT NOT NULL DEFAULT \'auto\'')
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS status_text TEXT')
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS status_emoji TEXT')
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS status_expires_at TEXT')
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS tickets (
       id TEXT PRIMARY KEY,

@@ -1,4 +1,6 @@
 export default defineNitroPlugin(async () => {
+  ensurePgQuerySerialized()
+
   await ensureDb()
   const db = useDatabase()
 

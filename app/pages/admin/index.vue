@@ -11,11 +11,13 @@ definePageMeta({
 })
 
 const { staff, fetchStaff, addStaff } = useStaff()
+const { getPresence, fetchPresences } = usePresence()
 const route = useRoute()
 
 onMounted(async () => {
   if (!staff.value.length)
     await fetchStaff()
+  await fetchPresences()
 })
 
 const searchQuery = ref('')
@@ -244,7 +246,14 @@ function formatDate(value: string) {
               @click="openStaff(member)"
             >
               <TableCell class="font-medium">
-                {{ member.name }}
+                <div class="flex items-center gap-1.5">
+                  <PresenceDot :state="getPresence(member.id)?.state" />
+                  {{ member.name }}
+                  <span v-if="getPresence(member.id)?.statusText" class="font-normal text-xs text-muted-foreground">
+                    <span v-if="getPresence(member.id)?.statusEmoji">{{ getPresence(member.id)?.statusEmoji }}</span>
+                    {{ getPresence(member.id)?.statusText }}
+                  </span>
+                </div>
               </TableCell>
               <TableCell class="text-muted-foreground">
                 {{ member.email }}
