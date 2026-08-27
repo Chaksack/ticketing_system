@@ -11,6 +11,8 @@ export interface SessionUser {
 
 interface SessionData {
   user?: SessionUser
+  /** CSRF nonce for the in-progress personal-Gmail OAuth connect flow, cleared once used. */
+  gmailOAuthState?: string
 }
 
 export function useAuthSession(event: H3Event) {

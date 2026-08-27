@@ -2,6 +2,26 @@ import type { NavMenu, NavMenuItems } from '~/types/nav'
 
 export const navMenu: NavMenu[] = [
   {
+    heading: 'Team',
+    items: [
+      {
+        title: 'Chat',
+        icon: 'i-lucide-message-square',
+        link: '/chat',
+      },
+      {
+        title: 'Calendar',
+        icon: 'i-lucide-calendar-days',
+        link: '/calendar',
+      },
+      {
+        title: 'Email',
+        icon: 'i-lucide-mail',
+        link: '/email',
+      },
+    ],
+  },
+  {
     heading: 'BD & SM',
     items: [
       {

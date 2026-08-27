@@ -7,6 +7,7 @@ const { fetchTickets } = useTickets()
 const { fetchTasks } = useTasks()
 const { fetchLeads } = useLeads()
 const { fetchClients } = useClients()
+const { fetchChannels } = useChat()
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
@@ -30,18 +31,22 @@ const TYPE_ICON: Record<NotificationType, string> = {
   task_assigned: 'i-lucide-user-check',
   lead_reminder: 'i-lucide-target',
   amc_follow_up: 'i-lucide-file-clock',
+  chat_message: 'i-lucide-message-square',
+  meeting_reminder: 'i-lucide-calendar-clock',
 }
 
 async function onSelect(notification: AppNotification) {
   await markRead(notification.id)
   // Refetch whichever list this notification actually affects, not always tickets —
-  // otherwise a task/lead/AMC notification leaves that page showing stale data.
+  // otherwise a task/lead/AMC/chat notification leaves that page showing stale data.
   if (notification.taskId)
     await fetchTasks()
   else if (notification.leadId)
     await fetchLeads()
   else if (notification.contractId)
     await fetchClients()
+  else if (notification.type === 'chat_message')
+    await fetchChannels()
   else
     await fetchTickets()
   if (notification.url)

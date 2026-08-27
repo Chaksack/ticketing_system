@@ -10,6 +10,7 @@ export interface NewNotification {
   taskId?: string
   leadId?: string
   contractId?: string
+  eventId?: string
 }
 
 export async function createNotification(input: NewNotification) {
@@ -20,9 +21,9 @@ export async function createNotification(input: NewNotification) {
   const now = new Date().toISOString()
 
   await db.prepare(`
-    INSERT INTO notifications (id, staff_id, type, title, body, url, ticket_id, task_id, lead_id, contract_id, read, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
-  `).run(id, input.staffId, input.type, input.title, input.body, input.url ?? null, input.ticketId ?? null, input.taskId ?? null, input.leadId ?? null, input.contractId ?? null, now)
+    INSERT INTO notifications (id, staff_id, type, title, body, url, ticket_id, task_id, lead_id, contract_id, event_id, read, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+  `).run(id, input.staffId, input.type, input.title, input.body, input.url ?? null, input.ticketId ?? null, input.taskId ?? null, input.leadId ?? null, input.contractId ?? null, input.eventId ?? null, now)
 
   return id
 }

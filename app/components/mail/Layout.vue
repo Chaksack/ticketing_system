@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import type { Mail } from './data/mails'
 import type { LinkProp } from '~/components/mail/Nav.vue'
+import type { GmailMessage } from '~/types/gmail'
 import { useMediaQuery } from '@vueuse/core'
 import { Search } from 'lucide-vue-next'
 import { cn } from '~/lib/utils'
@@ -16,19 +16,19 @@ interface MailProps {
     email: string
     icon: string
   }[]
-  mails: Mail[]
+  mails: GmailMessage[]
   defaultLayout?: number[]
   defaultCollapsed?: boolean
   navCollapsedSize: number
 }
 
 const isCollapsed = ref(props.defaultCollapsed)
-const selectedMail = ref<string | undefined>()
+const selectedMail = defineModel<string | undefined>('selectedMail', { default: undefined })
 const searchValue = ref('')
 const debouncedSearch = refDebounced(searchValue, 250)
 
 const filteredMailList = computed(() => {
-  let output: Mail[]
+  let output: GmailMessage[]
   const searchValue = debouncedSearch.value?.trim()
   if (!searchValue) {
     output = props.mails
@@ -51,77 +51,14 @@ const unreadMailList = computed(() => filteredMailList.value.filter(item => !ite
 
 const selectedMailData = computed(() => props.mails.find(item => item.id === selectedMail.value))
 
-const links: LinkProp[] = [
+const links = computed<LinkProp[]>(() => [
   {
     title: 'Inbox',
-    label: '128',
+    label: unreadMailList.value.length ? String(unreadMailList.value.length) : '',
     icon: 'lucide:inbox',
     variant: 'default',
   },
-  {
-    title: 'Drafts',
-    label: '9',
-    icon: 'lucide:file',
-    variant: 'ghost',
-  },
-  {
-    title: 'Sent',
-    label: '',
-    icon: 'lucide:send',
-    variant: 'ghost',
-  },
-  {
-    title: 'Junk',
-    label: '23',
-    icon: 'lucide:archive',
-    variant: 'ghost',
-  },
-  {
-    title: 'Trash',
-    label: '',
-    icon: 'lucide:trash',
-    variant: 'ghost',
-  },
-  {
-    title: 'Archive',
-    label: '',
-    icon: 'lucide:archive',
-    variant: 'ghost',
-  },
-]
-
-const links2: LinkProp[] = [
-  {
-    title: 'Social',
-    label: '972',
-    icon: 'lucide:user-2',
-    variant: 'ghost',
-  },
-  {
-    title: 'Updates',
-    label: '342',
-    icon: 'lucide:alert-circle',
-    variant: 'ghost',
-  },
-  {
-    title: 'Forums',
-    label: '128',
-    icon: 'lucide:message-square',
-    variant: 'ghost',
-  },
-  {
-    title: 'Shopping',
-    label: '8',
-    icon: 'lucide:shopping-cart',
-    variant: 'ghost',
-  },
-  {
-    title: 'Promotions',
-    label: '21',
-    icon: 'lucide:archive',
-    variant: 'ghost',
-  },
-]
+])
 
 function onCollapse() {
   isCollapsed.value = true
@@ -163,11 +100,6 @@ watch(() => defaultCollapse.value, () => {
         <MailNav
           :is-collapsed="isCollapsed"
           :links="links"
-        />
-        <Separator />
-        <MailNav
-          :is-collapsed="isCollapsed"
-          :links="links2"
         />
       </ResizablePanel>
       <ResizableHandle id="resize-handle-1" with-handle />

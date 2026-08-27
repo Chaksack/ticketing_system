@@ -35,6 +35,13 @@ async function migrate() {
 
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS avatar_url TEXT')
 
+  // Per-staff Gmail OAuth connection (distinct from the single shared support-inbox token in
+  // NUXT_GMAIL_REFRESH_TOKEN) — lets each staff member connect their own Gmail account for the
+  // personal Mail feature.
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS gmail_email TEXT')
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS gmail_refresh_token TEXT')
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS gmail_connected_at TEXT')
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS tickets (
       id TEXT PRIMARY KEY,
@@ -420,6 +427,62 @@ async function migrate() {
       PRIMARY KEY (scope, key, window_start)
     )
   `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_channels (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL DEFAULT 'group',
+      name TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_channel_members (
+      channel_id TEXT NOT NULL,
+      staff_id TEXT NOT NULL,
+      joined_at TEXT NOT NULL,
+      last_read_at TEXT,
+      PRIMARY KEY (channel_id, staff_id)
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      channel_id TEXT NOT NULL,
+      author_id TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      edited_at TEXT
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      location TEXT,
+      start_at TEXT NOT NULL,
+      end_at TEXT NOT NULL,
+      created_by TEXT,
+      reminder_sent INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS calendar_event_attendees (
+      event_id TEXT NOT NULL,
+      staff_id TEXT NOT NULL,
+      PRIMARY KEY (event_id, staff_id)
+    )
+  `)
+
+  await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_id TEXT')
 }
 
 export async function nextSequence(name: string): Promise<number> {
@@ -545,4 +608,19 @@ export async function nextLeadContactEmailId() {
 export async function nextLeadContactPhoneId() {
   const n = await nextSequence('lead_contact_phone')
   return `LCP-${n}`
+}
+
+export async function nextChannelId() {
+  const n = await nextSequence('chat_channel')
+  return `CHAN-${n}`
+}
+
+export async function nextChatMessageId() {
+  const n = await nextSequence('chat_message')
+  return `MSG-${n}`
+}
+
+export async function nextEventId() {
+  const n = await nextSequence('calendar_event')
+  return `EVENT-${n}`
 }

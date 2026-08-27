@@ -46,6 +46,7 @@ watch(() => route.fullPath, (val) => {
     <div class="ml-auto flex items-center gap-2">
       <Search />
       <AssistantPanel />
+      <LayoutHeaderChat />
       <LayoutHeaderNotifications />
       <slot />
     </div>

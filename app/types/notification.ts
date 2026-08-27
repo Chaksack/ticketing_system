@@ -1,4 +1,4 @@
-export type NotificationType = 'ticket_page' | 'on_call_assigned' | 'internal_note' | 'reply' | 'task_reminder' | 'task_assigned' | 'lead_reminder' | 'amc_follow_up'
+export type NotificationType = 'ticket_page' | 'on_call_assigned' | 'internal_note' | 'reply' | 'task_reminder' | 'task_assigned' | 'lead_reminder' | 'amc_follow_up' | 'chat_message' | 'meeting_reminder'
 
 export interface AppNotification {
   id: string
@@ -10,6 +10,7 @@ export interface AppNotification {
   taskId?: string
   leadId?: string
   contractId?: string
+  eventId?: string
   read: boolean
   createdAt: string
 }

@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import type { Mail } from './data/mails'
+import type { GmailMessage } from '~/types/gmail'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 interface MailListProps {
-  items: Mail[]
+  items: GmailMessage[]
 }
 
 defineProps<MailListProps>()

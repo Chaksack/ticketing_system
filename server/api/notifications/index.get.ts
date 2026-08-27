@@ -11,6 +11,7 @@ interface NotificationRow {
   task_id: string | null
   lead_id: string | null
   contract_id: string | null
+  event_id: string | null
   read: number
   created_at: string
 }
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event) => {
       taskId: row.task_id ?? undefined,
       leadId: row.lead_id ?? undefined,
       contractId: row.contract_id ?? undefined,
+      eventId: row.event_id ?? undefined,
       read: !!row.read,
       createdAt: row.created_at,
     })),

@@ -23,6 +23,8 @@ export default defineNitroPlugin(async () => {
 
     checkAmcFollowUps().catch(error => console.error('AMC follow-up sweep failed', error))
 
+    checkMeetingReminders().catch(error => console.error('Meeting reminder sweep failed', error))
+
     pruneReadNotifications().catch(error => console.error('Notification prune failed', error))
 
     checkGmailInbox().catch((error) => {
