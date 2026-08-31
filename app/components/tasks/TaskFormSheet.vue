@@ -15,12 +15,15 @@ const open = defineModel<boolean>('open', { default: false })
 const { addTask, updateTask, epics } = useTasks()
 const { staff, fetchStaff } = useStaff()
 const { statuses, fetchStatuses } = useTaskStatuses()
+const { sprints, fetchSprints } = useSprints()
 
 onMounted(() => {
   if (!staff.value.length)
     fetchStaff()
   if (!statuses.value.length)
     fetchStatuses()
+  if (!sprints.value.length)
+    fetchSprints()
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
@@ -49,6 +52,7 @@ const status = ref<TaskStatus>('todo')
 const priority = ref<TaskPriority>('medium')
 const assigneeIds = ref<string[]>([])
 const epicId = ref('none')
+const sprintId = ref('none')
 const color = ref<string>(epicColors[0]!)
 
 function resetForm() {
@@ -58,6 +62,7 @@ function resetForm() {
   priority.value = 'medium'
   assigneeIds.value = []
   epicId.value = 'none'
+  sprintId.value = 'none'
   color.value = epicColors[0]!
   startField.reset()
   dueField.reset()
@@ -75,6 +80,7 @@ watch(open, (isOpen) => {
     priority.value = props.task.priority
     assigneeIds.value = props.task.assignees.map(a => a.id)
     epicId.value = props.task.epicId ?? 'none'
+    sprintId.value = props.task.sprintId ?? 'none'
     color.value = props.task.color ?? epicColors[0]!
     startField.setFromIso(props.task.startDate)
     dueField.setFromIso(props.task.dueDate)
@@ -97,6 +103,7 @@ async function onSubmit() {
     color: effectiveType.value === 'epic' ? color.value : undefined,
     assigneeIds: assigneeIds.value,
     epicId: effectiveType.value === 'task' && epicId.value !== 'none' ? epicId.value : undefined,
+    sprintId: effectiveType.value !== 'epic' && sprintId.value !== 'none' ? sprintId.value : undefined,
     startDate: startField.toIso(),
     dueDate: dueField.toIso(),
     remindAt: remindField.toIso(),
@@ -161,7 +168,7 @@ async function onSubmit() {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex flex-col gap-1.5">
             <Label>Status</Label>
             <Select v-model="status">
@@ -205,6 +212,23 @@ async function onSubmit() {
                   <span class="size-2 rounded-full" :style="{ backgroundColor: epic.color }" />
                   {{ epic.title }}
                 </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div v-if="effectiveType !== 'epic'" class="flex flex-col gap-1.5">
+          <Label>Sprint (optional)</Label>
+          <Select v-model="sprintId">
+            <SelectTrigger class="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">
+                Backlog
+              </SelectItem>
+              <SelectItem v-for="sprint in sprints" :key="sprint.id" :value="sprint.id">
+                {{ sprint.name }}
               </SelectItem>
             </SelectContent>
           </Select>

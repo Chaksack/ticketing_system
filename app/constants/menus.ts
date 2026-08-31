@@ -37,6 +37,12 @@ export const navMenu: NavMenu[] = [
         roles: ['bd', 'sm'],
       },
       {
+        title: 'Sprints',
+        icon: 'i-lucide-rocket',
+        link: '/sprints',
+        roles: ['bd', 'sm'],
+      },
+      {
         title: 'Leads',
         icon: 'i-lucide-target',
         link: '/leads',
@@ -75,7 +81,7 @@ export const navMenu: NavMenu[] = [
         title: 'Tickets',
         icon: 'i-lucide-calendar-check-2',
         link: '/tickets',
-        roles: ['agent'],
+        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
       },
       {
         title: 'Reports',
@@ -128,9 +134,9 @@ export const navMenuBottom: NavMenuItems = [
     icon: 'i-lucide-circle-help',
     link: '/help',
   },
-  {
-    title: 'Feedback',
-    icon: 'i-lucide-send',
-    link: '',
-  },
+  // {
+  //   title: 'Feedback',
+  //   icon: 'i-lucide-send',
+  //   link: '',
+  // },
 ]

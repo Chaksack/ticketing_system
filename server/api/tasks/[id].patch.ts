@@ -10,6 +10,7 @@ interface UpdateTaskBody {
   assigneeIds?: string[]
   epicId?: string | null
   parentTaskId?: string | null
+  sprintId?: string | null
   startDate?: string | null
   dueDate?: string | null
   remindAt?: string | null
@@ -40,6 +41,7 @@ export default defineEventHandler(async (event) => {
   const color = body.color !== undefined ? body.color : existing.color
   const epicId = body.epicId !== undefined ? body.epicId : existing.epic_id
   const parentTaskId = body.parentTaskId !== undefined ? body.parentTaskId : existing.parent_task_id
+  const sprintId = body.sprintId !== undefined ? body.sprintId : existing.sprint_id
   const startDate = body.startDate !== undefined ? body.startDate : existing.start_date
   const dueDate = body.dueDate !== undefined ? body.dueDate : existing.due_date
   const remindAt = body.remindAt !== undefined ? body.remindAt : existing.remind_at
@@ -50,9 +52,9 @@ export default defineEventHandler(async (event) => {
   await db.prepare(`
     UPDATE tasks
     SET title = ?, description = ?, status = ?, priority = ?, color = ?, epic_id = ?,
-        parent_task_id = ?, start_date = ?, due_date = ?, remind_at = ?, reminder_sent = ?, updated_at = ?
+        parent_task_id = ?, sprint_id = ?, start_date = ?, due_date = ?, remind_at = ?, reminder_sent = ?, updated_at = ?
     WHERE id = ?
-  `).run(title, description, status, priority, color, epicId, parentTaskId, startDate, dueDate, remindAt, reminderSent, now, id)
+  `).run(title, description, status, priority, color, epicId, parentTaskId, sprintId, startDate, dueDate, remindAt, reminderSent, now, id)
 
   if (body.assigneeIds !== undefined) {
     const before = await getTaskAssignees(id)
@@ -75,9 +77,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const row = await db.prepare(`
-    SELECT tasks.*, epics.title AS epic_title, epics.color AS epic_color
+    SELECT tasks.*, epics.title AS epic_title, epics.color AS epic_color,
+      sprints.name AS sprint_name, sprints.status AS sprint_status
     FROM tasks
     LEFT JOIN tasks epics ON epics.id = tasks.epic_id
+    LEFT JOIN sprints ON sprints.id = tasks.sprint_id
     WHERE tasks.id = ?
   `).get(id) as TaskRow
 

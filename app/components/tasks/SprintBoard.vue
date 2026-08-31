@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import type { Sprint } from '~/types/sprint'
 import type { Task } from '~/types/task'
 import { toast } from 'vue-sonner'
 import Draggable from 'vuedraggable'
 import { priorities } from './data'
+import SprintFormSheet from './SprintFormSheet.vue'
 import TaskFormSheet from './TaskFormSheet.vue'
 
-const { tasks, epics, updateTask, removeTask, subtasksOf } = useTasks()
+const { tasks, updateTask, removeTask, subtasksOf } = useTasks()
 const { statuses, addStatus, renameStatus, removeStatus, reorderStatuses } = useTaskStatuses()
+const { sprints, updateSprint, removeSprint } = useSprints()
 const { staff, fetchStaff } = useStaff()
 
 onMounted(() => {
@@ -17,54 +20,62 @@ onMounted(() => {
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
 
 const isDesktop = useMediaQuery('(min-width: 768px)')
-const [DefineEpicList, ReuseEpicList] = createReusableTemplate()
-const showEpicDrawer = ref(false)
+const [DefineSprintList, ReuseSprintList] = createReusableTemplate()
+const showSprintDrawer = ref(false)
 const showFilterDrawer = ref(false)
 
-const activeEpicFilter = ref<string | null>(null)
+const STATUS_ORDER: Record<Sprint['status'], number> = { active: 0, planned: 1, completed: 2 }
+const orderedSprints = computed(() => [...sprints.value].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]))
+
+const BACKLOG = 'backlog'
+const selectedView = ref<string>(BACKLOG)
+const selectedSprint = computed(() => sprints.value.find(s => s.id === selectedView.value))
+
+function selectView(view: string) {
+  selectedView.value = view
+  showSprintDrawer.value = false
+}
+
+function openNewSprintFromDrawer() {
+  showSprintDrawer.value = false
+  openNewSprint()
+}
+
+function editSprintFromDrawer(sprint: Sprint) {
+  showSprintDrawer.value = false
+  openEditSprint(sprint)
+}
+
+function deleteSprintFromDrawer(sprint: Sprint) {
+  showSprintDrawer.value = false
+  onDeleteSprint(sprint)
+}
+
+const SPRINT_STATUS_BADGE: Record<Sprint['status'], string> = {
+  planned: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30',
+  active: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30',
+  completed: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30',
+}
+
 const assigneeFilter = ref('all')
 const priorityFilter = ref('all')
 const dueFilter = ref('all')
 
-const activeEpicLabel = computed(() => epics.value.find(e => e.id === activeEpicFilter.value)?.title ?? 'All epics')
+const hasActiveFilters = computed(() =>
+  assigneeFilter.value !== 'all' || priorityFilter.value !== 'all' || dueFilter.value !== 'all',
+)
+
 const activeToolbarFilterCount = computed(() =>
   [assigneeFilter.value !== 'all', priorityFilter.value !== 'all', dueFilter.value !== 'all'].filter(Boolean).length,
 )
 
-const hasActiveFilters = computed(() =>
-  !!activeEpicFilter.value || assigneeFilter.value !== 'all' || priorityFilter.value !== 'all' || dueFilter.value !== 'all',
-)
-
 function resetFilters() {
-  activeEpicFilter.value = null
   assigneeFilter.value = 'all'
   priorityFilter.value = 'all'
   dueFilter.value = 'all'
 }
 
-function selectEpicFilter(epicId: string | null) {
-  if (epicId === null)
-    activeEpicFilter.value = null
-  else
-    toggleEpicFilter(epicId)
-
-  showEpicDrawer.value = false
-}
-
-function openNewEpicFromDrawer() {
-  showEpicDrawer.value = false
-  openNewEpic()
-}
-
-function editEpicFromDrawer(task: Task) {
-  showEpicDrawer.value = false
-  openEdit(task)
-}
-
 function matchesFilters(task: Task) {
-  if (activeEpicFilter.value && task.epicId !== activeEpicFilter.value)
-    return false
-
   if (assigneeFilter.value === 'unassigned') {
     if (task.assignees.length)
       return false
@@ -87,6 +98,10 @@ function matchesFilters(task: Task) {
   return true
 }
 
+function matchesView(task: Task) {
+  return selectedView.value === BACKLOG ? !task.sprintId : task.sprintId === selectedView.value
+}
+
 const columnTasks = reactive<Record<string, Task[]>>({})
 
 function syncColumns() {
@@ -96,14 +111,12 @@ function syncColumns() {
       delete columnTasks[key]
   }
   for (const col of statuses.value) {
-    columnTasks[col.id] = tasks.value.filter(t => t.type === 'task' && t.status === col.id && matchesFilters(t))
+    columnTasks[col.id] = tasks.value.filter(t => t.type === 'task' && t.status === col.id && matchesView(t) && matchesFilters(t))
   }
 }
 
-watch([tasks, activeEpicFilter, assigneeFilter, priorityFilter, dueFilter, statuses], syncColumns, { immediate: true, deep: true })
+watch([tasks, selectedView, assigneeFilter, priorityFilter, dueFilter, statuses], syncColumns, { immediate: true, deep: true })
 
-// Bound the board to the remaining viewport height (below the header, page title, and
-// toolbar) so each column scrolls its own tasks instead of growing the whole page.
 const boardRoot = ref<HTMLElement>()
 const { top: boardTop } = useElementBounding(boardRoot)
 const { height: windowHeight } = useWindowSize()
@@ -112,10 +125,6 @@ const boardHeight = computed(() => `${Math.max(windowHeight.value - boardTop.val
 async function onChange(statusId: string, evt: any) {
   if (evt.added)
     await updateTask(evt.added.element.id, { status: statusId })
-}
-
-function toggleEpicFilter(epicId: string) {
-  activeEpicFilter.value = activeEpicFilter.value === epicId ? null : epicId
 }
 
 const expanded = reactive<Set<string>>(new Set())
@@ -136,16 +145,9 @@ async function toggleSubtaskDone(subtask: Task) {
 }
 
 const formOpen = ref(false)
-const formType = ref<'epic' | 'task' | 'subtask'>('task')
+const formType = ref<'task' | 'subtask'>('task')
 const formTask = ref<Task | null>(null)
 const formParentTaskId = ref<string | undefined>()
-
-function openNewEpic() {
-  formTask.value = null
-  formType.value = 'epic'
-  formParentTaskId.value = undefined
-  formOpen.value = true
-}
 
 function openNewTask() {
   formTask.value = null
@@ -167,6 +169,10 @@ function openEdit(task: Task) {
   formOpen.value = true
 }
 
+async function moveToSprint(task: Task, sprintId: string | null) {
+  await updateTask(task.id, { sprintId })
+}
+
 function priorityMeta(priority: string) {
   return priorities.find(p => p.value === priority)
 }
@@ -183,10 +189,50 @@ function formatDueDate(task: Task) {
   return new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+function formatSprintDate(iso?: string) {
+  if (!iso)
+    return null
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 const DUE_BADGE_CLASS: Record<string, string> = {
   'on-track': 'text-muted-foreground',
   'due-soon': 'text-amber-600 dark:text-amber-400',
   'overdue': 'text-destructive',
+}
+
+// --- Sprint rail management ---
+const sprintFormOpen = ref(false)
+const editingSprint = ref<Sprint | null>(null)
+
+function openNewSprint() {
+  editingSprint.value = null
+  sprintFormOpen.value = true
+}
+
+function openEditSprint(sprint: Sprint) {
+  editingSprint.value = sprint
+  sprintFormOpen.value = true
+}
+
+async function onDeleteSprint(sprint: Sprint) {
+  await removeSprint(sprint.id)
+  if (selectedView.value === sprint.id)
+    selectedView.value = BACKLOG
+}
+
+async function startSprint(sprint: Sprint) {
+  const otherActive = sprints.value.find(s => s.status === 'active' && s.id !== sprint.id)
+  await updateSprint(sprint.id, { status: 'active' })
+  if (otherActive)
+    toast('Sprint started', { description: `${otherActive.name} was automatically completed.` })
+  else
+    toast('Sprint started', { description: `${sprint.name} is now active.` })
+}
+
+async function completeSprint(sprint: Sprint) {
+  await updateSprint(sprint.id, { status: 'completed' })
+  toast('Sprint completed', { description: `${sprint.name} was marked completed.` })
 }
 
 // --- Column management ---
@@ -236,12 +282,12 @@ async function onColumnsReordered() {
 </script>
 
 <template>
-  <DefineEpicList>
+  <DefineSprintList>
     <div class="flex items-center justify-between">
       <h3 class="font-semibold text-sm">
-        Epics
+        Sprints
       </h3>
-      <Button size="sm" variant="ghost" class="h-7 px-2" @click="openNewEpicFromDrawer">
+      <Button size="sm" variant="ghost" class="h-7 px-2" @click="openNewSprintFromDrawer">
         <Icon name="i-lucide-plus" class="mr-1 h-3.5 w-3.5" />
         New
       </Button>
@@ -249,212 +295,240 @@ async function onColumnsReordered() {
 
     <button
       type="button"
-      class="text-left text-sm rounded-md px-2 py-1.5 hover:bg-accent"
-      :class="!activeEpicFilter && 'bg-accent font-medium'"
-      @click="selectEpicFilter(null)"
+      class="text-left text-sm rounded-md px-2 py-1.5 hover:bg-accent flex items-center gap-2"
+      :class="selectedView === BACKLOG && 'bg-accent font-medium'"
+      @click="selectView(BACKLOG)"
     >
-      All epics
+      <Icon name="i-lucide-inbox" class="size-3.5 text-muted-foreground shrink-0" />
+      Backlog
     </button>
 
     <div class="flex-1 min-h-0 flex flex-col gap-0.5 overflow-y-auto">
       <div
-        v-for="epic in epics"
-        :key="epic.id"
-        class="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
-        :class="activeEpicFilter === epic.id && 'bg-accent font-medium'"
-        @click="selectEpicFilter(epic.id)"
+        v-for="sprint in orderedSprints"
+        :key="sprint.id"
+        class="group flex flex-col gap-0.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+        :class="selectedView === sprint.id && 'bg-accent font-medium'"
+        @click="selectView(sprint.id)"
       >
-        <span class="size-2 rounded-full shrink-0" :style="{ backgroundColor: epic.color }" />
-        <span class="flex-1 truncate">{{ epic.title }}</span>
-        <Icon
-          name="i-lucide-pencil"
-          class="size-3 shrink-0 opacity-0 group-hover:opacity-60"
-          @click.stop="editEpicFromDrawer(epic)"
-        />
+        <div class="flex items-center gap-2">
+          <span class="flex-1 truncate">{{ sprint.name }}</span>
+          <Icon
+            name="i-lucide-pencil"
+            class="size-3 shrink-0 opacity-0 group-hover:opacity-60"
+            @click.stop="editSprintFromDrawer(sprint)"
+          />
+          <Icon
+            name="i-lucide-trash-2"
+            class="size-3 shrink-0 opacity-0 group-hover:opacity-60"
+            @click.stop="deleteSprintFromDrawer(sprint)"
+          />
+        </div>
+        <Badge variant="outline" class="w-fit text-[10px]" :class="SPRINT_STATUS_BADGE[sprint.status]">
+          {{ sprint.status }}
+        </Badge>
       </div>
-      <p v-if="!epics.length" class="text-xs text-muted-foreground px-2 py-1">
-        No epics yet.
+      <p v-if="!orderedSprints.length" class="text-xs text-muted-foreground px-2 py-1">
+        No sprints yet.
       </p>
     </div>
-  </DefineEpicList>
+  </DefineSprintList>
 
   <div ref="boardRoot" class="flex gap-4" :style="{ height: boardHeight }">
-    <div v-if="isDesktop" class="w-56 shrink-0 min-h-0 flex flex-col gap-2 border-r pr-4">
-      <ReuseEpicList />
+    <div v-if="isDesktop" class="w-64 shrink-0 min-h-0 flex flex-col gap-2 border-r pr-4">
+      <ReuseSprintList />
     </div>
 
     <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-4">
-      <div v-if="isDesktop" class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <div v-if="selectedSprint" class="flex items-center gap-2 mr-2">
+          <span class="font-semibold text-sm">{{ selectedSprint.name }}</span>
+          <Badge variant="outline" class="text-[10px]" :class="SPRINT_STATUS_BADGE[selectedSprint.status]">
+            {{ selectedSprint.status }}
+          </Badge>
+          <span v-if="selectedSprint.startDate || selectedSprint.endDate" class="text-xs text-muted-foreground">
+            {{ formatSprintDate(selectedSprint.startDate) ?? '—' }} – {{ formatSprintDate(selectedSprint.endDate) ?? '—' }}
+          </span>
+          <Button v-if="selectedSprint.status === 'planned'" size="sm" variant="outline" class="h-7" @click="startSprint(selectedSprint)">
+            <Icon name="i-lucide-play" class="mr-1 h-3 w-3" />
+            Start sprint
+          </Button>
+          <Button v-else-if="selectedSprint.status === 'active'" size="sm" variant="outline" class="h-7" @click="completeSprint(selectedSprint)">
+            <Icon name="i-lucide-check" class="mr-1 h-3 w-3" />
+            Complete sprint
+          </Button>
+        </div>
+        <div v-else class="font-semibold text-sm mr-2">
+          Backlog
+        </div>
+
         <Button size="sm" @click="openNewTask">
           <Icon name="i-lucide-plus" class="mr-1.5 h-4 w-4" />
           New Task
         </Button>
 
-        <Separator orientation="vertical" class="h-6 mx-1" />
+        <template v-if="isDesktop">
+          <Separator orientation="vertical" class="h-6 mx-1" />
 
-        <Select v-model="assigneeFilter">
-          <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
-            <Icon name="i-lucide-user" class="h-3.5 w-3.5 text-muted-foreground" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              All assignees
-            </SelectItem>
-            <SelectItem value="unassigned">
-              Unassigned
-            </SelectItem>
-            <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-              {{ member.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+          <Select v-model="assigneeFilter">
+            <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
+              <Icon name="i-lucide-user" class="h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                All assignees
+              </SelectItem>
+              <SelectItem value="unassigned">
+                Unassigned
+              </SelectItem>
+              <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
+                {{ member.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select v-model="priorityFilter">
-          <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
-            <Icon name="i-lucide-flag" class="h-3.5 w-3.5 text-muted-foreground" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              All priorities
-            </SelectItem>
-            <SelectItem v-for="option in priorities" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+          <Select v-model="priorityFilter">
+            <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
+              <Icon name="i-lucide-flag" class="h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                All priorities
+              </SelectItem>
+              <SelectItem v-for="option in priorities" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select v-model="dueFilter">
-          <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
-            <Icon name="i-lucide-calendar-clock" class="h-3.5 w-3.5 text-muted-foreground" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              Any due date
-            </SelectItem>
-            <SelectItem value="overdue">
-              Overdue
-            </SelectItem>
-            <SelectItem value="due-soon">
-              Due soon
-            </SelectItem>
-            <SelectItem value="none">
-              No due date
-            </SelectItem>
-          </SelectContent>
-        </Select>
+          <Select v-model="dueFilter">
+            <SelectTrigger class="h-8 w-auto gap-1.5 text-xs">
+              <Icon name="i-lucide-calendar-clock" class="h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                Any due date
+              </SelectItem>
+              <SelectItem value="overdue">
+                Overdue
+              </SelectItem>
+              <SelectItem value="due-soon">
+                Due soon
+              </SelectItem>
+              <SelectItem value="none">
+                No due date
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Button v-if="hasActiveFilters" size="sm" variant="ghost" class="text-muted-foreground" @click="resetFilters">
-          <Icon name="i-lucide-x" class="mr-1 h-3.5 w-3.5" />
-          Clear filters
-        </Button>
-      </div>
+          <Button v-if="hasActiveFilters" size="sm" variant="ghost" class="text-muted-foreground" @click="resetFilters">
+            <Icon name="i-lucide-x" class="mr-1 h-3.5 w-3.5" />
+            Clear filters
+          </Button>
+        </template>
 
-      <div v-else class="flex flex-wrap items-center gap-2">
-        <Button size="sm" @click="openNewTask">
-          <Icon name="i-lucide-plus" class="mr-1.5 h-4 w-4" />
-          New Task
-        </Button>
-
-        <Drawer v-model:open="showEpicDrawer">
-          <DrawerTrigger as-child>
-            <Button size="sm" variant="outline" class="gap-1.5 text-xs">
-              <span class="max-w-28 truncate">{{ activeEpicLabel }}</span>
-              <Icon name="i-lucide-chevron-down" class="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
-          </DrawerTrigger>
-          <DrawerContent>
-            <DrawerHeader class="sr-only">
-              <DrawerTitle>Epics</DrawerTitle>
-              <DrawerDescription>Filter tasks by epic</DrawerDescription>
-            </DrawerHeader>
-            <div class="flex flex-col gap-2 px-4 pb-6 max-h-[70vh]">
-              <ReuseEpicList />
-            </div>
-          </DrawerContent>
-        </Drawer>
-
-        <Drawer v-model:open="showFilterDrawer">
-          <DrawerTrigger as-child>
-            <Button size="sm" variant="outline" class="gap-1.5 text-xs">
-              <Icon name="i-lucide-sliders-horizontal" class="h-3.5 w-3.5 text-muted-foreground" />
-              Filters
-              <Badge v-if="activeToolbarFilterCount" variant="secondary" class="h-4 min-w-4 px-1 text-[10px]">
-                {{ activeToolbarFilterCount }}
-              </Badge>
-            </Button>
-          </DrawerTrigger>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Filters</DrawerTitle>
-              <DrawerDescription class="sr-only">
-                Filter tasks by assignee, priority, and due date
-              </DrawerDescription>
-            </DrawerHeader>
-            <div class="flex flex-col gap-3 px-4 pb-6">
-              <Select v-model="assigneeFilter">
-                <SelectTrigger class="w-full gap-1.5 text-xs">
-                  <Icon name="i-lucide-user" class="h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    All assignees
-                  </SelectItem>
-                  <SelectItem value="unassigned">
-                    Unassigned
-                  </SelectItem>
-                  <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
-                    {{ member.name }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select v-model="priorityFilter">
-                <SelectTrigger class="w-full gap-1.5 text-xs">
-                  <Icon name="i-lucide-flag" class="h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    All priorities
-                  </SelectItem>
-                  <SelectItem v-for="option in priorities" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select v-model="dueFilter">
-                <SelectTrigger class="w-full gap-1.5 text-xs">
-                  <Icon name="i-lucide-calendar-clock" class="h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    Any due date
-                  </SelectItem>
-                  <SelectItem value="overdue">
-                    Overdue
-                  </SelectItem>
-                  <SelectItem value="due-soon">
-                    Due soon
-                  </SelectItem>
-                  <SelectItem value="none">
-                    No due date
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button v-if="hasActiveFilters" size="sm" variant="ghost" class="text-muted-foreground self-start" @click="resetFilters">
-                <Icon name="i-lucide-x" class="mr-1 h-3.5 w-3.5" />
-                Clear filters
+        <template v-else>
+          <Drawer v-model:open="showSprintDrawer">
+            <DrawerTrigger as-child>
+              <Button size="sm" variant="outline" class="gap-1.5 text-xs">
+                <Icon name="i-lucide-list" class="h-3.5 w-3.5 text-muted-foreground" />
+                Switch
               </Button>
-            </div>
-          </DrawerContent>
-        </Drawer>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader class="sr-only">
+                <DrawerTitle>Sprints</DrawerTitle>
+                <DrawerDescription>Switch between the backlog and a sprint</DrawerDescription>
+              </DrawerHeader>
+              <div class="flex flex-col gap-2 px-4 pb-6 max-h-[70vh]">
+                <ReuseSprintList />
+              </div>
+            </DrawerContent>
+          </Drawer>
+
+          <Drawer v-model:open="showFilterDrawer">
+            <DrawerTrigger as-child>
+              <Button size="sm" variant="outline" class="gap-1.5 text-xs">
+                <Icon name="i-lucide-sliders-horizontal" class="h-3.5 w-3.5 text-muted-foreground" />
+                Filters
+                <Badge v-if="activeToolbarFilterCount" variant="secondary" class="h-4 min-w-4 px-1 text-[10px]">
+                  {{ activeToolbarFilterCount }}
+                </Badge>
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Filters</DrawerTitle>
+                <DrawerDescription class="sr-only">
+                  Filter tasks by assignee, priority, and due date
+                </DrawerDescription>
+              </DrawerHeader>
+              <div class="flex flex-col gap-3 px-4 pb-6">
+                <Select v-model="assigneeFilter">
+                  <SelectTrigger class="w-full gap-1.5 text-xs">
+                    <Icon name="i-lucide-user" class="h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      All assignees
+                    </SelectItem>
+                    <SelectItem value="unassigned">
+                      Unassigned
+                    </SelectItem>
+                    <SelectItem v-for="member in activeStaff" :key="member.id" :value="member.id">
+                      {{ member.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select v-model="priorityFilter">
+                  <SelectTrigger class="w-full gap-1.5 text-xs">
+                    <Icon name="i-lucide-flag" class="h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      All priorities
+                    </SelectItem>
+                    <SelectItem v-for="option in priorities" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select v-model="dueFilter">
+                  <SelectTrigger class="w-full gap-1.5 text-xs">
+                    <Icon name="i-lucide-calendar-clock" class="h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      Any due date
+                    </SelectItem>
+                    <SelectItem value="overdue">
+                      Overdue
+                    </SelectItem>
+                    <SelectItem value="due-soon">
+                      Due soon
+                    </SelectItem>
+                    <SelectItem value="none">
+                      No due date
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button v-if="hasActiveFilters" size="sm" variant="ghost" class="text-muted-foreground self-start" @click="resetFilters">
+                  <Icon name="i-lucide-x" class="mr-1 h-3.5 w-3.5" />
+                  Clear filters
+                </Button>
+              </div>
+            </DrawerContent>
+          </Drawer>
+        </template>
       </div>
 
       <Draggable
@@ -501,7 +575,7 @@ async function onColumnsReordered() {
 
             <Draggable
               v-model="columnTasks[col.id]"
-              :group="{ name: 'task-board', pull: true, put: true }"
+              :group="{ name: 'sprint-board', pull: true, put: true }"
               item-key="id"
               :animation="180"
               class="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto p-0.5"
@@ -527,6 +601,25 @@ async function onColumnsReordered() {
                           <Icon name="i-lucide-git-branch-plus" class="size-4" />
                           Add subtask
                         </DropdownMenuItem>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <Icon name="i-lucide-arrow-right-left" class="size-4" />
+                            Move to sprint
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem :disabled="!task.sprintId" @click="moveToSprint(task, null)">
+                              Backlog
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              v-for="sprint in orderedSprints"
+                              :key="sprint.id"
+                              :disabled="task.sprintId === sprint.id"
+                              @click="moveToSprint(task, sprint.id)"
+                            >
+                              {{ sprint.name }}
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem variant="destructive" class="text-destructive" @click="removeTask(task.id)">
                           <Icon name="i-lucide-trash-2" class="size-4" />
@@ -633,6 +726,11 @@ async function onColumnsReordered() {
       :task="formTask"
       :type="formType"
       :parent-task-id="formParentTaskId"
+    />
+
+    <SprintFormSheet
+      v-model:open="sprintFormOpen"
+      :sprint="editingSprint"
     />
   </div>
 </template>

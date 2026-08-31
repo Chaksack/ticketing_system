@@ -10,6 +10,7 @@ export interface NewTask {
   assigneeIds?: string[]
   epicId?: string
   parentTaskId?: string
+  sprintId?: string
   startDate?: string
   dueDate?: string
   remindAt?: string
@@ -24,6 +25,7 @@ export interface TaskPatch {
   assigneeIds?: string[]
   epicId?: string | null
   parentTaskId?: string | null
+  sprintId?: string | null
   startDate?: string | null
   dueDate?: string | null
   remindAt?: string | null

@@ -11,6 +11,7 @@ interface NewTaskBody {
   assigneeIds?: string[]
   epicId?: string
   parentTaskId?: string
+  sprintId?: string
   startDate?: string
   dueDate?: string
   remindAt?: string
@@ -35,10 +36,10 @@ export default defineEventHandler(async (event) => {
 
   await db.prepare(`
     INSERT INTO tasks (
-      id, type, title, description, status, priority, color, epic_id, parent_task_id,
+      id, type, title, description, status, priority, color, epic_id, parent_task_id, sprint_id,
       start_date, due_date, remind_at, reminder_sent, created_by, created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
   `).run(
     id,
     type,
@@ -49,6 +50,7 @@ export default defineEventHandler(async (event) => {
     body.color ?? null,
     type === 'task' ? (body.epicId ?? null) : null,
     type === 'subtask' ? (body.parentTaskId ?? null) : null,
+    type !== 'epic' ? (body.sprintId ?? null) : null,
     body.startDate ?? null,
     body.dueDate ?? null,
     body.remindAt ?? null,
@@ -60,9 +62,11 @@ export default defineEventHandler(async (event) => {
   await setTaskAssignees(id, assigneeIds)
 
   const row = await db.prepare(`
-    SELECT tasks.*, epics.title AS epic_title, epics.color AS epic_color
+    SELECT tasks.*, epics.title AS epic_title, epics.color AS epic_color,
+      sprints.name AS sprint_name, sprints.status AS sprint_status
     FROM tasks
     LEFT JOIN tasks epics ON epics.id = tasks.epic_id
+    LEFT JOIN sprints ON sprints.id = tasks.sprint_id
     WHERE tasks.id = ?
   `).get(id) as TaskRow
 

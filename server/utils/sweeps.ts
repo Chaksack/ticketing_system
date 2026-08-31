@@ -6,6 +6,7 @@ interface SweepTicketRow {
   due_at: string | null
   resolved_at: string | null
   sla_escalated: number
+  escalation_level: string | null
 }
 
 export async function escalateBreachedSla() {
@@ -13,7 +14,7 @@ export async function escalateBreachedSla() {
   const now = new Date().toISOString()
 
   const breached = await db.prepare(`
-    SELECT id, status, due_at, resolved_at, sla_escalated FROM tickets
+    SELECT id, status, due_at, resolved_at, sla_escalated, escalation_level FROM tickets
     WHERE status IN ('open', 'in-progress') AND sla_escalated = 0 AND due_at IS NOT NULL AND due_at < ?
   `).all(now) as SweepTicketRow[]
 
@@ -27,6 +28,10 @@ export async function escalateBreachedSla() {
       actorName: 'System',
       message: 'SLA breached — on-call staff paged',
     })
+
+    if (!row.escalation_level) {
+      await escalateTicket(row.id, { name: 'System' })
+    }
   }
 
   return breached.length

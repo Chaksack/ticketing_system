@@ -4,6 +4,7 @@ import type { Macro } from '../../app/types/automation'
 import type { Client, ClientActivity, ClientContactEmail, ClientContactPhone } from '../../app/types/client'
 import type { Lead, LeadActivity, LeadContactEmail, LeadContactPhone } from '../../app/types/lead'
 import type { Project } from '../../app/types/project'
+import type { Sprint } from '../../app/types/sprint'
 import type { StaffMember, StaffRole } from '../../app/types/staff'
 import type { Task } from '../../app/types/task'
 import type { Ticket, TicketActivity, TicketReply, TicketTag } from '../../app/types/ticket'
@@ -63,6 +64,7 @@ export interface TicketRow {
   resolved_at: string | null
   closed_at: string | null
   sla_escalated: number
+  escalation_level: string | null
 }
 
 export function mapTicketRow(
@@ -95,6 +97,7 @@ export function mapTicketRow(
     resolvedAt: row.resolved_at ?? undefined,
     closedAt: row.closed_at ?? undefined,
     slaEscalated: !!row.sla_escalated,
+    escalationLevel: (row.escalation_level as Ticket['escalationLevel']) ?? undefined,
   }
 }
 
@@ -483,6 +486,9 @@ export interface TaskRow {
   epic_title?: string | null
   epic_color?: string | null
   parent_task_id: string | null
+  sprint_id: string | null
+  sprint_name?: string | null
+  sprint_status?: string | null
   start_date: string | null
   due_date: string | null
   remind_at: string | null
@@ -506,10 +512,39 @@ export function mapTaskRow(row: TaskRow, assignees: Assignee[] = []): Task {
     epicTitle: row.epic_title ?? undefined,
     epicColor: row.epic_color ?? undefined,
     parentTaskId: row.parent_task_id ?? undefined,
+    sprintId: row.sprint_id ?? undefined,
+    sprintName: row.sprint_name ?? undefined,
+    sprintStatus: (row.sprint_status as Task['sprintStatus']) ?? undefined,
     startDate: row.start_date ?? undefined,
     dueDate: row.due_date ?? undefined,
     remindAt: row.remind_at ?? undefined,
     reminderSent: !!row.reminder_sent,
+    createdBy: row.created_by ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export interface SprintRow {
+  id: string
+  name: string
+  goal: string | null
+  status: string
+  start_date: string | null
+  end_date: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function mapSprintRow(row: SprintRow): Sprint {
+  return {
+    id: row.id,
+    name: row.name,
+    goal: row.goal ?? undefined,
+    status: row.status as Sprint['status'],
+    startDate: row.start_date ?? undefined,
+    endDate: row.end_date ?? undefined,
     createdBy: row.created_by ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

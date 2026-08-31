@@ -54,3 +54,21 @@ export const priorities = [
     badgeClass: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
   },
 ]
+
+export const escalationLevels = [
+  {
+    value: 'engineer',
+    label: 'Engineer',
+    badgeClass: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-400 dark:border-teal-500/30',
+  },
+  {
+    value: 'engineering_coordinator',
+    label: 'Engineering Coordinator',
+    badgeClass: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-400 dark:border-indigo-500/30',
+  },
+  {
+    value: 'engineering_lead',
+    label: 'Engineering Lead',
+    badgeClass: 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30',
+  },
+]

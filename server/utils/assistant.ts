@@ -27,6 +27,9 @@ const ROLE_LABELS: Record<string, string> = {
   agent: 'Agent',
   bd: 'BD Executive',
   sm: 'Sales & Marketing Exec',
+  engineer: 'Engineer',
+  engineering_coordinator: 'Engineering Coordinator',
+  engineering_lead: 'Engineering Lead',
 }
 
 function normalize(text: string) {
@@ -38,7 +41,7 @@ function hasAny(text: string, words: string[]) {
 }
 
 function canSeeTickets(user: SessionUser) {
-  return user.roles.some(role => role === 'agent' || role === 'admin')
+  return user.roles.some(role => role === 'agent' || role === 'admin' || role === 'engineer' || role === 'engineering_coordinator' || role === 'engineering_lead')
 }
 
 function canSeeClients(user: SessionUser) {
@@ -224,7 +227,7 @@ async function staffHeadcount(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT role, roles FROM staff').all() as { role: string, roles: string | null }[]
 
-  const tally: Record<string, number> = { admin: 0, agent: 0, bd: 0, sm: 0 }
+  const tally: Record<string, number> = { admin: 0, agent: 0, bd: 0, sm: 0, engineer: 0, engineering_coordinator: 0, engineering_lead: 0 }
   for (const row of rows) {
     for (const role of parseStaffRoles(row))
       tally[role] = (tally[role] ?? 0) + 1

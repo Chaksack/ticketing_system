@@ -15,6 +15,9 @@ const ROLE_LABELS: Record<StaffRole, string> = {
   agent: 'Agent',
   bd: 'BD Executive',
   sm: 'Sales & Marketing Exec',
+  engineer: 'Engineer',
+  engineering_coordinator: 'Engineering Coordinator',
+  engineering_lead: 'Engineering Lead',
 }
 
 const { currentUser, isAdmin } = useAuth()

@@ -26,7 +26,7 @@ useHead({
   },
 })
 
-const title = 'BD & SM Platform - Ticketing System'
+const title = 'BSM Platform - Ticketing System'
 const description = 'ticketing system to help IBS offer support to their clients'
 
 useSeoMeta({

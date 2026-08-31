@@ -76,6 +76,7 @@ async function migrate() {
   await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS closed_at TEXT')
   await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS sla_escalated INTEGER NOT NULL DEFAULT 0')
   await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS updated_at TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS escalation_level TEXT')
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS ticket_replies (
@@ -493,6 +494,22 @@ async function migrate() {
   `)
 
   await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_id TEXT')
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS sprints (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      goal TEXT,
+      status TEXT NOT NULL DEFAULT 'planned',
+      start_date TEXT,
+      end_date TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sprint_id TEXT')
 }
 
 export async function nextSequence(name: string): Promise<number> {
@@ -593,6 +610,11 @@ export async function nextTaskId() {
 export async function nextTaskStatusId() {
   const n = await nextSequence('task_status')
   return `STATUS-${n}`
+}
+
+export async function nextSprintId() {
+  const n = await nextSequence('sprint')
+  return `SPRINT-${n}`
 }
 
 export async function nextProjectId() {

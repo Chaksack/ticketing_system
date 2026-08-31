@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
   const db = useDatabase()
   const like = `%${q}%`
 
-  const canSeeTickets = user.roles.some(role => role === 'agent' || role === 'admin')
+  const canSeeTickets = user.roles.some(role => role === 'agent' || role === 'admin' || role === 'engineer' || role === 'engineering_coordinator' || role === 'engineering_lead')
   const canSeeBd = user.roles.some(role => role === 'bd' || role === 'sm' || role === 'admin')
 
   // Sequential, not Promise.all — db0's postgresql connector shares a single client

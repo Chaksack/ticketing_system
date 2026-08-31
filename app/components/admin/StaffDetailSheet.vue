@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AcceptableValue } from 'reka-ui'
-import type { StaffMember, StaffStatus } from '~/types/staff'
+import type { StaffMember, StaffRole, StaffStatus } from '~/types/staff'
 import { toast } from 'vue-sonner'
 import { roleBadgeClass } from './data'
 
@@ -27,9 +27,12 @@ const roleOptions = [
   { value: 'agent', label: 'Agent' },
   { value: 'bd', label: 'BD Executive' },
   { value: 'sm', label: 'Sales & Marketing Exec' },
+  { value: 'engineer', label: 'Engineer' },
+  { value: 'engineering_coordinator', label: 'Engineering Coordinator' },
+  { value: 'engineering_lead', label: 'Engineering Lead' },
 ] as const
 
-async function onToggleRole(value: 'admin' | 'agent' | 'bd' | 'sm', checked: boolean) {
+async function onToggleRole(value: StaffRole, checked: boolean) {
   if (!props.staff)
     return
 

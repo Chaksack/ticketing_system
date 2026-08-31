@@ -70,3 +70,14 @@ export async function requireAgent(event: H3Event): Promise<SessionUser> {
 
   return user
 }
+
+/** Gates engineering-only areas — engineer, engineering_coordinator, and engineering_lead hold identical access here, alongside admin. */
+export async function requireEngineer(event: H3Event): Promise<SessionUser> {
+  const user = await requireSessionUser(event)
+
+  if (!user.roles.includes('engineer') && !user.roles.includes('engineering_coordinator') && !user.roles.includes('engineering_lead') && !user.roles.includes('admin')) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  return user
+}

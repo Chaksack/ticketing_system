@@ -87,10 +87,16 @@ export function useTickets() {
     return ticket
   }
 
+  async function escalateTicket(ticketId: string) {
+    const { ticket } = await $fetch(`/api/tickets/${ticketId}/escalate`, { method: 'POST' })
+    replaceTicket(ticket)
+    return ticket
+  }
+
   async function removeTicket(ticketId: string) {
     await $fetch(`/api/tickets/${ticketId}`, { method: 'DELETE' })
     tickets.value = tickets.value.filter(t => t.id !== ticketId)
   }
 
-  return { tickets, fetchTickets, getTicket, fetchTicket, addTicket, addReply, updateStatus, updateTicket, addTag, removeTag, applyMacro, removeTicket }
+  return { tickets, fetchTickets, getTicket, fetchTicket, addTicket, addReply, updateStatus, updateTicket, addTag, removeTag, applyMacro, escalateTicket, removeTicket }
 }

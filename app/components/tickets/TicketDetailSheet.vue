@@ -6,7 +6,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
-import { priorities, statuses } from './data/data'
+import { escalationLevels, priorities, statuses } from './data/data'
 
 const props = defineProps<{
   ticket: Ticket | null
@@ -14,7 +14,7 @@ const props = defineProps<{
 
 const open = defineModel<boolean>('open', { default: false })
 
-const { addReply, updateTicket, addTag, removeTag, applyMacro } = useTickets()
+const { addReply, updateTicket, addTag, removeTag, applyMacro, escalateTicket } = useTickets()
 const { staff, fetchStaff } = useStaff()
 const { tags, fetchTags, createTag } = useTags()
 const { macros, fetchMacros } = useMacros()
@@ -76,6 +76,32 @@ async function onAssigneeChange(value: AcceptableValue) {
   toast('Assignee updated', {
     description: name ? `Assigned to ${name}.` : 'Ticket unassigned.',
   })
+}
+
+const escalation = computed(() => escalationLevels.find(l => l.value === props.ticket?.escalationLevel))
+const canEscalateFurther = computed(() => {
+  if (!props.ticket)
+    return false
+  const index = props.ticket.escalationLevel ? escalationLevels.findIndex(l => l.value === props.ticket!.escalationLevel) : -1
+  return index < escalationLevels.length - 1
+})
+
+async function onEscalate() {
+  if (!props.ticket)
+    return
+
+  try {
+    const ticket = await escalateTicket(props.ticket.id)
+    const label = escalationLevels.find(l => l.value === ticket.escalationLevel)?.label
+    toast('Ticket escalated', {
+      description: label ? `Escalated to ${label}.` : undefined,
+    })
+  }
+  catch (error: any) {
+    toast.error('Could not escalate', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
 }
 
 const isTagPopoverOpen = ref(false)
@@ -165,6 +191,8 @@ function activityLabel(activity: TicketActivity) {
       return `${actor} changed priority from ${activity.fromValue} to ${activity.toValue}`
     case 'assignee_changed':
       return `${actor} assigned to ${activity.toValue}`
+    case 'escalated':
+      return `${actor} escalated to ${activity.toValue}`
     case 'tag_added':
       return `${actor} added tag "${activity.toValue}"`
     case 'tag_removed':
@@ -237,6 +265,14 @@ function formatDate(value: string) {
                 Target: {{ ticket.dueAt ? formatDate(ticket.dueAt) : 'n/a' }}
               </TooltipContent>
             </Tooltip>
+            <Badge v-if="escalation" variant="outline" class="gap-1.5" :class="escalation.badgeClass">
+              <Icon name="i-lucide-arrow-up-circle" class="h-3.5 w-3.5" />
+              {{ escalation.label }}
+            </Badge>
+            <Button v-if="canEscalateFurther" size="sm" variant="outline" class="h-7 gap-1.5 text-xs" @click="onEscalate">
+              <Icon name="i-lucide-arrow-up-circle" class="h-3.5 w-3.5" />
+              Escalate
+            </Button>
           </div>
 
           <div class="flex flex-wrap items-center gap-2 pt-2">

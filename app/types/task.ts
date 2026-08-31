@@ -1,4 +1,5 @@
 import type { Assignee } from './assignee'
+import type { SprintStatus } from './sprint'
 
 export type TaskType = 'epic' | 'task' | 'subtask'
 // Staff-defined board columns (see `task_statuses` table / useTaskStatuses) — not a fixed enum.
@@ -18,6 +19,9 @@ export interface Task {
   epicTitle?: string
   epicColor?: string
   parentTaskId?: string
+  sprintId?: string
+  sprintName?: string
+  sprintStatus?: SprintStatus
   startDate?: string
   dueDate?: string
   remindAt?: string

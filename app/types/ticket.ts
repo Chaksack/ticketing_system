@@ -2,6 +2,7 @@ export type TicketStatus = 'open' | 'in-progress' | 'resolved' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type SlaStatus = 'on-track' | 'at-risk' | 'breached'
 export type ReplyAuthorType = 'staff' | 'customer' | 'system'
+export type EscalationLevel = 'engineer' | 'engineering_coordinator' | 'engineering_lead'
 
 export interface TicketReply {
   id: string
@@ -23,6 +24,7 @@ export type TicketActivityType
     | 'sla_escalated'
     | 'auto_assigned'
     | 'automation_applied'
+    | 'escalated'
 
 export interface TicketActivity {
   id: string
@@ -66,4 +68,5 @@ export interface Ticket {
   resolvedAt?: string
   closedAt?: string
   slaEscalated: boolean
+  escalationLevel?: EscalationLevel
 }
