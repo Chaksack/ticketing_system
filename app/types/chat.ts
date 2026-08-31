@@ -10,6 +10,10 @@ export interface ChatMessage {
   body: string
   createdAt: string
   editedAt?: string
+  attachmentUrl?: string
+  attachmentName?: string
+  attachmentType?: string
+  attachmentSize?: number
 }
 
 export interface ChatChannel {

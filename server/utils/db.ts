@@ -470,6 +470,11 @@ async function migrate() {
     )
   `)
 
+  await db.exec('ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS attachment_url TEXT')
+  await db.exec('ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS attachment_name TEXT')
+  await db.exec('ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS attachment_type TEXT')
+  await db.exec('ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS attachment_size INTEGER')
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS calendar_events (
       id TEXT PRIMARY KEY,

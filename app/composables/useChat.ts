@@ -46,8 +46,13 @@ export function useChat() {
     messagesByChannel.value = { ...messagesByChannel.value, [channelId]: messages }
   }
 
-  async function sendMessage(channelId: string, body: string) {
-    const { message } = await $fetch<{ message: ChatMessage }>(`/api/chat/channels/${channelId}/messages`, { method: 'POST', body: { body } })
+  async function sendMessage(channelId: string, body: string, file?: File | null) {
+    const formData = new FormData()
+    formData.append('body', body)
+    if (file)
+      formData.append('attachment', file)
+
+    const { message } = await $fetch<{ message: ChatMessage }>(`/api/chat/channels/${channelId}/messages`, { method: 'POST', body: formData })
     messagesByChannel.value = { ...messagesByChannel.value, [channelId]: [...(messagesByChannel.value[channelId] ?? []), message] }
     return message
   }

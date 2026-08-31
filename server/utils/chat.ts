@@ -17,6 +17,10 @@ export interface ChatMessageRow {
   body: string
   created_at: string
   edited_at: string | null
+  attachment_url?: string | null
+  attachment_name?: string | null
+  attachment_type?: string | null
+  attachment_size?: number | null
 }
 
 export function mapChatMessageRow(row: ChatMessageRow): ChatMessage {
@@ -28,6 +32,10 @@ export function mapChatMessageRow(row: ChatMessageRow): ChatMessage {
     body: row.body,
     createdAt: row.created_at,
     editedAt: row.edited_at ?? undefined,
+    attachmentUrl: row.attachment_url ?? undefined,
+    attachmentName: row.attachment_name ?? undefined,
+    attachmentType: row.attachment_type ?? undefined,
+    attachmentSize: row.attachment_size ?? undefined,
   }
 }
 

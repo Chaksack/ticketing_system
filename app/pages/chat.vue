@@ -100,14 +100,76 @@ onUnmounted(() => {
 
 const draft = ref('')
 
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+  'text/csv',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/zip',
+])
+const MAX_ATTACHMENT_SIZE = 4 * 1024 * 1024
+
+const attachmentInput = ref<HTMLInputElement>()
+const pendingAttachment = ref<File | null>(null)
+const pendingAttachmentPreviewUrl = ref<string | null>(null)
+
+function onAttachmentButtonClick() {
+  attachmentInput.value?.click()
+}
+
+function clearPendingAttachment() {
+  if (pendingAttachmentPreviewUrl.value)
+    URL.revokeObjectURL(pendingAttachmentPreviewUrl.value)
+  pendingAttachment.value = null
+  pendingAttachmentPreviewUrl.value = null
+}
+
+function onAttachmentChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file)
+    return
+
+  if (!ALLOWED_ATTACHMENT_TYPES.has(file.type)) {
+    toast.error('Could not attach file', {
+      description: 'That file type is not supported.',
+    })
+    return
+  }
+
+  if (file.size > MAX_ATTACHMENT_SIZE) {
+    toast.error('Could not attach file', {
+      description: 'File must be smaller than 4MB.',
+    })
+    return
+  }
+
+  clearPendingAttachment()
+  pendingAttachment.value = file
+  if (file.type.startsWith('image/'))
+    pendingAttachmentPreviewUrl.value = URL.createObjectURL(file)
+}
+
 async function onSend() {
-  if (!activeChannelId.value || !draft.value.trim())
+  if (!activeChannelId.value || (!draft.value.trim() && !pendingAttachment.value))
     return
 
   const body = draft.value.trim()
+  const file = pendingAttachment.value
   draft.value = ''
+  clearPendingAttachment()
   try {
-    await sendMessage(activeChannelId.value, body)
+    await sendMessage(activeChannelId.value, body, file)
     await scrollToBottom()
   }
   catch (error: any) {
@@ -115,7 +177,34 @@ async function onSend() {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
     draft.value = body
+    pendingAttachment.value = file
+    if (file?.type.startsWith('image/'))
+      pendingAttachmentPreviewUrl.value = URL.createObjectURL(file)
   }
+}
+
+function formatFileSize(bytes?: number) {
+  if (!bytes)
+    return ''
+  if (bytes < 1024)
+    return `${bytes} B`
+  if (bytes < 1024 * 1024)
+    return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function isImageAttachment(message: ChatMessage) {
+  return message.attachmentType?.startsWith('image/') ?? false
+}
+
+function lastMessagePreview(channel: typeof channels.value[number]) {
+  if (!channel.lastMessage)
+    return ''
+  if (channel.lastMessage.body)
+    return channel.lastMessage.body
+  if (channel.lastMessage.attachmentName)
+    return `📎 ${channel.lastMessage.attachmentName}`
+  return ''
 }
 
 function onInsertReference(token: string) {
@@ -272,7 +361,7 @@ function formatListTime(value: string) {
               <div class="flex items-center justify-between gap-2 mt-0.5">
                 <p class="truncate text-sm text-muted-foreground">
                   <template v-if="channel.lastMessage">
-                    <span v-if="channel.lastMessage.authorId === currentUser?.id">You: </span>{{ channel.lastMessage.body }}
+                    <span v-if="channel.lastMessage.authorId === currentUser?.id">You: </span>{{ lastMessagePreview(channel) }}
                   </template>
                   <template v-else>
                     No messages yet
@@ -351,7 +440,29 @@ function formatListTime(value: string) {
                 message.authorId !== currentUser?.id && isGroupEnd(index) ? 'rounded-bl-md' : '',
               ]"
             >
-              <MessageBody :body="message.body" />
+              <MessageBody v-if="message.body" :body="message.body" />
+              <a
+                v-if="message.attachmentUrl && isImageAttachment(message)"
+                :href="message.attachmentUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mt-1 block"
+                :class="message.body && 'pt-1'"
+              >
+                <img :src="message.attachmentUrl" :alt="message.attachmentName" class="max-h-64 max-w-full rounded-lg object-contain">
+              </a>
+              <a
+                v-else-if="message.attachmentUrl"
+                :href="message.attachmentUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mt-1 flex items-center gap-1.5 rounded-md border border-current/15 px-2 py-1.5 text-xs hover:bg-black/5"
+                :class="message.body && 'mt-2'"
+              >
+                <Icon name="i-lucide-paperclip" class="h-3.5 w-3.5 shrink-0" />
+                <span class="truncate">{{ message.attachmentName }}</span>
+                <span class="shrink-0 opacity-70">{{ formatFileSize(message.attachmentSize) }}</span>
+              </a>
             </div>
             <span v-if="isGroupEnd(index)" class="text-[10px] text-muted-foreground px-1 mt-0.5">
               {{ metaLabel(message) }}
@@ -362,13 +473,30 @@ function formatListTime(value: string) {
           </p>
         </div>
 
-        <form class="flex items-center gap-2 border-t bg-background px-3 py-2.5 shrink-0 md:py-3" style="padding-bottom: max(0.625rem, env(safe-area-inset-bottom))" @submit.prevent="onSend">
-          <ReferencePicker @insert="onInsertReference" />
-          <Input v-model="draft" placeholder="Message" class="flex-1 h-10 rounded-full border-none bg-muted focus-visible:ring-1" />
-          <Button type="submit" size="icon" class="rounded-full shrink-0" :disabled="!draft.trim()">
-            <Icon name="i-lucide-send" class="size-4" />
-          </Button>
-        </form>
+        <div class="border-t bg-background shrink-0">
+          <div v-if="pendingAttachment" class="flex items-center gap-2 px-3 pt-2 md:px-4">
+            <div class="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs">
+              <img v-if="pendingAttachmentPreviewUrl" :src="pendingAttachmentPreviewUrl" alt="" class="size-5 rounded object-cover">
+              <Icon v-else name="i-lucide-paperclip" class="size-3.5" />
+              <span class="max-w-40 truncate">{{ pendingAttachment.name }}</span>
+              <button type="button" class="text-muted-foreground hover:text-foreground" @click="clearPendingAttachment">
+                <Icon name="i-lucide-x" class="size-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <form class="flex items-center gap-2 px-3 py-2.5 md:py-3" style="padding-bottom: max(0.625rem, env(safe-area-inset-bottom))" @submit.prevent="onSend">
+            <input ref="attachmentInput" type="file" class="hidden" :accept="[...ALLOWED_ATTACHMENT_TYPES].join(',')" @change="onAttachmentChange">
+            <Button type="button" size="icon-sm" variant="ghost" class="shrink-0 rounded-full" aria-label="Attach file" @click="onAttachmentButtonClick">
+              <Icon name="i-lucide-paperclip" class="size-4" />
+            </Button>
+            <ReferencePicker @insert="onInsertReference" />
+            <Input v-model="draft" placeholder="Message" class="flex-1 h-10 rounded-full border-none bg-muted focus-visible:ring-1" />
+            <Button type="submit" size="icon" class="rounded-full shrink-0" :disabled="!draft.trim() && !pendingAttachment">
+              <Icon name="i-lucide-send" class="size-4" />
+            </Button>
+          </form>
+        </div>
       </template>
       <div v-else class="flex-1 items-center justify-center text-sm text-muted-foreground hidden md:flex">
         Select a conversation to start chatting.
