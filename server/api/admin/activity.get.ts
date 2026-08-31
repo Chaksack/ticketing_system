@@ -1,6 +1,6 @@
 export interface ActivityLogEntry {
   id: string
-  source: 'ticket' | 'client' | 'lead'
+  source: 'ticket' | 'client' | 'lead' | 'page'
   entityId: string
   entityLabel: string
   type: string
@@ -10,6 +10,30 @@ export interface ActivityLogEntry {
   toValue?: string
   message?: string
   createdAt: string
+}
+
+interface RawPageRow {
+  id: string
+  ticket_id: string
+  ticket_subject: string
+  staff_id: string
+  staff_name: string
+  acknowledged: number
+  created_at: string
+}
+
+function mapPageRow(row: RawPageRow): ActivityLogEntry {
+  return {
+    id: row.id,
+    source: 'page',
+    entityId: row.ticket_id,
+    entityLabel: row.ticket_subject,
+    type: 'paged',
+    actorId: row.staff_id,
+    actorName: row.staff_name,
+    toValue: row.acknowledged ? 'Acknowledged' : 'Pending',
+    createdAt: row.created_at,
+  }
 }
 
 interface RawActivityRow {
@@ -83,10 +107,21 @@ export default defineEventHandler(async (event) => {
     LIMIT 300
   `).all(...(staffId ? [staffId] : [])) as RawActivityRow[]
 
+  // "actor" here means the staff member who was paged, not who triggered the page (pages are
+  // always system-initiated) — filtering by staff surfaces pages relevant to that person.
+  const pageRows = await db.prepare(`
+    SELECT id, ticket_id, ticket_subject, staff_id, staff_name, acknowledged, created_at
+    FROM pages
+    ${staffId ? 'WHERE staff_id = ?' : ''}
+    ORDER BY created_at DESC
+    LIMIT 300
+  `).all(...(staffId ? [staffId] : [])) as RawPageRow[]
+
   const activity = [
     ...ticketRows.map(row => mapRow(row, 'ticket')),
     ...clientRows.map(row => mapRow(row, 'client')),
     ...leadRows.map(row => mapRow(row, 'lead')),
+    ...pageRows.map(mapPageRow),
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 300)
 
   return { activity }

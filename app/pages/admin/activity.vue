@@ -1,7 +1,7 @@
 <script setup lang="ts">
 interface ActivityLogEntry {
   id: string
-  source: 'ticket' | 'client' | 'lead'
+  source: 'ticket' | 'client' | 'lead' | 'page'
   entityId: string
   entityLabel: string
   type: string
@@ -57,18 +57,21 @@ const SOURCE_LABEL: Record<ActivityLogEntry['source'], string> = {
   ticket: 'Ticket',
   client: 'Client',
   lead: 'Lead',
+  page: 'Page',
 }
 
 const SOURCE_BADGE_CLASS: Record<ActivityLogEntry['source'], string> = {
   ticket: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30',
   client: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/15 dark:text-violet-400 dark:border-violet-500/30',
   lead: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
+  page: 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30',
 }
 
 const SOURCE_LINK: Record<ActivityLogEntry['source'], (id: string) => string> = {
   ticket: id => `/tickets?open=${id}`,
   client: id => `/clients?open=${id}`,
   lead: id => `/leads?open=${id}`,
+  page: id => `/tickets?open=${id}`,
 }
 
 function activityLabel(entry: ActivityLogEntry) {
@@ -137,6 +140,9 @@ function formatDateTime(value: string) {
           </SelectItem>
           <SelectItem value="lead">
             Leads
+          </SelectItem>
+          <SelectItem value="page">
+            Pages
           </SelectItem>
         </SelectContent>
       </Select>
