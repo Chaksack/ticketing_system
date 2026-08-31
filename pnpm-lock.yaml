@@ -32,6 +32,9 @@ importers:
       '@unovis/vue':
         specifier: ^1.6.1
         version: 1.6.1(@unovis/ts@1.6.1)(vue@3.5.22(typescript@5.9.3))
+      '@vee-validate/zod':
+        specifier: ^4.15.1
+        version: 4.15.1(vue@3.5.22(typescript@5.9.3))(zod@3.25.76)
       '@vercel/blob':
         specifier: ^2.8.0
         version: 2.8.0
@@ -71,6 +74,9 @@ importers:
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@antfu/eslint-config':
         specifier: ^4.19.0
@@ -96,9 +102,6 @@ importers:
       '@types/web-push':
         specifier: ^3.6.4
         version: 3.6.4
-      '@vee-validate/zod':
-        specifier: ^4.15.1
-        version: 4.15.1(vue@3.5.22(typescript@5.9.3))(zod@3.25.76)
       '@vueuse/core':
         specifier: ^12.8.2
         version: 12.8.2(typescript@5.9.3)
@@ -162,9 +165,6 @@ importers:
       vue-tsc:
         specifier: ^2.2.12
         version: 2.2.12(typescript@5.9.3)
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
 
 packages:
 

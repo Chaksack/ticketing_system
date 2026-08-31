@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import type { StaffRole } from '../../app/types/staff'
+import type { StaffRow } from './mappers'
 
 export interface SessionUser {
   id: string
@@ -25,9 +26,31 @@ export function useAuthSession(event: H3Event) {
   })
 }
 
+// Re-derives roles/status from the staff table on every call instead of trusting the session
+// cookie's snapshot — otherwise an admin changing someone's roles (or disabling them) has no
+// effect until that person logs out and back in.
 export async function getSessionUser(event: H3Event): Promise<SessionUser | null> {
   const session = await useAuthSession(event)
-  return session.data.user ?? null
+  const sessionUser = session.data.user
+  if (!sessionUser) {
+    return null
+  }
+
+  await ensureDb()
+  const db = useDatabase()
+  const row = await db.prepare('SELECT * FROM staff WHERE id = ?').get(sessionUser.id) as StaffRow | undefined
+
+  if (!row || row.status === 'disabled') {
+    return null
+  }
+
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    roles: parseStaffRoles(row),
+    avatarUrl: row.avatar_url ?? undefined,
+  }
 }
 
 export async function requireSessionUser(event: H3Event): Promise<SessionUser> {

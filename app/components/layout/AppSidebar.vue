@@ -24,7 +24,7 @@ const { currentUser, isAdmin } = useAuth()
 
 const teams = computed(() => [
   {
-    name: 'BD & SM Platform',
+    name: 'BSM Platform',
     logo: '/icons/logo.png',
     role: currentUser.value?.roles.map(role => ROLE_LABELS[role]).join(', ') ?? '',
   },
