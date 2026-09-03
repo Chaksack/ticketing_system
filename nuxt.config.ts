@@ -7,6 +7,16 @@ export default defineNuxtConfig({
   css: ['~/assets/css/tailwind.css'],
   vite: {
     plugins: [tailwindcss()],
+    // zod/@vee-validate/zod are only reachable through lazily-imported page chunks (form
+    // pages), and Nitro's file-tracer for the Vercel/node-server output doesn't reliably pick
+    // up dependencies behind that kind of dynamic import boundary — it copies a different,
+    // internal zod (a Nitro tooling dependency) into .output but not this one, so requests to
+    // those pages 500 with ERR_MODULE_NOT_FOUND in production despite zod being a real
+    // dependency. Forcing these to bundle inline (not stay an external runtime import) sidesteps
+    // the trace entirely.
+    ssr: {
+      noExternal: ['zod', '@vee-validate/zod'],
+    },
     optimizeDeps: {
       include: [
         '@internationalized/date',

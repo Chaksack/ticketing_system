@@ -11,9 +11,9 @@ definePageMeta({
         <h1 class="text-2xl font-semibold tracking-tight">
           Welcome back
         </h1>
-        <p class="text-balance text-sm text-muted-foreground">
+        <!-- <p class="text-balance text-sm text-muted-foreground">
           Login with your Apple or Google account
-        </p>
+        </p> -->
       </div>
       <AuthSignIn />
     </div>
