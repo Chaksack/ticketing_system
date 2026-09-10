@@ -1,4 +1,5 @@
 import type { CalendarEvent } from '~/types/calendar-event'
+import type { RegardingType } from '~/types/interaction'
 
 export interface CalendarEventPayload {
   title: string
@@ -7,6 +8,8 @@ export interface CalendarEventPayload {
   startAt: string
   endAt: string
   attendeeIds?: string[]
+  regardingType?: RegardingType | null
+  regardingId?: string | null
 }
 
 export function useCalendar() {

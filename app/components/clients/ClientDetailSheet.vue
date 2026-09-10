@@ -14,7 +14,7 @@ const props = defineProps<{
 const open = defineModel<boolean>('open', { default: false })
 const router = useRouter()
 
-const { updateClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone, addContact, removeContact } = useClients()
+const { updateClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone, addContact, removeContact, uploadDocument, removeDocument } = useClients()
 const { staff, fetchStaff } = useStaff()
 const { projectsForClient, fetchProjects, addProject } = useProjects()
 
@@ -176,6 +176,51 @@ async function onRemoveContact(contactId: string) {
   if (!props.client)
     return
   await removeContact(props.client.id, contactId)
+}
+
+const documentInput = ref<HTMLInputElement>()
+const isUploadingDocument = ref(false)
+
+function onUploadButtonClick() {
+  documentInput.value?.click()
+}
+
+async function onDocumentChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!props.client || !file)
+    return
+
+  isUploadingDocument.value = true
+  try {
+    await uploadDocument(props.client.id, file)
+    toast('Document uploaded')
+  }
+  catch (error: any) {
+    toast.error('Could not upload document', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    isUploadingDocument.value = false
+    input.value = ''
+  }
+}
+
+async function onRemoveDocument(docId: string) {
+  if (!props.client)
+    return
+  await removeDocument(props.client.id, docId)
+}
+
+function formatFileSize(bytes?: number) {
+  if (!bytes)
+    return ''
+  if (bytes < 1024)
+    return `${bytes} B`
+  if (bytes < 1024 * 1024)
+    return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function activityLabel(activity: ClientActivity) {
@@ -388,6 +433,36 @@ function formatDateTime(value: string) {
                 </div>
               </div>
             </div>
+
+            <Separator />
+
+            <div class="flex flex-col gap-3">
+              <h4 class="text-sm font-medium flex items-center justify-between">
+                <span>Documents</span>
+                <Button size="sm" variant="outline" :disabled="isUploadingDocument" @click="onUploadButtonClick">
+                  <Icon name="i-lucide-upload" class="mr-1.5 h-3.5 w-3.5" />
+                  Upload
+                </Button>
+              </h4>
+              <input ref="documentInput" type="file" class="hidden" @change="onDocumentChange">
+              <p v-if="!client.documents.length" class="text-sm text-muted-foreground">
+                No documents uploaded yet.
+              </p>
+              <div v-for="document in client.documents" :key="document.id" class="flex items-center gap-2 rounded-md border p-2 text-sm">
+                <Icon name="i-lucide-paperclip" class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <a :href="document.url" target="_blank" rel="noopener noreferrer" class="flex-1 truncate hover:underline">
+                  {{ document.name }}
+                </a>
+                <span class="shrink-0 text-xs text-muted-foreground">{{ formatFileSize(document.size) }}</span>
+                <Button size="icon-sm" variant="ghost" class="size-6 text-muted-foreground" @click="onRemoveDocument(document.id)">
+                  <Icon name="i-lucide-x" class="size-3" />
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            <InteractionsSection regarding-type="client" :regarding-id="client.id" :interactions="client.interactions" />
 
             <Separator />
 

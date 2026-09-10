@@ -392,6 +392,10 @@ function formatDateTime(value: string) {
 
             <Separator />
 
+            <InteractionsSection regarding-type="tender" :regarding-id="tender.id" :interactions="tender.interactions" />
+
+            <Separator />
+
             <div v-if="isWon && !isConverted" class="rounded-md border p-3 flex items-center justify-between gap-2">
               <div class="flex flex-col">
                 <span class="text-sm font-medium">Won the tender?</span>

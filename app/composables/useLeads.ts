@@ -98,10 +98,26 @@ export function useLeads() {
     return lead
   }
 
+  async function uploadDocument(id: string, file: File) {
+    const formData = new FormData()
+    formData.append('document', file)
+
+    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/documents`, { method: 'POST', body: formData })
+    replaceLead(lead)
+    return lead
+  }
+
+  async function removeDocument(id: string, docId: string) {
+    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/documents/${docId}`, { method: 'DELETE' })
+    replaceLead(lead)
+    return lead
+  }
+
   return {
     leads,
     fetchLeads,
     fetchLead,
+    replaceLead,
     addLead,
     updateLead,
     convertLead,
@@ -110,5 +126,7 @@ export function useLeads() {
     removeContactEmail,
     addContactPhone,
     removeContactPhone,
+    uploadDocument,
+    removeDocument,
   }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CalendarEvent } from '~/types/calendar-event'
+import type { RegardingType } from '~/types/interaction'
 import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
 import { toast } from 'vue-sonner'
 
@@ -87,6 +88,8 @@ const formTitle = ref('')
 const formDescription = ref('')
 const formLocation = ref('')
 const formAttendeeIds = ref<string[]>([])
+const formRegardingType = ref<RegardingType | undefined>(undefined)
+const formRegardingId = ref<string | undefined>(undefined)
 
 function openCreateForm(date?: Date) {
   isEditing.value = false
@@ -95,6 +98,8 @@ function openCreateForm(date?: Date) {
   formDescription.value = ''
   formLocation.value = ''
   formAttendeeIds.value = currentUser.value ? [currentUser.value.id] : []
+  formRegardingType.value = undefined
+  formRegardingId.value = undefined
 
   const base = date ?? new Date()
   const start = new Date(base)
@@ -114,6 +119,8 @@ function openEditForm(event: CalendarEvent) {
   formDescription.value = event.description ?? ''
   formLocation.value = event.location ?? ''
   formAttendeeIds.value = event.attendees.map(a => a.id)
+  formRegardingType.value = event.regardingType
+  formRegardingId.value = event.regardingId
   startField.setFromIso(event.startAt)
   endField.setFromIso(event.endAt)
   isFormOpen.value = true
@@ -136,6 +143,8 @@ async function onSubmitForm() {
         startAt,
         endAt,
         attendeeIds: formAttendeeIds.value,
+        regardingType: formRegardingType.value ?? null,
+        regardingId: formRegardingId.value ?? null,
       })
       toast('Meeting updated')
     }
@@ -147,6 +156,8 @@ async function onSubmitForm() {
         startAt,
         endAt,
         attendeeIds: formAttendeeIds.value,
+        regardingType: formRegardingType.value ?? null,
+        regardingId: formRegardingId.value ?? null,
       })
       toast('Meeting scheduled')
     }
@@ -244,6 +255,7 @@ function isCurrentMonth(date: Date) {
             class="truncate rounded bg-primary/10 px-1 py-0.5 text-left text-[11px] font-medium text-primary hover:bg-primary/20"
             @click.stop="openDetail(event)"
           >
+            <Icon v-if="event.regardingLabel" name="i-lucide-link" class="mr-0.5 inline size-2.5 align-[-1px]" />
             {{ formatTime(event.startAt) }} {{ event.title }}
           </button>
           <span v-if="(eventsByDay.get(dayKey(date))?.length ?? 0) > 3" class="text-[10px] text-muted-foreground px-1">
@@ -314,6 +326,11 @@ function isCurrentMonth(date: Date) {
             <StaffAssigneePicker v-model="formAttendeeIds" :staff="activeStaff" />
           </div>
 
+          <div class="flex flex-col gap-1.5">
+            <Label class="text-xs text-muted-foreground">Regarding</Label>
+            <RegardingPicker v-model:regarding-type="formRegardingType" v-model:regarding-id="formRegardingId" />
+          </div>
+
           <SheetFooter class="p-0">
             <Button :disabled="!formTitle.trim()" @click="onSubmitForm">
               {{ isEditing ? 'Save Changes' : 'Schedule Meeting' }}
@@ -338,6 +355,10 @@ function isCurrentMonth(date: Date) {
             <p v-if="selectedEvent.description" class="text-sm text-muted-foreground whitespace-pre-wrap">
               {{ selectedEvent.description }}
             </p>
+            <Badge v-if="selectedEvent.regardingLabel" variant="outline" class="w-fit gap-1">
+              <Icon name="i-lucide-link" class="size-3" />
+              {{ selectedEvent.regardingLabel }}
+            </Badge>
             <div class="flex flex-col gap-1.5">
               <Label class="text-xs text-muted-foreground">Attendees</Label>
               <div class="flex flex-wrap gap-1">

@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import type { GmailMessage } from '~/types/gmail'
+import type { RegardingType } from '~/types/interaction'
 import { format } from 'date-fns'
-import { Archive, ArchiveX, ArrowLeft, Clock, Forward, MoreVertical, Reply, ReplyAll, Trash2 } from 'lucide-vue-next'
+import { Archive, ArchiveX, ArrowLeft, Clock, Forward, Link2, MoreVertical, Reply, ReplyAll, Trash2 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -14,6 +15,7 @@ const props = defineProps<MailDisplayProps>()
 const emit = defineEmits(['close'])
 
 const { status, sendReply, archiveMessage, markAsSpam, trashMessage, markAsUnread, toggleStar } = useGmailAccount()
+const { addInteraction } = useInteractions()
 
 const mailFallbackName = computed(() => {
   return props.mail?.name
@@ -182,6 +184,48 @@ function onNotSupported(feature: string) {
     description: 'Gmail\'s API doesn\'t expose this action to connected apps.',
   })
 }
+
+const isLogDialogOpen = ref(false)
+const logRegardingType = ref<RegardingType | undefined>(undefined)
+const logRegardingId = ref<string | undefined>(undefined)
+const isLogging = ref(false)
+
+watch(() => props.mail?.id, () => {
+  logRegardingType.value = undefined
+  logRegardingId.value = undefined
+})
+
+async function onLogToCrm() {
+  if (!props.mail || !logRegardingType.value || !logRegardingId.value)
+    return
+
+  const direction = props.mail.email.toLowerCase() === status.value.email?.toLowerCase() ? 'sent' : 'received'
+
+  isLogging.value = true
+  try {
+    await addInteraction({
+      regardingType: logRegardingType.value,
+      regardingId: logRegardingId.value,
+      type: 'email',
+      subject: props.mail.subject,
+      body: props.mail.text,
+      direction,
+      gmailMessageId: props.mail.id,
+      gmailThreadId: props.mail.threadId,
+      occurredAt: props.mail.date,
+    })
+    toast('Email logged to CRM')
+    isLogDialogOpen.value = false
+  }
+  catch (error: any) {
+    toast.error('Could not log this email', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    isLogging.value = false
+  }
+}
 </script>
 
 <template>
@@ -279,6 +323,9 @@ function onNotSupported(feature: string) {
           <DropdownMenuItem @click="onToggleStar">
             {{ isStarred ? 'Unstar thread' : 'Star thread' }}
           </DropdownMenuItem>
+          <DropdownMenuItem @click="isLogDialogOpen = true">
+            Log to CRM…
+          </DropdownMenuItem>
           <DropdownMenuItem @click="onNotSupported('Custom labels')">
             Add label
           </DropdownMenuItem>
@@ -355,5 +402,28 @@ function onNotSupported(feature: string) {
     <div v-else class="p-8 text-center text-muted-foreground">
       No message selected
     </div>
+
+    <Dialog v-model:open="isLogDialogOpen">
+      <DialogContent class="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Log email to CRM</DialogTitle>
+          <DialogDescription>
+            Link this email to a lead, tender, or client so it shows up on their timeline.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="flex flex-col gap-3">
+          <p v-if="mail" class="line-clamp-1 text-sm text-muted-foreground">
+            {{ mail.subject }}
+          </p>
+          <RegardingPicker v-model:regarding-type="logRegardingType" v-model:regarding-id="logRegardingId" />
+        </div>
+        <DialogFooter>
+          <Button :disabled="!logRegardingType || !logRegardingId || isLogging" @click="onLogToCrm">
+            <Link2 class="mr-1.5 size-3.5" />
+            {{ isLogging ? 'Logging…' : 'Log email' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

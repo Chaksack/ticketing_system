@@ -1,4 +1,5 @@
 import type { CalendarEvent } from '../../app/types/calendar-event'
+import type { RegardingType } from '../../app/types/interaction'
 import type { AssigneeRef } from './assignees'
 
 export interface CalendarEventRow {
@@ -10,12 +11,14 @@ export interface CalendarEventRow {
   end_at: string
   created_by: string | null
   created_by_name?: string | null
+  regarding_type: string | null
+  regarding_id: string | null
   reminder_sent: number
   created_at: string
   updated_at: string
 }
 
-export function mapCalendarEventRow(row: CalendarEventRow, attendees: AssigneeRef[] = []): CalendarEvent {
+export function mapCalendarEventRow(row: CalendarEventRow, attendees: AssigneeRef[] = [], regardingLabel?: string): CalendarEvent {
   return {
     id: row.id,
     title: row.title,
@@ -24,12 +27,30 @@ export function mapCalendarEventRow(row: CalendarEventRow, attendees: AssigneeRe
     startAt: row.start_at,
     endAt: row.end_at,
     attendees,
+    regardingType: (row.regarding_type as RegardingType) ?? undefined,
+    regardingId: row.regarding_id ?? undefined,
+    regardingLabel,
     createdBy: row.created_by ?? undefined,
     createdByName: row.created_by_name ?? undefined,
     reminderSent: !!row.reminder_sent,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+}
+
+export async function resolveRegardingLabel(regardingType: RegardingType | null | undefined, regardingId: string | null | undefined): Promise<string | undefined> {
+  if (!regardingType || !regardingId)
+    return undefined
+
+  const db = useDatabase()
+  const tables: Record<RegardingType, { table: string, nameColumn: string }> = {
+    lead: { table: 'leads', nameColumn: 'name' },
+    tender: { table: 'tenders', nameColumn: 'title' },
+    client: { table: 'clients', nameColumn: 'name' },
+  }
+  const { table, nameColumn } = tables[regardingType]
+  const row = await db.prepare(`SELECT ${nameColumn} AS label FROM ${table} WHERE id = ?`).get(regardingId) as { label: string } | undefined
+  return row?.label
 }
 
 export async function getEventAttendees(eventId: string): Promise<AssigneeRef[]> {
@@ -63,5 +84,6 @@ export async function loadFullEvent(eventId: string): Promise<CalendarEvent | nu
     return null
 
   const attendees = await getEventAttendees(eventId)
-  return mapCalendarEventRow(row, attendees)
+  const regardingLabel = await resolveRegardingLabel(row.regarding_type as RegardingType | null, row.regarding_id)
+  return mapCalendarEventRow(row, attendees, regardingLabel)
 }

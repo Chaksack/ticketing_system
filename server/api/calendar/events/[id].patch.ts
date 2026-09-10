@@ -1,3 +1,4 @@
+import type { RegardingType } from '../../../../app/types/interaction'
 import type { CalendarEventRow } from '../../../utils/calendar'
 
 interface UpdateEventBody {
@@ -7,10 +8,12 @@ interface UpdateEventBody {
   startAt?: string
   endAt?: string
   attendeeIds?: string[]
+  regardingType?: RegardingType | null
+  regardingId?: string | null
 }
 
 export default defineEventHandler(async (event) => {
-  await requireSessionUser(event)
+  const user = await requireSessionUser(event)
 
   const id = getRouterParam(event, 'id')
   const body = await readBody<UpdateEventBody>(event)
@@ -38,16 +41,26 @@ export default defineEventHandler(async (event) => {
   }
 
   const reminderSent = body.startAt && body.startAt !== existing.start_at ? 0 : existing.reminder_sent
+  const regardingType = body.regardingType !== undefined ? body.regardingType : (existing.regarding_type as RegardingType | null)
+  const regardingId = body.regardingId !== undefined ? body.regardingId : existing.regarding_id
 
   await db.prepare(`
     UPDATE calendar_events
-    SET title = ?, description = ?, location = ?, start_at = ?, end_at = ?, reminder_sent = ?, updated_at = ?
+    SET title = ?, description = ?, location = ?, start_at = ?, end_at = ?, regarding_type = ?, regarding_id = ?, reminder_sent = ?, updated_at = ?
     WHERE id = ?
-  `).run(title, description, location, startAt, endAt, reminderSent, new Date().toISOString(), id)
+  `).run(title, description, location, startAt, endAt, regardingType, regardingId, reminderSent, new Date().toISOString(), id)
 
   if (body.attendeeIds)
     await setEventAttendees(id, body.attendeeIds)
 
   const calendarEvent = await loadFullEvent(id)
+
+  if (calendarEvent?.regardingType && calendarEvent.regardingId) {
+    await upsertMeetingInteraction(calendarEvent, user.id)
+  }
+  else {
+    await removeMeetingInteraction(id)
+  }
+
   return { event: calendarEvent }
 })

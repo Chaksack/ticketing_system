@@ -1,8 +1,9 @@
 import type { AmcContract, AmcPlan } from '../../app/types/amc'
 import type { Assignee } from '../../app/types/assignee'
 import type { Macro } from '../../app/types/automation'
-import type { Client, ClientActivity, ClientContact, ClientContactEmail, ClientContactPhone } from '../../app/types/client'
-import type { Lead, LeadActivity, LeadContactEmail, LeadContactPhone } from '../../app/types/lead'
+import type { Client, ClientActivity, ClientContact, ClientContactEmail, ClientContactPhone, ClientDocument } from '../../app/types/client'
+import type { Interaction } from '../../app/types/interaction'
+import type { Lead, LeadActivity, LeadContactEmail, LeadContactPhone, LeadDocument } from '../../app/types/lead'
 import type { Project } from '../../app/types/project'
 import type { Sprint } from '../../app/types/sprint'
 import type { StaffMember, StaffRole } from '../../app/types/staff'
@@ -220,6 +221,8 @@ export function mapClientRow(
   additionalPhones: ClientContactPhone[] = [],
   assignees: Assignee[] = [],
   contacts: ClientContact[] = [],
+  documents: ClientDocument[] = [],
+  interactions: Interaction[] = [],
 ): Client {
   return {
     id: row.id,
@@ -230,6 +233,7 @@ export function mapClientRow(
     additionalEmails,
     additionalPhones,
     contacts,
+    documents,
     stage: row.stage as Client['stage'],
     estimatedValue: row.estimated_value !== null ? Number(row.estimated_value) : undefined,
     notes: row.notes ?? undefined,
@@ -237,6 +241,7 @@ export function mapClientRow(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     activity,
+    interactions,
     projects,
     contracts,
   }
@@ -432,6 +437,8 @@ export function mapLeadRow(
   assignees: Assignee[] = [],
   additionalEmails: LeadContactEmail[] = [],
   additionalPhones: LeadContactPhone[] = [],
+  documents: LeadDocument[] = [],
+  interactions: Interaction[] = [],
 ): Lead {
   return {
     id: row.id,
@@ -441,6 +448,7 @@ export function mapLeadRow(
     contactPhone: row.contact_phone ?? undefined,
     additionalEmails,
     additionalPhones,
+    documents,
     source: row.source ?? undefined,
     stage: row.stage as Lead['stage'],
     estimatedValue: row.estimated_value !== null ? Number(row.estimated_value) : undefined,
@@ -453,6 +461,7 @@ export function mapLeadRow(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     activity,
+    interactions,
   }
 }
 
@@ -531,6 +540,7 @@ export function mapTenderRow(
   activity: TenderActivity[] = [],
   assignees: Assignee[] = [],
   documents: TenderDocument[] = [],
+  interactions: Interaction[] = [],
 ): Tender {
   return {
     id: row.id,
@@ -553,6 +563,7 @@ export function mapTenderRow(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     activity,
+    interactions,
   }
 }
 
@@ -575,6 +586,85 @@ export function mapTenderDocumentRow(row: TenderDocumentRow): TenderDocument {
     type: row.type ?? undefined,
     size: row.size !== null ? Number(row.size) : undefined,
     uploadedBy: row.uploaded_by ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+export interface LeadDocumentRow {
+  id: string
+  lead_id: string
+  name: string
+  url: string
+  type: string | null
+  size: number | string | null
+  uploaded_by: string | null
+  created_at: string
+}
+
+export function mapLeadDocumentRow(row: LeadDocumentRow): LeadDocument {
+  return {
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    type: row.type ?? undefined,
+    size: row.size !== null ? Number(row.size) : undefined,
+    uploadedBy: row.uploaded_by ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+export interface ClientDocumentRow {
+  id: string
+  client_id: string
+  name: string
+  url: string
+  type: string | null
+  size: number | string | null
+  uploaded_by: string | null
+  created_at: string
+}
+
+export function mapClientDocumentRow(row: ClientDocumentRow): ClientDocument {
+  return {
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    type: row.type ?? undefined,
+    size: row.size !== null ? Number(row.size) : undefined,
+    uploadedBy: row.uploaded_by ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+export interface InteractionRow {
+  id: string
+  regarding_type: string
+  regarding_id: string
+  type: string
+  subject: string | null
+  body: string | null
+  direction: string | null
+  gmail_message_id: string | null
+  gmail_thread_id: string | null
+  calendar_event_id: string | null
+  occurred_at: string
+  logged_by: string | null
+  logged_by_name?: string | null
+  created_at: string
+}
+
+export function mapInteractionRow(row: InteractionRow): Interaction {
+  return {
+    id: row.id,
+    type: row.type as Interaction['type'],
+    subject: row.subject ?? undefined,
+    body: row.body ?? undefined,
+    direction: (row.direction as Interaction['direction']) ?? undefined,
+    gmailMessageId: row.gmail_message_id ?? undefined,
+    gmailThreadId: row.gmail_thread_id ?? undefined,
+    occurredAt: row.occurred_at,
+    loggedBy: row.logged_by ?? undefined,
+    loggedByName: row.logged_by_name ?? undefined,
     createdAt: row.created_at,
   }
 }

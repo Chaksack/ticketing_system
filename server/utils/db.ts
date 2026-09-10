@@ -488,6 +488,32 @@ async function migrate() {
   `)
 
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS lead_documents (
+      id TEXT PRIMARY KEY,
+      lead_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      type TEXT,
+      size INTEGER,
+      uploaded_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS client_documents (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      type TEXT,
+      size INTEGER,
+      uploaded_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS task_statuses (
       id TEXT PRIMARY KEY,
       label TEXT NOT NULL,
@@ -573,7 +599,28 @@ async function migrate() {
     )
   `)
 
+  await db.exec('ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS regarding_type TEXT')
+  await db.exec('ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS regarding_id TEXT')
+
   await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_id TEXT')
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS interactions (
+      id TEXT PRIMARY KEY,
+      regarding_type TEXT NOT NULL,
+      regarding_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      subject TEXT,
+      body TEXT,
+      direction TEXT,
+      gmail_message_id TEXT,
+      gmail_thread_id TEXT,
+      calendar_event_id TEXT,
+      occurred_at TEXT NOT NULL,
+      logged_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS sprints (
@@ -695,6 +742,21 @@ export async function nextTenderActivityId() {
 export async function nextTenderDocumentId() {
   const n = await nextSequence('tender_document')
   return `TDOC-${n}`
+}
+
+export async function nextLeadDocumentId() {
+  const n = await nextSequence('lead_document')
+  return `LDOC-${n}`
+}
+
+export async function nextClientDocumentId() {
+  const n = await nextSequence('client_document')
+  return `CDOC-${n}`
+}
+
+export async function nextInteractionId() {
+  const n = await nextSequence('interaction')
+  return `INT-${n}`
 }
 
 export async function nextTaskId() {

@@ -115,12 +115,28 @@ export function useClients() {
     return client
   }
 
+  async function uploadDocument(id: string, file: File) {
+    const formData = new FormData()
+    formData.append('document', file)
+
+    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/documents`, { method: 'POST', body: formData })
+    replaceClient(client)
+    return client
+  }
+
+  async function removeDocument(id: string, docId: string) {
+    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/documents/${docId}`, { method: 'DELETE' })
+    replaceClient(client)
+    return client
+  }
+
   return {
     clients,
     upcomingRenewals,
     fetchClients,
     fetchUpcomingRenewals,
     fetchClient,
+    replaceClient,
     addClient,
     updateClient,
     removeClient,
@@ -130,5 +146,7 @@ export function useClients() {
     removeContactPhone,
     addContact,
     removeContact,
+    uploadDocument,
+    removeDocument,
   }
 }

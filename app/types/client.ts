@@ -1,10 +1,11 @@
 import type { AmcContract } from './amc'
 import type { Assignee } from './assignee'
+import type { Interaction } from './interaction'
 import type { Project } from './project'
 
 export type ClientStage = 'lead' | 'contacted' | 'proposal' | 'negotiation' | 'active' | 'lost'
 
-export type ClientActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'amc_assigned' | 'amc_cancelled' | 'amc_renewal_reminder' | 'converted_from_lead' | 'contact_added' | 'contact_removed'
+export type ClientActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'amc_assigned' | 'amc_cancelled' | 'amc_renewal_reminder' | 'converted_from_lead' | 'contact_added' | 'contact_removed' | 'document_added' | 'document_removed'
 
 export interface ClientActivity {
   id: string
@@ -41,6 +42,16 @@ export interface ClientContact {
   createdAt: string
 }
 
+export interface ClientDocument {
+  id: string
+  name: string
+  url: string
+  type?: string
+  size?: number
+  uploadedBy?: string
+  createdAt: string
+}
+
 export interface Client {
   id: string
   name: string
@@ -50,6 +61,7 @@ export interface Client {
   additionalEmails: ClientContactEmail[]
   additionalPhones: ClientContactPhone[]
   contacts: ClientContact[]
+  documents: ClientDocument[]
   stage: ClientStage
   estimatedValue?: number
   notes?: string
@@ -57,6 +69,7 @@ export interface Client {
   createdAt: string
   updatedAt: string
   activity: ClientActivity[]
+  interactions: Interaction[]
   projects: Project[]
   /** Contracts predating Projects, not linked to any project (client-level "legacy" contracts). */
   contracts: AmcContract[]

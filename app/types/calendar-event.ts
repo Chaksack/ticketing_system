@@ -1,4 +1,5 @@
 import type { Assignee } from './assignee'
+import type { RegardingType } from './interaction'
 
 export interface CalendarEvent {
   id: string
@@ -8,6 +9,9 @@ export interface CalendarEvent {
   startAt: string
   endAt: string
   attendees: Assignee[]
+  regardingType?: RegardingType
+  regardingId?: string
+  regardingLabel?: string
   createdBy?: string
   createdByName?: string
   reminderSent: boolean

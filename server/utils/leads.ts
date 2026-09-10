@@ -1,5 +1,5 @@
 import type { Lead, LeadActivityType } from '../../app/types/lead'
-import type { LeadActivityRow, LeadContactEmailRow, LeadContactPhoneRow, LeadRow } from './mappers'
+import type { LeadActivityRow, LeadContactEmailRow, LeadContactPhoneRow, LeadDocumentRow, LeadRow } from './mappers'
 
 const LEAD_SELECT = 'SELECT * FROM leads WHERE id = ?'
 
@@ -15,6 +15,8 @@ export async function loadFullLead(id: string): Promise<Lead> {
   const assignees = await getLeadAssignees(id)
   const emailRows = await db.prepare('SELECT * FROM lead_contact_emails WHERE lead_id = ? ORDER BY created_at ASC').all(id) as LeadContactEmailRow[]
   const phoneRows = await db.prepare('SELECT * FROM lead_contact_phones WHERE lead_id = ? ORDER BY created_at ASC').all(id) as LeadContactPhoneRow[]
+  const documentRows = await db.prepare('SELECT * FROM lead_documents WHERE lead_id = ? ORDER BY created_at ASC').all(id) as LeadDocumentRow[]
+  const interactions = await getInteractions('lead', id)
 
   return mapLeadRow(
     row,
@@ -22,6 +24,8 @@ export async function loadFullLead(id: string): Promise<Lead> {
     assignees,
     emailRows.map(emailRow => mapLeadContactEmailRow(emailRow)),
     phoneRows.map(phoneRow => mapLeadContactPhoneRow(phoneRow)),
+    documentRows.map(documentRow => mapLeadDocumentRow(documentRow)),
+    interactions,
   )
 }
 

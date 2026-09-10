@@ -95,6 +95,7 @@ export function useTenders() {
     tenders,
     fetchTenders,
     fetchTender,
+    replaceTender,
     addTender,
     updateTender,
     convertTender,

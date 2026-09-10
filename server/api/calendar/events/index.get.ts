@@ -1,3 +1,4 @@
+import type { CalendarEvent } from '../../../../app/types/calendar-event'
 import type { CalendarEventRow } from '../../../utils/calendar'
 
 export default defineEventHandler(async (event) => {
@@ -21,7 +22,8 @@ export default defineEventHandler(async (event) => {
   const events = []
   for (const row of rows) {
     const attendees = await getEventAttendees(row.id)
-    events.push(mapCalendarEventRow(row, attendees))
+    const regardingLabel = await resolveRegardingLabel(row.regarding_type as CalendarEvent['regardingType'], row.regarding_id)
+    events.push(mapCalendarEventRow(row, attendees, regardingLabel))
   }
 
   return { events }

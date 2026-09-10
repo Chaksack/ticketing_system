@@ -1,4 +1,5 @@
 import type { Assignee } from './assignee'
+import type { Interaction } from './interaction'
 
 export type TenderStage = 'identified' | 'registered' | 'preparing' | 'submitted' | 'evaluation' | 'won' | 'lost'
 
@@ -57,4 +58,5 @@ export interface Tender {
   createdAt: string
   updatedAt: string
   activity: TenderActivity[]
+  interactions: Interaction[]
 }

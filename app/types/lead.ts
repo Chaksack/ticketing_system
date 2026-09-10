@@ -1,4 +1,5 @@
 import type { Assignee } from './assignee'
+import type { Interaction } from './interaction'
 
 export type LeadStage = 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
 
@@ -11,7 +12,7 @@ export const LEAD_STAGE_PROBABILITY: Record<LeadStage, number> = {
   lost: 0,
 }
 
-export type LeadActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'next_step_updated'
+export type LeadActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'next_step_updated' | 'document_added' | 'document_removed'
 
 export interface LeadActivity {
   id: string
@@ -37,6 +38,16 @@ export interface LeadContactPhone {
   label?: string
 }
 
+export interface LeadDocument {
+  id: string
+  name: string
+  url: string
+  type?: string
+  size?: number
+  uploadedBy?: string
+  createdAt: string
+}
+
 export interface Lead {
   id: string
   name: string
@@ -45,6 +56,7 @@ export interface Lead {
   contactPhone?: string
   additionalEmails: LeadContactEmail[]
   additionalPhones: LeadContactPhone[]
+  documents: LeadDocument[]
   source?: string
   stage: LeadStage
   estimatedValue?: number
@@ -57,4 +69,5 @@ export interface Lead {
   createdAt: string
   updatedAt: string
   activity: LeadActivity[]
+  interactions: Interaction[]
 }

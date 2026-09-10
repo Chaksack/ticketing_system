@@ -14,12 +14,14 @@ export async function loadFullTender(id: string): Promise<Tender> {
   const activityRows = await db.prepare('SELECT * FROM tender_activity WHERE tender_id = ? ORDER BY created_at ASC').all(id) as TenderActivityRow[]
   const assignees = await getTenderAssignees(id)
   const documentRows = await db.prepare('SELECT * FROM tender_documents WHERE tender_id = ? ORDER BY created_at ASC').all(id) as TenderDocumentRow[]
+  const interactions = await getInteractions('tender', id)
 
   return mapTenderRow(
     row,
     activityRows.map(activityRow => mapTenderActivityRow(activityRow)),
     assignees,
     documentRows.map(documentRow => mapTenderDocumentRow(documentRow)),
+    interactions,
   )
 }
 
