@@ -413,6 +413,63 @@ async function migrate() {
   `)
 
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS tenders (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      issuing_authority TEXT,
+      reference_number TEXT,
+      contact_name TEXT,
+      contact_email TEXT,
+      contact_phone TEXT,
+      source TEXT,
+      stage TEXT NOT NULL DEFAULT 'identified',
+      estimated_value NUMERIC,
+      submission_deadline TEXT,
+      deadline_reminder_sent INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      converted_client_id TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS tender_activity (
+      id TEXT PRIMARY KEY,
+      tender_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      actor_id TEXT,
+      actor_name TEXT,
+      from_value TEXT,
+      to_value TEXT,
+      message TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS tender_assignees (
+      tender_id TEXT NOT NULL,
+      staff_id TEXT NOT NULL,
+      PRIMARY KEY (tender_id, staff_id)
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS tender_documents (
+      id TEXT PRIMARY KEY,
+      tender_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      type TEXT,
+      size INTEGER,
+      uploaded_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS task_statuses (
       id TEXT PRIMARY KEY,
       label TEXT NOT NULL,
@@ -605,6 +662,21 @@ export async function nextLeadId() {
 export async function nextLeadActivityId() {
   const n = await nextSequence('lead_activity')
   return `LACT-${n}`
+}
+
+export async function nextTenderId() {
+  const n = await nextSequence('tender')
+  return `TENDER-${n}`
+}
+
+export async function nextTenderActivityId() {
+  const n = await nextSequence('tender_activity')
+  return `TACT-${n}`
+}
+
+export async function nextTenderDocumentId() {
+  const n = await nextSequence('tender_document')
+  return `TDOC-${n}`
 }
 
 export async function nextTaskId() {

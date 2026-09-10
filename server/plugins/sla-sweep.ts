@@ -21,6 +21,8 @@ export default defineNitroPlugin(async () => {
 
     checkLeadReminders().catch(error => console.error('Lead reminder sweep failed', error))
 
+    checkTenderReminders().catch(error => console.error('Tender reminder sweep failed', error))
+
     checkAmcFollowUps().catch(error => console.error('AMC follow-up sweep failed', error))
 
     checkMeetingReminders().catch(error => console.error('Meeting reminder sweep failed', error))

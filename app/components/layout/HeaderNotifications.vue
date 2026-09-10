@@ -34,6 +34,7 @@ const TYPE_ICON: Record<NotificationType, string> = {
   chat_message: 'i-lucide-message-square',
   meeting_reminder: 'i-lucide-calendar-clock',
   ticket_escalated: 'i-lucide-arrow-up-circle',
+  tender_reminder: 'i-lucide-gavel',
 }
 
 async function onSelect(notification: AppNotification) {

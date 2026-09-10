@@ -7,6 +7,7 @@ import type { Project } from '../../app/types/project'
 import type { Sprint } from '../../app/types/sprint'
 import type { StaffMember, StaffRole } from '../../app/types/staff'
 import type { Task } from '../../app/types/task'
+import type { Tender, TenderActivity, TenderDocument } from '../../app/types/tender'
 import type { Ticket, TicketActivity, TicketReply, TicketTag } from '../../app/types/ticket'
 
 export interface StaffRow {
@@ -465,6 +466,105 @@ export function mapLeadActivityRow(row: LeadActivityRow): LeadActivity {
     id: row.id,
     leadId: row.lead_id,
     type: row.type as LeadActivity['type'],
+    actorId: row.actor_id ?? undefined,
+    actorName: row.actor_name ?? undefined,
+    fromValue: row.from_value ?? undefined,
+    toValue: row.to_value ?? undefined,
+    message: row.message ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+export interface TenderRow {
+  id: string
+  title: string
+  issuing_authority: string | null
+  reference_number: string | null
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  source: string | null
+  stage: string
+  estimated_value: number | string | null
+  submission_deadline: string | null
+  deadline_reminder_sent: number
+  notes: string | null
+  converted_client_id: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function mapTenderRow(
+  row: TenderRow,
+  activity: TenderActivity[] = [],
+  assignees: Assignee[] = [],
+  documents: TenderDocument[] = [],
+): Tender {
+  return {
+    id: row.id,
+    title: row.title,
+    issuingAuthority: row.issuing_authority ?? undefined,
+    referenceNumber: row.reference_number ?? undefined,
+    contactName: row.contact_name ?? undefined,
+    contactEmail: row.contact_email ?? undefined,
+    contactPhone: row.contact_phone ?? undefined,
+    source: row.source ?? undefined,
+    stage: row.stage as Tender['stage'],
+    estimatedValue: row.estimated_value !== null ? Number(row.estimated_value) : undefined,
+    submissionDeadline: row.submission_deadline ?? undefined,
+    deadlineReminderSent: !!row.deadline_reminder_sent,
+    notes: row.notes ?? undefined,
+    assignees,
+    convertedClientId: row.converted_client_id ?? undefined,
+    documents,
+    createdBy: row.created_by ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    activity,
+  }
+}
+
+export interface TenderDocumentRow {
+  id: string
+  tender_id: string
+  name: string
+  url: string
+  type: string | null
+  size: number | string | null
+  uploaded_by: string | null
+  created_at: string
+}
+
+export function mapTenderDocumentRow(row: TenderDocumentRow): TenderDocument {
+  return {
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    type: row.type ?? undefined,
+    size: row.size !== null ? Number(row.size) : undefined,
+    uploadedBy: row.uploaded_by ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+export interface TenderActivityRow {
+  id: string
+  tender_id: string
+  type: string
+  actor_id: string | null
+  actor_name: string | null
+  from_value: string | null
+  to_value: string | null
+  message: string | null
+  created_at: string
+}
+
+export function mapTenderActivityRow(row: TenderActivityRow): TenderActivity {
+  return {
+    id: row.id,
+    tenderId: row.tender_id,
+    type: row.type as TenderActivity['type'],
     actorId: row.actor_id ?? undefined,
     actorName: row.actor_name ?? undefined,
     fromValue: row.from_value ?? undefined,
