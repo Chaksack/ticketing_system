@@ -2,6 +2,16 @@ import type { Assignee } from './assignee'
 
 export type TenderStage = 'identified' | 'registered' | 'preparing' | 'submitted' | 'evaluation' | 'won' | 'lost'
 
+export const TENDER_STAGE_PROBABILITY: Record<TenderStage, number> = {
+  identified: 10,
+  registered: 25,
+  preparing: 40,
+  submitted: 60,
+  evaluation: 75,
+  won: 100,
+  lost: 0,
+}
+
 export type TenderActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'deadline_updated' | 'document_added' | 'document_removed'
 
 export interface TenderActivity {

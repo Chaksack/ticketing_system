@@ -6,6 +6,7 @@ export interface NewClient {
   contactEmail?: string
   contactPhone?: string
   stage?: ClientStage
+  estimatedValue?: number
   notes?: string
   assigneeIds?: string[]
 }
@@ -16,6 +17,7 @@ export interface ClientPatch {
   contactEmail?: string
   contactPhone?: string
   stage?: ClientStage
+  estimatedValue?: number | null
   notes?: string
   assigneeIds?: string[]
 }
@@ -101,6 +103,18 @@ export function useClients() {
     return client
   }
 
+  async function addContact(id: string, payload: { name: string, title?: string, email?: string, phone?: string, isPrimary?: boolean }) {
+    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contacts`, { method: 'POST', body: payload })
+    replaceClient(client)
+    return client
+  }
+
+  async function removeContact(id: string, contactId: string) {
+    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contacts/${contactId}`, { method: 'DELETE' })
+    replaceClient(client)
+    return client
+  }
+
   return {
     clients,
     upcomingRenewals,
@@ -114,5 +128,7 @@ export function useClients() {
     removeContactEmail,
     addContactPhone,
     removeContactPhone,
+    addContact,
+    removeContact,
   }
 }

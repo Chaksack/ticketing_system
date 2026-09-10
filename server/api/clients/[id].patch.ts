@@ -7,6 +7,7 @@ interface UpdateClientBody {
   contactEmail?: string
   contactPhone?: string
   stage?: ClientStage
+  estimatedValue?: number | null
   notes?: string
   assigneeIds?: string[]
 }
@@ -43,14 +44,15 @@ export default defineEventHandler(async (event) => {
   const contactEmail = body.contactEmail !== undefined ? body.contactEmail : existing.contact_email
   const contactPhone = body.contactPhone !== undefined ? body.contactPhone : existing.contact_phone
   const stage = body.stage ?? existing.stage as ClientStage
+  const estimatedValue = body.estimatedValue !== undefined ? body.estimatedValue : existing.estimated_value
   const notes = body.notes !== undefined ? body.notes : existing.notes
   const now = new Date().toISOString()
 
   await db.prepare(`
     UPDATE clients
-    SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, stage = ?, notes = ?, updated_at = ?
+    SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, stage = ?, estimated_value = ?, notes = ?, updated_at = ?
     WHERE id = ?
-  `).run(name, contactName, contactEmail, contactPhone, stage, notes, now, id)
+  `).run(name, contactName, contactEmail, contactPhone, stage, estimatedValue, notes, now, id)
 
   if (stage !== existing.stage) {
     await logClientActivity({

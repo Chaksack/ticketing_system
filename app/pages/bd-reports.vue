@@ -59,6 +59,7 @@ function titleCase(value: string) {
 }
 
 const leadsByStageData = computed(() => summary.value?.leads.byStage.map(row => ({ stage: titleCase(row.stage), count: row.count })) ?? [])
+const tendersByStageData = computed(() => summary.value?.tenders.byStage.map(row => ({ stage: titleCase(row.stage), count: row.count })) ?? [])
 const clientsByStageData = computed(() => summary.value?.clients.byStage.map(row => ({ stage: titleCase(row.stage), count: row.count })) ?? [])
 const amcByStatusData = computed(() => summary.value?.amc.byStatus.map(row => ({ status: titleCase(row.status), count: row.count })) ?? [])
 </script>
@@ -107,7 +108,7 @@ const amcByStatusData = computed(() => summary.value?.amc.byStatus.map(row => ({
         <h3 class="text-sm font-medium text-muted-foreground">
           Leads
         </h3>
-        <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-3 @3xl/main:grid-cols-5">
           <Card class="@container/card">
             <CardHeader>
               <CardDescription>New Leads</CardDescription>
@@ -129,6 +130,22 @@ const amcByStatusData = computed(() => summary.value?.amc.byStatus.map(row => ({
               <CardDescription>Conversion Rate</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                 <NumberFlow :value="summary?.leads.conversionRate ?? 0" suffix="%" />
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Pipeline Value</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow :value="summary?.leads.estimatedValueTotal ?? 0" />
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Weighted Value</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow :value="summary?.leads.weightedValueTotal ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -154,6 +171,78 @@ const amcByStatusData = computed(() => summary.value?.amc.byStatus.map(row => ({
                 No leads in this range.
               </p>
               <BarChart v-else :data="summary.leads.bySource" :categories="['count']" index="source" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <h3 class="text-sm font-medium text-muted-foreground">
+          Tenders
+        </h3>
+        <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-3 @3xl/main:grid-cols-5">
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>New Tenders</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow :value="summary?.tenders.newCount ?? 0" />
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Won</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow :value="summary?.tenders.convertedCount ?? 0" />
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Win Rate</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow :value="summary?.tenders.conversionRate ?? 0" suffix="%" />
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Pipeline Value</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow :value="summary?.tenders.estimatedValueTotal ?? 0" />
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Weighted Value</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow :value="summary?.tenders.weightedValueTotal ?? 0" />
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+        <div class="grid grid-cols-1 gap-4 @xl/main:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>By Stage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p v-if="!tendersByStageData.length" class="text-sm text-muted-foreground">
+                No tenders in this range.
+              </p>
+              <DonutChart v-else :data="tendersByStageData" category="count" index="stage" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>By Source</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p v-if="!summary?.tenders.bySource.length" class="text-sm text-muted-foreground">
+                No tenders in this range.
+              </p>
+              <BarChart v-else :data="summary.tenders.bySource" :categories="['count']" index="source" />
             </CardContent>
           </Card>
         </div>

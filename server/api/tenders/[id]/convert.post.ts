@@ -29,14 +29,15 @@ export default defineEventHandler(async (event) => {
   const tenderAssignees = await getTenderAssignees(id)
 
   await db.prepare(`
-    INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
+    INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, estimated_value, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
   `).run(
     clientId,
     tender.title,
     tender.contact_name,
     tender.contact_email,
     tender.contact_phone,
+    tender.estimated_value,
     tender.notes,
     now,
     now,

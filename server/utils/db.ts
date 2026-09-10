@@ -340,6 +340,23 @@ async function migrate() {
   `)
 
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS client_contacts (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      title TEXT,
+      email TEXT,
+      phone TEXT,
+      is_primary INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec('ALTER TABLE clients ADD COLUMN IF NOT EXISTS estimated_value NUMERIC')
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS leads (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -359,6 +376,7 @@ async function migrate() {
   await db.exec('ALTER TABLE leads ADD COLUMN IF NOT EXISTS next_step TEXT')
   await db.exec('ALTER TABLE leads ADD COLUMN IF NOT EXISTS next_step_at TEXT')
   await db.exec('ALTER TABLE leads ADD COLUMN IF NOT EXISTS next_step_reminder_sent INTEGER NOT NULL DEFAULT 0')
+  await db.exec('ALTER TABLE leads ADD COLUMN IF NOT EXISTS estimated_value NUMERIC')
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS lead_activity (
@@ -707,6 +725,11 @@ export async function nextClientContactEmailId() {
 export async function nextClientContactPhoneId() {
   const n = await nextSequence('client_contact_phone')
   return `CCP-${n}`
+}
+
+export async function nextClientContactId() {
+  const n = await nextSequence('client_contact')
+  return `CCT-${n}`
 }
 
 export async function nextLeadContactEmailId() {

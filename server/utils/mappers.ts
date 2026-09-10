@@ -1,7 +1,7 @@
 import type { AmcContract, AmcPlan } from '../../app/types/amc'
 import type { Assignee } from '../../app/types/assignee'
 import type { Macro } from '../../app/types/automation'
-import type { Client, ClientActivity, ClientContactEmail, ClientContactPhone } from '../../app/types/client'
+import type { Client, ClientActivity, ClientContact, ClientContactEmail, ClientContactPhone } from '../../app/types/client'
 import type { Lead, LeadActivity, LeadContactEmail, LeadContactPhone } from '../../app/types/lead'
 import type { Project } from '../../app/types/project'
 import type { Sprint } from '../../app/types/sprint'
@@ -205,6 +205,7 @@ export interface ClientRow {
   contact_email: string | null
   contact_phone: string | null
   stage: string
+  estimated_value: number | string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -218,6 +219,7 @@ export function mapClientRow(
   additionalEmails: ClientContactEmail[] = [],
   additionalPhones: ClientContactPhone[] = [],
   assignees: Assignee[] = [],
+  contacts: ClientContact[] = [],
 ): Client {
   return {
     id: row.id,
@@ -227,7 +229,9 @@ export function mapClientRow(
     contactPhone: row.contact_phone ?? undefined,
     additionalEmails,
     additionalPhones,
+    contacts,
     stage: row.stage as Client['stage'],
+    estimatedValue: row.estimated_value !== null ? Number(row.estimated_value) : undefined,
     notes: row.notes ?? undefined,
     assignees,
     createdAt: row.created_at,
@@ -260,6 +264,31 @@ export interface ClientContactPhoneRow {
 
 export function mapClientContactPhoneRow(row: ClientContactPhoneRow): ClientContactPhone {
   return { id: row.id, phone: row.phone, label: row.label ?? undefined }
+}
+
+export interface ClientContactRow {
+  id: string
+  client_id: string
+  name: string
+  title: string | null
+  email: string | null
+  phone: string | null
+  is_primary: number
+  notes: string | null
+  created_at: string
+}
+
+export function mapClientContactRow(row: ClientContactRow): ClientContact {
+  return {
+    id: row.id,
+    name: row.name,
+    title: row.title ?? undefined,
+    email: row.email ?? undefined,
+    phone: row.phone ?? undefined,
+    isPrimary: !!row.is_primary,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+  }
 }
 
 export interface ProjectRow {
@@ -387,6 +416,7 @@ export interface LeadRow {
   contact_phone: string | null
   source: string | null
   stage: string
+  estimated_value: number | string | null
   notes: string | null
   converted_client_id: string | null
   next_step: string | null
@@ -413,6 +443,7 @@ export function mapLeadRow(
     additionalPhones,
     source: row.source ?? undefined,
     stage: row.stage as Lead['stage'],
+    estimatedValue: row.estimated_value !== null ? Number(row.estimated_value) : undefined,
     notes: row.notes ?? undefined,
     assignees,
     convertedClientId: row.converted_client_id ?? undefined,

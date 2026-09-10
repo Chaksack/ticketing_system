@@ -1,5 +1,5 @@
 import type { Client, ClientActivityType } from '../../app/types/client'
-import type { ClientActivityRow, ClientContactEmailRow, ClientContactPhoneRow, ClientRow, ContractRow, ProjectRow } from './mappers'
+import type { ClientActivityRow, ClientContactEmailRow, ClientContactPhoneRow, ClientContactRow, ClientRow, ContractRow, ProjectRow } from './mappers'
 
 const CLIENT_SELECT = 'SELECT * FROM clients WHERE id = ?'
 
@@ -45,6 +45,7 @@ export async function loadFullClient(id: string): Promise<Client> {
 
   const emailRows = await db.prepare('SELECT * FROM client_contact_emails WHERE client_id = ? ORDER BY created_at ASC').all(id) as ClientContactEmailRow[]
   const phoneRows = await db.prepare('SELECT * FROM client_contact_phones WHERE client_id = ? ORDER BY created_at ASC').all(id) as ClientContactPhoneRow[]
+  const contactRows = await db.prepare('SELECT * FROM client_contacts WHERE client_id = ? ORDER BY is_primary DESC, created_at ASC').all(id) as ClientContactRow[]
   const assignees = await getClientAssignees(id)
 
   return mapClientRow(
@@ -55,6 +56,7 @@ export async function loadFullClient(id: string): Promise<Client> {
     emailRows.map(emailRow => mapClientContactEmailRow(emailRow)),
     phoneRows.map(phoneRow => mapClientContactPhoneRow(phoneRow)),
     assignees,
+    contactRows.map(contactRow => mapClientContactRow(contactRow)),
   )
 }
 

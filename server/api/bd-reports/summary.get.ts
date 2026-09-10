@@ -1,6 +1,29 @@
+import { LEAD_STAGE_PROBABILITY } from '../../../app/types/lead'
+import { TENDER_STAGE_PROBABILITY } from '../../../app/types/tender'
+
 interface CountRow { count: string | number }
 interface GroupCountRow { key: string, count: string | number }
 interface CurrencyTotalRow { currency: string, total: string | number }
+interface ValueRow { stage: string, estimated_value: string | number | null }
+
+function computeValueTotals(rows: ValueRow[], probability: Record<string, number>) {
+  let estimatedValueTotal = 0
+  let weightedValueTotal = 0
+
+  for (const row of rows) {
+    if (row.stage === 'lost' || row.estimated_value === null)
+      continue
+
+    const value = Number(row.estimated_value)
+    estimatedValueTotal += value
+    weightedValueTotal += value * ((probability[row.stage] ?? 0) / 100)
+  }
+
+  return {
+    estimatedValueTotal: Math.round(estimatedValueTotal),
+    weightedValueTotal: Math.round(weightedValueTotal),
+  }
+}
 
 export default defineEventHandler(async (event) => {
   await requireBd(event)
@@ -23,6 +46,13 @@ export default defineEventHandler(async (event) => {
   const convertedLeadsRow = await db.prepare('SELECT COUNT(DISTINCT lead_id) as count FROM lead_activity WHERE type = \'converted\' AND created_at BETWEEN ? AND ?').get(from, to) as CountRow
   const leadsByStage = await db.prepare('SELECT stage as key, COUNT(*) as count FROM leads WHERE created_at BETWEEN ? AND ? GROUP BY stage').all(from, to) as GroupCountRow[]
   const leadsBySource = await db.prepare('SELECT COALESCE(NULLIF(source, \'\'), \'Unknown\') as key, COUNT(*) as count FROM leads WHERE created_at BETWEEN ? AND ? GROUP BY COALESCE(NULLIF(source, \'\'), \'Unknown\')').all(from, to) as GroupCountRow[]
+  const leadValueRows = await db.prepare('SELECT stage, estimated_value FROM leads WHERE created_at BETWEEN ? AND ?').all(from, to) as ValueRow[]
+
+  const newTendersRow = await db.prepare('SELECT COUNT(*) as count FROM tenders WHERE created_at BETWEEN ? AND ?').get(from, to) as CountRow
+  const convertedTendersRow = await db.prepare('SELECT COUNT(DISTINCT tender_id) as count FROM tender_activity WHERE type = \'converted\' AND created_at BETWEEN ? AND ?').get(from, to) as CountRow
+  const tendersByStage = await db.prepare('SELECT stage as key, COUNT(*) as count FROM tenders WHERE created_at BETWEEN ? AND ? GROUP BY stage').all(from, to) as GroupCountRow[]
+  const tendersBySource = await db.prepare('SELECT COALESCE(NULLIF(source, \'\'), \'Unknown\') as key, COUNT(*) as count FROM tenders WHERE created_at BETWEEN ? AND ? GROUP BY COALESCE(NULLIF(source, \'\'), \'Unknown\')').all(from, to) as GroupCountRow[]
+  const tenderValueRows = await db.prepare('SELECT stage, estimated_value FROM tenders WHERE created_at BETWEEN ? AND ?').all(from, to) as ValueRow[]
 
   const newClientsRow = await db.prepare('SELECT COUNT(*) as count FROM clients WHERE created_at BETWEEN ? AND ?').get(from, to) as CountRow
   const clientsByStage = await db.prepare('SELECT stage as key, COUNT(*) as count FROM clients WHERE created_at BETWEEN ? AND ? GROUP BY stage').all(from, to) as GroupCountRow[]
@@ -44,6 +74,8 @@ export default defineEventHandler(async (event) => {
 
   const newLeads = Number(newLeadsRow.count)
   const convertedLeads = Number(convertedLeadsRow.count)
+  const newTenders = Number(newTendersRow.count)
+  const convertedTenders = Number(convertedTendersRow.count)
 
   return {
     range: { from: fromDate ?? defaultFrom, to: toDate ?? defaultTo },
@@ -53,6 +85,15 @@ export default defineEventHandler(async (event) => {
       conversionRate: newLeads > 0 ? Math.round((convertedLeads / newLeads) * 1000) / 10 : 0,
       byStage: leadsByStage.map(row => ({ stage: row.key, count: Number(row.count) })),
       bySource: leadsBySource.map(row => ({ source: row.key, count: Number(row.count) })),
+      ...computeValueTotals(leadValueRows, LEAD_STAGE_PROBABILITY),
+    },
+    tenders: {
+      newCount: newTenders,
+      convertedCount: convertedTenders,
+      conversionRate: newTenders > 0 ? Math.round((convertedTenders / newTenders) * 1000) / 10 : 0,
+      byStage: tendersByStage.map(row => ({ stage: row.key, count: Number(row.count) })),
+      bySource: tendersBySource.map(row => ({ source: row.key, count: Number(row.count) })),
+      ...computeValueTotals(tenderValueRows, TENDER_STAGE_PROBABILITY),
     },
     clients: {
       newCount: Number(newClientsRow.count),

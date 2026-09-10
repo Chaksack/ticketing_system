@@ -30,6 +30,12 @@ const isConverted = computed(() => !!props.tender?.convertedClientId)
 const isWon = computed(() => props.tender?.stage === 'won')
 const isConverting = ref(false)
 
+const weightedValue = computed(() => {
+  if (!props.tender?.estimatedValue || !stage.value || props.tender.stage === 'won' || props.tender.stage === 'lost')
+    return null
+  return Math.round(props.tender.estimatedValue * (stage.value.probability / 100))
+})
+
 async function onStageChange(value: AcceptableValue) {
   if (!props.tender || value === null)
     return
@@ -314,6 +320,9 @@ function formatDateTime(value: string) {
               <div class="flex flex-col gap-1.5">
                 <Label class="text-xs text-muted-foreground">Estimated Value</Label>
                 <Input v-model="estimatedValueDraft" type="number" placeholder="Optional" />
+                <p v-if="weightedValue !== null" class="text-xs text-muted-foreground">
+                  Weighted: {{ weightedValue.toLocaleString() }} at {{ stage?.probability }}%
+                </p>
               </div>
               <div class="flex justify-end">
                 <Button size="sm" variant="outline" :disabled="!titleDraft.trim()" @click="saveDetails">

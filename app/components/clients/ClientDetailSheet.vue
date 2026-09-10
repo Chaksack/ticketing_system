@@ -14,7 +14,7 @@ const props = defineProps<{
 const open = defineModel<boolean>('open', { default: false })
 const router = useRouter()
 
-const { updateClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone } = useClients()
+const { updateClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone, addContact, removeContact } = useClients()
 const { staff, fetchStaff } = useStaff()
 const { projectsForClient, fetchProjects, addProject } = useProjects()
 
@@ -89,12 +89,14 @@ const nameDraft = ref('')
 const contactNameDraft = ref('')
 const contactEmailDraft = ref('')
 const contactPhoneDraft = ref('')
+const estimatedValueDraft = ref('')
 
 watch(() => props.client?.id, () => {
   nameDraft.value = props.client?.name ?? ''
   contactNameDraft.value = props.client?.contactName ?? ''
   contactEmailDraft.value = props.client?.contactEmail ?? ''
   contactPhoneDraft.value = props.client?.contactPhone ?? ''
+  estimatedValueDraft.value = props.client?.estimatedValue !== undefined ? String(props.client.estimatedValue) : ''
 }, { immediate: true })
 
 async function saveDetails() {
@@ -106,6 +108,7 @@ async function saveDetails() {
     contactName: contactNameDraft.value.trim(),
     contactEmail: contactEmailDraft.value.trim(),
     contactPhone: contactPhoneDraft.value.trim(),
+    estimatedValue: estimatedValueDraft.value.trim() ? Number(estimatedValueDraft.value.trim()) : null,
   })
   toast('Details saved')
 }
@@ -145,6 +148,36 @@ async function onRemovePhone(phoneId: string) {
   await removeContactPhone(props.client.id, phoneId)
 }
 
+const newContactName = ref('')
+const newContactTitle = ref('')
+const newContactEmail = ref('')
+const newContactPhone = ref('')
+const newContactIsPrimary = ref(false)
+
+async function onAddContact() {
+  if (!props.client || !newContactName.value.trim())
+    return
+
+  await addContact(props.client.id, {
+    name: newContactName.value.trim(),
+    title: newContactTitle.value.trim() || undefined,
+    email: newContactEmail.value.trim() || undefined,
+    phone: newContactPhone.value.trim() || undefined,
+    isPrimary: newContactIsPrimary.value,
+  })
+  newContactName.value = ''
+  newContactTitle.value = ''
+  newContactEmail.value = ''
+  newContactPhone.value = ''
+  newContactIsPrimary.value = false
+}
+
+async function onRemoveContact(contactId: string) {
+  if (!props.client)
+    return
+  await removeContact(props.client.id, contactId)
+}
+
 function activityLabel(activity: ClientActivity) {
   const actor = activity.actorName ?? 'Someone'
 
@@ -157,6 +190,10 @@ function activityLabel(activity: ClientActivity) {
       return `${actor} updated the notes`
     case 'amc_cancelled':
       return `${actor} cancelled an AMC contract`
+    case 'contact_added':
+      return `${actor} added contact ${activity.toValue}`
+    case 'contact_removed':
+      return `${actor} removed contact ${activity.fromValue}`
     default:
       return activity.message ?? `${actor} updated this client`
   }
@@ -233,10 +270,71 @@ function formatDateTime(value: string) {
                   <Input v-model="contactPhoneDraft" placeholder="Optional" />
                 </div>
               </div>
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Estimated Value</Label>
+                <Input v-model="estimatedValueDraft" type="number" placeholder="Optional" />
+              </div>
               <div class="flex justify-end">
                 <Button size="sm" variant="outline" :disabled="!nameDraft.trim()" @click="saveDetails">
                   Save Details
                 </Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div class="flex flex-col gap-3">
+              <h4 class="text-sm font-medium">
+                Contacts
+              </h4>
+              <p class="text-xs text-muted-foreground -mt-1">
+                Named people at this account — a procurement lead, a technical evaluator, and so on.
+              </p>
+
+              <div v-for="contact in client.contacts" :key="contact.id" class="flex items-center gap-2 rounded-md border p-2 text-sm">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-medium truncate">{{ contact.name }}</span>
+                    <Badge v-if="contact.isPrimary" variant="outline" class="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
+                      Primary
+                    </Badge>
+                    <Badge v-if="contact.title" variant="outline" class="text-[10px]">
+                      {{ contact.title }}
+                    </Badge>
+                  </div>
+                  <p class="text-xs text-muted-foreground truncate">
+                    <span v-if="contact.email">{{ contact.email }}</span>
+                    <span v-if="contact.email && contact.phone"> · </span>
+                    <span v-if="contact.phone">{{ contact.phone }}</span>
+                  </p>
+                </div>
+                <Button size="icon-sm" variant="ghost" class="size-6 shrink-0 text-muted-foreground" @click="onRemoveContact(contact.id)">
+                  <Icon name="i-lucide-x" class="size-3" />
+                </Button>
+              </div>
+              <p v-if="!client.contacts.length" class="text-xs text-muted-foreground">
+                No named contacts yet.
+              </p>
+
+              <div class="flex flex-col gap-2 rounded-md border p-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <Input v-model="newContactName" placeholder="Name" class="h-8 text-xs" />
+                  <Input v-model="newContactTitle" placeholder="Title (optional)" class="h-8 text-xs" />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <Input v-model="newContactEmail" type="email" placeholder="Email (optional)" class="h-8 text-xs" />
+                  <Input v-model="newContactPhone" placeholder="Phone (optional)" class="h-8 text-xs" />
+                </div>
+                <div class="flex items-center justify-between">
+                  <label class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Checkbox v-model="newContactIsPrimary" />
+                    Make this the primary contact
+                  </label>
+                  <Button size="sm" variant="outline" :disabled="!newContactName.trim()" @click="onAddContact">
+                    <Icon name="i-lucide-plus" class="mr-1 size-3.5" />
+                    Add Contact
+                  </Button>
+                </div>
               </div>
             </div>
 

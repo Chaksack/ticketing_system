@@ -2,6 +2,15 @@ import type { Assignee } from './assignee'
 
 export type LeadStage = 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
 
+export const LEAD_STAGE_PROBABILITY: Record<LeadStage, number> = {
+  new: 10,
+  contacted: 25,
+  qualified: 40,
+  proposal: 60,
+  won: 100,
+  lost: 0,
+}
+
 export type LeadActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'next_step_updated'
 
 export interface LeadActivity {
@@ -38,6 +47,7 @@ export interface Lead {
   additionalPhones: LeadContactPhone[]
   source?: string
   stage: LeadStage
+  estimatedValue?: number
   notes?: string
   assignees: Assignee[]
   convertedClientId?: string

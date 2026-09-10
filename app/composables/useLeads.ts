@@ -8,6 +8,7 @@ export interface NewLead {
   contactPhone?: string
   source?: string
   stage?: LeadStage
+  estimatedValue?: number
   notes?: string
   assigneeIds?: string[]
   nextStep?: string
@@ -21,6 +22,7 @@ export interface LeadPatch {
   contactPhone?: string
   source?: string
   stage?: LeadStage
+  estimatedValue?: number | null
   notes?: string
   assigneeIds?: string[]
   nextStep?: string | null

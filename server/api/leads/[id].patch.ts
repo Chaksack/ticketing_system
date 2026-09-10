@@ -8,6 +8,7 @@ interface UpdateLeadBody {
   contactPhone?: string
   source?: string
   stage?: LeadStage
+  estimatedValue?: number | null
   notes?: string
   assigneeIds?: string[]
   nextStep?: string | null
@@ -47,6 +48,7 @@ export default defineEventHandler(async (event) => {
   const contactPhone = body.contactPhone !== undefined ? body.contactPhone : existing.contact_phone
   const source = body.source !== undefined ? body.source : existing.source
   const stage = body.stage ?? existing.stage as LeadStage
+  const estimatedValue = body.estimatedValue !== undefined ? body.estimatedValue : existing.estimated_value
   const notes = body.notes !== undefined ? body.notes : existing.notes
   const nextStep = body.nextStep !== undefined ? body.nextStep : existing.next_step
   const nextStepAt = body.nextStepAt !== undefined ? body.nextStepAt : existing.next_step_at
@@ -56,10 +58,10 @@ export default defineEventHandler(async (event) => {
 
   await db.prepare(`
     UPDATE leads
-    SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, source = ?, stage = ?, notes = ?,
+    SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, source = ?, stage = ?, estimated_value = ?, notes = ?,
         next_step = ?, next_step_at = ?, next_step_reminder_sent = ?, updated_at = ?
     WHERE id = ?
-  `).run(name, contactName, contactEmail, contactPhone, source, stage, notes, nextStep, nextStepAt, nextStepReminderSent, now, id)
+  `).run(name, contactName, contactEmail, contactPhone, source, stage, estimatedValue, notes, nextStep, nextStepAt, nextStepReminderSent, now, id)
 
   if (stage !== existing.stage) {
     await logLeadActivity({

@@ -48,17 +48,21 @@ const leadFormSchema = toTypedSchema(z.object({
   contactPhone: z.string().optional(),
   source: z.string().optional(),
   stage: z.enum(['new', 'contacted', 'qualified', 'proposal', 'won', 'lost']),
+  estimatedValue: z.string().optional(),
   assigneeIds: z.array(z.string()).optional(),
 }))
 
 const { handleSubmit, resetForm } = useForm({
   validationSchema: leadFormSchema,
-  initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'new', assigneeIds: [] },
+  initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'new', estimatedValue: '', assigneeIds: [] },
 })
 
 const onSubmit = handleSubmit(async (values) => {
   try {
-    const lead = await addLead(values)
+    const lead = await addLead({
+      ...values,
+      estimatedValue: values.estimatedValue ? Number(values.estimatedValue) : undefined,
+    })
     resetForm()
     isAddOpen.value = false
     toast('Lead added', {
@@ -170,6 +174,16 @@ const onSubmit = handleSubmit(async (values) => {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+
+            <FormField v-slot="{ componentField }" name="estimatedValue">
+              <FormItem>
+                <FormLabel>Estimated Value</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Optional" v-bind="componentField" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             </FormField>

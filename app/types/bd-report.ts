@@ -6,6 +6,17 @@ export interface BdReportSummary {
     conversionRate: number
     byStage: { stage: string, count: number }[]
     bySource: { source: string, count: number }[]
+    estimatedValueTotal: number
+    weightedValueTotal: number
+  }
+  tenders: {
+    newCount: number
+    convertedCount: number
+    conversionRate: number
+    byStage: { stage: string, count: number }[]
+    bySource: { source: string, count: number }[]
+    estimatedValueTotal: number
+    weightedValueTotal: number
   }
   clients: {
     newCount: number

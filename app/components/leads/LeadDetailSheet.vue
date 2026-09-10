@@ -29,6 +29,12 @@ const stage = computed(() => leadStages.find(s => s.value === props.lead?.stage)
 const isConverted = computed(() => !!props.lead?.convertedClientId)
 const isConverting = ref(false)
 
+const weightedValue = computed(() => {
+  if (!props.lead?.estimatedValue || !stage.value || props.lead.stage === 'won' || props.lead.stage === 'lost')
+    return null
+  return Math.round(props.lead.estimatedValue * (stage.value.probability / 100))
+})
+
 async function onStageChange(value: AcceptableValue) {
   if (!props.lead || value === null)
     return
@@ -53,6 +59,7 @@ const nameDraft = ref('')
 const contactNameDraft = ref('')
 const contactEmailDraft = ref('')
 const contactPhoneDraft = ref('')
+const estimatedValueDraft = ref('')
 const df = new DateFormatter('en-US', { dateStyle: 'medium' })
 const nextStepReminderField = useDateTimeField()
 
@@ -65,6 +72,7 @@ watch(() => props.lead?.id, () => {
   contactNameDraft.value = props.lead?.contactName ?? ''
   contactEmailDraft.value = props.lead?.contactEmail ?? ''
   contactPhoneDraft.value = props.lead?.contactPhone ?? ''
+  estimatedValueDraft.value = props.lead?.estimatedValue !== undefined ? String(props.lead.estimatedValue) : ''
 }, { immediate: true })
 
 async function saveDetails() {
@@ -76,6 +84,7 @@ async function saveDetails() {
     contactName: contactNameDraft.value.trim(),
     contactEmail: contactEmailDraft.value.trim(),
     contactPhone: contactPhoneDraft.value.trim(),
+    estimatedValue: estimatedValueDraft.value.trim() ? Number(estimatedValueDraft.value.trim()) : null,
   })
   toast('Details saved')
 }
@@ -279,6 +288,13 @@ function formatDateTime(value: string) {
                   <Label class="text-xs text-muted-foreground">Contact Phone</Label>
                   <Input v-model="contactPhoneDraft" placeholder="Optional" />
                 </div>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <Label class="text-xs text-muted-foreground">Estimated Value</Label>
+                <Input v-model="estimatedValueDraft" type="number" placeholder="Optional" />
+                <p v-if="weightedValue !== null" class="text-xs text-muted-foreground">
+                  Weighted: {{ weightedValue.toLocaleString() }} at {{ stage?.probability }}%
+                </p>
               </div>
               <div class="flex justify-end">
                 <Button size="sm" variant="outline" :disabled="!nameDraft.trim()" @click="saveDetails">

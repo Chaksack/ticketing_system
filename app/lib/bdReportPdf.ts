@@ -119,9 +119,23 @@ export async function downloadBdReportPdf(summary: BdReportSummary) {
     { label: 'New Leads', value: String(summary.leads.newCount) },
     { label: 'Converted', value: String(summary.leads.convertedCount) },
     { label: 'Conversion Rate', value: `${summary.leads.conversionRate}%` },
+    { label: 'Pipeline Value', value: summary.leads.estimatedValueTotal.toLocaleString() },
+    { label: 'Weighted Value', value: summary.leads.weightedValueTotal.toLocaleString() },
   ])
   table(['Stage', 'Count'], summary.leads.byStage.map(row => [titleCase(row.stage), row.count]))
   table(['Source', 'Count'], summary.leads.bySource.map(row => [row.source, row.count]))
+
+  // Tenders
+  sectionTitle('Tenders')
+  statLine([
+    { label: 'New Tenders', value: String(summary.tenders.newCount) },
+    { label: 'Won', value: String(summary.tenders.convertedCount) },
+    { label: 'Win Rate', value: `${summary.tenders.conversionRate}%` },
+    { label: 'Pipeline Value', value: summary.tenders.estimatedValueTotal.toLocaleString() },
+    { label: 'Weighted Value', value: summary.tenders.weightedValueTotal.toLocaleString() },
+  ])
+  table(['Stage', 'Count'], summary.tenders.byStage.map(row => [titleCase(row.stage), row.count]))
+  table(['Source', 'Count'], summary.tenders.bySource.map(row => [row.source, row.count]))
 
   // Clients
   sectionTitle('Clients')

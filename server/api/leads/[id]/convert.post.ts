@@ -25,14 +25,15 @@ export default defineEventHandler(async (event) => {
   const leadAssignees = await getLeadAssignees(id)
 
   await db.prepare(`
-    INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
+    INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, estimated_value, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
   `).run(
     clientId,
     lead.name,
     lead.contact_name,
     lead.contact_email,
     lead.contact_phone,
+    lead.estimated_value,
     lead.notes,
     now,
     now,

@@ -4,7 +4,7 @@ import type { Project } from './project'
 
 export type ClientStage = 'lead' | 'contacted' | 'proposal' | 'negotiation' | 'active' | 'lost'
 
-export type ClientActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'amc_assigned' | 'amc_cancelled' | 'amc_renewal_reminder' | 'converted_from_lead'
+export type ClientActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'amc_assigned' | 'amc_cancelled' | 'amc_renewal_reminder' | 'converted_from_lead' | 'contact_added' | 'contact_removed'
 
 export interface ClientActivity {
   id: string
@@ -30,6 +30,17 @@ export interface ClientContactPhone {
   label?: string
 }
 
+export interface ClientContact {
+  id: string
+  name: string
+  title?: string
+  email?: string
+  phone?: string
+  isPrimary: boolean
+  notes?: string
+  createdAt: string
+}
+
 export interface Client {
   id: string
   name: string
@@ -38,7 +49,9 @@ export interface Client {
   contactPhone?: string
   additionalEmails: ClientContactEmail[]
   additionalPhones: ClientContactPhone[]
+  contacts: ClientContact[]
   stage: ClientStage
+  estimatedValue?: number
   notes?: string
   assignees: Assignee[]
   createdAt: string
