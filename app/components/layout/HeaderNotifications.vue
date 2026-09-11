@@ -8,6 +8,7 @@ const { fetchTasks } = useTasks()
 const { fetchLeads } = useLeads()
 const { fetchClients } = useClients()
 const { fetchChannels } = useChat()
+const { fetchTenders } = useTenders()
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
@@ -35,6 +36,7 @@ const TYPE_ICON: Record<NotificationType, string> = {
   meeting_reminder: 'i-lucide-calendar-clock',
   ticket_escalated: 'i-lucide-arrow-up-circle',
   tender_reminder: 'i-lucide-gavel',
+  bd_automation: 'i-lucide-workflow',
 }
 
 async function onSelect(notification: AppNotification) {
@@ -49,6 +51,8 @@ async function onSelect(notification: AppNotification) {
     await fetchClients()
   else if (notification.type === 'chat_message')
     await fetchChannels()
+  else if (notification.type === 'bd_automation' || notification.type === 'tender_reminder')
+    await fetchTenders()
   else
     await fetchTickets()
   if (notification.url)

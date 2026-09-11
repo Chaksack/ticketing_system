@@ -32,8 +32,8 @@ export interface LeadPatch {
 export function useLeads() {
   const leads = useState<Lead[]>('leads-list', () => [])
 
-  async function fetchLeads() {
-    const { leads: rows } = await $fetch('/api/leads')
+  async function fetchLeads(options?: { scope?: 'team' }) {
+    const { leads: rows } = await $fetch('/api/leads', { query: options?.scope ? { scope: options.scope } : undefined })
     leads.value = rows
   }
 

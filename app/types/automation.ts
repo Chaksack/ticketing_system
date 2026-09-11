@@ -33,3 +33,25 @@ export interface AutomationRule {
   addTagId?: string
   createdAt: string
 }
+
+export type BdEntityType = 'lead' | 'tender'
+export type BdRuleTrigger = 'created' | 'stage_changed'
+export type BdRuleField = 'source'
+export type BdRuleOperator = 'equals' | 'contains'
+
+export interface BdAutomationRule {
+  id: string
+  entityType: BdEntityType
+  trigger: BdRuleTrigger
+  name: string
+  enabled: boolean
+  /** Only meaningful when trigger is 'created' — matched against the record's source. */
+  field?: BdRuleField
+  operator?: BdRuleOperator
+  value?: string
+  /** Only meaningful when trigger is 'stage_changed'. */
+  toStage?: string
+  setAssigneeId?: string
+  notifyStaffId?: string
+  createdAt: string
+}

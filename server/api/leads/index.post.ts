@@ -50,7 +50,10 @@ export default defineEventHandler(async (event) => {
 
   await setLeadAssignees(id, body.assigneeIds ?? [])
 
-  const lead = await loadFullLead(id)
+  let lead = await loadFullLead(id)
+  lead = await applyBdCreationRules('lead', lead)
+  if (!lead.assignees.length)
+    lead = await autoAssignLead(lead)
 
   setResponseStatus(event, 201)
   return { lead }

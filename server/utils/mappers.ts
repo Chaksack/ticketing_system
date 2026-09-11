@@ -3,7 +3,9 @@ import type { Assignee } from '../../app/types/assignee'
 import type { Macro } from '../../app/types/automation'
 import type { Client, ClientActivity, ClientContact, ClientContactEmail, ClientContactPhone, ClientDocument } from '../../app/types/client'
 import type { Interaction } from '../../app/types/interaction'
+import type { Invoice } from '../../app/types/invoice'
 import type { Lead, LeadActivity, LeadContactEmail, LeadContactPhone, LeadDocument } from '../../app/types/lead'
+import type { LineItem } from '../../app/types/product'
 import type { Project } from '../../app/types/project'
 import type { Sprint } from '../../app/types/sprint'
 import type { StaffMember, StaffRole } from '../../app/types/staff'
@@ -25,6 +27,7 @@ export interface StaffRow {
   reset_token: string | null
   reset_expires_at: string | null
   avatar_url: string | null
+  manager_id?: string | null
   created_at: string
 }
 
@@ -41,6 +44,7 @@ export function mapStaffRow(row: StaffRow): StaffMember {
     status: row.status as StaffMember['status'],
     onCall: !!row.on_call,
     avatarUrl: row.avatar_url ?? undefined,
+    managerId: row.manager_id ?? undefined,
     createdAt: row.created_at,
   }
 }
@@ -223,6 +227,8 @@ export function mapClientRow(
   contacts: ClientContact[] = [],
   documents: ClientDocument[] = [],
   interactions: Interaction[] = [],
+  invoices: Invoice[] = [],
+  balanceByCurrency: { currency: string, balance: number }[] = [],
 ): Client {
   return {
     id: row.id,
@@ -242,6 +248,8 @@ export function mapClientRow(
     updatedAt: row.updated_at,
     activity,
     interactions,
+    invoices,
+    balanceByCurrency,
     projects,
     contracts,
   }
@@ -383,6 +391,7 @@ export interface ContractRow {
   project_id: string | null
   plan_id: string
   plan_name?: string | null
+  plan_price?: number | string | null
   start_date: string
   end_date: string
   status: string
@@ -394,7 +403,12 @@ export interface ContractRow {
   created_at: string
 }
 
-export function mapContractRow(row: ContractRow): AmcContract {
+export function mapContractRow(row: ContractRow, lineItems: LineItem[] = []): AmcContract {
+  const lineItemsTotal = lineItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+  const totalValue = lineItems.length
+    ? lineItemsTotal
+    : (row.plan_price !== null && row.plan_price !== undefined ? Number(row.plan_price) : undefined)
+
   return {
     id: row.id,
     clientId: row.client_id,
@@ -409,6 +423,8 @@ export function mapContractRow(row: ContractRow): AmcContract {
     nextStep: row.next_step ?? undefined,
     nextStepAt: row.next_step_at ?? undefined,
     nextStepReminderSent: !!row.next_step_reminder_sent,
+    lineItems,
+    totalValue,
     createdAt: row.created_at,
   }
 }

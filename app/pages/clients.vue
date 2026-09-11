@@ -18,9 +18,13 @@ const { clients, fetchClients, fetchClient, addClient } = useClients()
 const { staff, fetchStaff } = useStaff()
 const route = useRoute()
 
+const viewScope = ref<'all' | 'team'>('all')
+
 onMounted(async () => {
   await Promise.all([fetchClients(), fetchStaff()])
 })
+
+watch(viewScope, scope => fetchClients(scope === 'team' ? { scope: 'team' } : undefined))
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
 
@@ -50,15 +54,22 @@ const clientFormSchema = toTypedSchema(z.object({
   assigneeIds: z.array(z.string()).optional(),
 }))
 
-const { handleSubmit, resetForm } = useForm({
+const { handleSubmit, resetForm, values } = useForm({
   validationSchema: clientFormSchema,
   initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', stage: 'lead', assigneeIds: [] },
+})
+
+const { matches: duplicateMatches, check: checkDuplicate, reset: resetDuplicateCheck } = useDuplicateCheck('clients')
+
+watch([() => values.name, () => values.contactEmail, () => values.contactPhone], () => {
+  checkDuplicate({ name: values.name, email: values.contactEmail, phone: values.contactPhone })
 })
 
 const onSubmit = handleSubmit(async (values) => {
   try {
     const client = await addClient(values)
     resetForm()
+    resetDuplicateCheck()
     isAddOpen.value = false
     toast('Client added', {
       description: `${client.name} was added to the pipeline.`,
@@ -173,6 +184,17 @@ const onSubmit = handleSubmit(async (values) => {
               </FormItem>
             </FormField>
 
+            <Alert v-if="duplicateMatches.length">
+              <Icon name="i-lucide-triangle-alert" class="h-4 w-4" />
+              <AlertTitle>Possible duplicate</AlertTitle>
+              <AlertDescription>
+                <span v-for="(match, index) in duplicateMatches" :key="match.id">
+                  {{ match.label }} ({{ match.stage }})<span v-if="index < duplicateMatches.length - 1">, </span>
+                </span>
+                already exists. You can still add this client.
+              </AlertDescription>
+            </Alert>
+
             <SheetFooter class="p-0">
               <Button type="submit">
                 Add Client
@@ -182,6 +204,17 @@ const onSubmit = handleSubmit(async (values) => {
         </SheetContent>
       </Sheet>
     </div>
+
+    <Tabs v-model="viewScope">
+      <TabsList>
+        <TabsTrigger value="all">
+          All
+        </TabsTrigger>
+        <TabsTrigger value="team">
+          My Team
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
 
     <DataTable :data="clients" :columns="columns" @select="openClient">
       <template #toolbar="{ table }">

@@ -57,7 +57,8 @@ export default defineEventHandler(async (event) => {
 
   await setTenderAssignees(id, body.assigneeIds ?? [])
 
-  const tender = await loadFullTender(id)
+  let tender = await loadFullTender(id)
+  tender = await applyBdCreationRules('tender', tender)
 
   setResponseStatus(event, 201)
   return { tender }

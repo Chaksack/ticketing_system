@@ -14,7 +14,9 @@ const emit = defineEmits<{
 
 const open = defineModel<boolean>('open', { default: false })
 
-const { updateStatus, setOnCall, updateRoles, removeStaff } = useStaff()
+const { staff: allStaff, updateStatus, setOnCall, updateRoles, updateManager, removeStaff } = useStaff()
+
+const managerOptions = computed(() => allStaff.value.filter(s => s.status === 'active' && s.id !== props.staff?.id))
 
 const statusOptions = [
   { value: 'active', label: 'Active' },
@@ -73,6 +75,18 @@ async function onOnCallChange(value: boolean) {
     description: value
       ? `${props.staff.name} will be paged when new tickets are reported.`
       : `${props.staff.name} will no longer be paged.`,
+  })
+}
+
+async function onManagerChange(value: AcceptableValue) {
+  if (!props.staff)
+    return
+
+  await updateManager(props.staff.id, (value as string) || null)
+
+  const managerName = value ? allStaff.value.find(s => s.id === value)?.name : undefined
+  toast('Manager updated', {
+    description: managerName ? `${props.staff.name} now reports to ${managerName}.` : `${props.staff.name} has no manager set.`,
   })
 }
 
@@ -144,6 +158,23 @@ function formatDate(value: string) {
                 />
                 {{ option.label }}
               </label>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <span class="text-sm text-muted-foreground">Manager</span>
+              <Select :model-value="staff.managerId ?? ''" @update:model-value="onManagerChange">
+                <SelectTrigger class="w-full">
+                  <SelectValue placeholder="No manager set" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">
+                    No manager
+                  </SelectItem>
+                  <SelectItem v-for="option in managerOptions" :key="option.id" :value="option.id">
+                    {{ option.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div class="flex flex-col gap-1">

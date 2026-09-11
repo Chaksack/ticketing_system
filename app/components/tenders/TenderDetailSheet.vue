@@ -40,10 +40,17 @@ async function onStageChange(value: AcceptableValue) {
   if (!props.tender || value === null)
     return
 
-  await updateTender(props.tender.id, { stage: value as TenderStage })
-  toast('Stage updated', {
-    description: `${props.tender.title} is now ${tenderStages.find(s => s.value === value)?.label}.`,
-  })
+  try {
+    await updateTender(props.tender.id, { stage: value as TenderStage })
+    toast('Stage updated', {
+      description: `${props.tender.title} is now ${tenderStages.find(s => s.value === value)?.label}.`,
+    })
+  }
+  catch (error: any) {
+    toast.error('Could not update stage', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
 }
 
 async function onAssigneesChange(assigneeIds: string[]) {
@@ -393,6 +400,17 @@ function formatDateTime(value: string) {
             <Separator />
 
             <InteractionsSection regarding-type="tender" :regarding-id="tender.id" :interactions="tender.interactions" />
+
+            <Separator />
+
+            <QuotesSection
+              regarding-type="tender"
+              :regarding-id="tender.id"
+              :record-name="tender.title"
+              :contact-name="tender.contactName"
+              :contact-email="tender.contactEmail"
+              :contact-phone="tender.contactPhone"
+            />
 
             <Separator />
 

@@ -12,7 +12,7 @@ export const LEAD_STAGE_PROBABILITY: Record<LeadStage, number> = {
   lost: 0,
 }
 
-export type LeadActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'next_step_updated' | 'document_added' | 'document_removed'
+export type LeadActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'next_step_updated' | 'document_added' | 'document_removed' | 'automation_applied'
 
 export interface LeadActivity {
   id: string

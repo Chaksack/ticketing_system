@@ -17,12 +17,18 @@ export async function loadFullProject(id: string): Promise<Project> {
   }
 
   const contractRows = await db.prepare(`
-    SELECT client_amc_contracts.*, amc_plans.name AS plan_name
+    SELECT client_amc_contracts.*, amc_plans.name AS plan_name, amc_plans.price AS plan_price
     FROM client_amc_contracts
     LEFT JOIN amc_plans ON amc_plans.id = client_amc_contracts.plan_id
     WHERE client_amc_contracts.project_id = ?
     ORDER BY client_amc_contracts.start_date DESC
   `).all(id) as ContractRow[]
 
-  return mapProjectRow(row, contractRows.map(contractRow => mapContractRow(contractRow)))
+  const contracts = []
+  for (const contractRow of contractRows) {
+    const lineItems = await getContractLineItems(contractRow.id)
+    contracts.push(mapContractRow(contractRow, lineItems))
+  }
+
+  return mapProjectRow(row, contracts)
 }

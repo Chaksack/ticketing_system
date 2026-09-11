@@ -39,10 +39,17 @@ async function onStageChange(value: AcceptableValue) {
   if (!props.lead || value === null)
     return
 
-  await updateLead(props.lead.id, { stage: value as LeadStage })
-  toast('Stage updated', {
-    description: `${props.lead.name} is now ${leadStages.find(s => s.value === value)?.label}.`,
-  })
+  try {
+    await updateLead(props.lead.id, { stage: value as LeadStage })
+    toast('Stage updated', {
+      description: `${props.lead.name} is now ${leadStages.find(s => s.value === value)?.label}.`,
+    })
+  }
+  catch (error: any) {
+    toast.error('Could not update stage', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
 }
 
 async function onAssigneesChange(assigneeIds: string[]) {
@@ -428,6 +435,17 @@ function formatDateTime(value: string) {
             <Separator />
 
             <InteractionsSection regarding-type="lead" :regarding-id="lead.id" :interactions="lead.interactions" />
+
+            <Separator />
+
+            <QuotesSection
+              regarding-type="lead"
+              :regarding-id="lead.id"
+              :record-name="lead.name"
+              :contact-name="lead.contactName"
+              :contact-email="lead.contactEmail"
+              :contact-phone="lead.contactPhone"
+            />
 
             <Separator />
 

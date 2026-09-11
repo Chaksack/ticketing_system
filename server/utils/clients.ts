@@ -16,7 +16,7 @@ export async function loadFullClient(id: string): Promise<Client> {
   // Legacy contracts predate Projects and were never linked to one — still surfaced at the
   // client level so nothing already assigned silently disappears from view.
   const legacyContractRows = await db.prepare(`
-    SELECT client_amc_contracts.*, amc_plans.name AS plan_name
+    SELECT client_amc_contracts.*, amc_plans.name AS plan_name, amc_plans.price AS plan_price
     FROM client_amc_contracts
     LEFT JOIN amc_plans ON amc_plans.id = client_amc_contracts.plan_id
     WHERE client_amc_contracts.client_id = ? AND client_amc_contracts.project_id IS NULL
@@ -34,13 +34,19 @@ export async function loadFullClient(id: string): Promise<Client> {
   const projects = []
   for (const projectRow of projectRows) {
     const contractRows = await db.prepare(`
-      SELECT client_amc_contracts.*, amc_plans.name AS plan_name
+      SELECT client_amc_contracts.*, amc_plans.name AS plan_name, amc_plans.price AS plan_price
       FROM client_amc_contracts
       LEFT JOIN amc_plans ON amc_plans.id = client_amc_contracts.plan_id
       WHERE client_amc_contracts.project_id = ?
       ORDER BY client_amc_contracts.start_date DESC
     `).all(projectRow.id) as ContractRow[]
-    projects.push(mapProjectRow(projectRow, contractRows.map(contractRow => mapContractRow(contractRow))))
+
+    const contracts = []
+    for (const contractRow of contractRows) {
+      const lineItems = await getContractLineItems(contractRow.id)
+      contracts.push(mapContractRow(contractRow, lineItems))
+    }
+    projects.push(mapProjectRow(projectRow, contracts))
   }
 
   const emailRows = await db.prepare('SELECT * FROM client_contact_emails WHERE client_id = ? ORDER BY created_at ASC').all(id) as ClientContactEmailRow[]
@@ -49,11 +55,19 @@ export async function loadFullClient(id: string): Promise<Client> {
   const assignees = await getClientAssignees(id)
   const documentRows = await db.prepare('SELECT * FROM client_documents WHERE client_id = ? ORDER BY created_at ASC').all(id) as ClientDocumentRow[]
   const interactions = await getInteractions('client', id)
+  const invoices = await getInvoicesForClient(id)
+  const balanceByCurrency = computeBalanceByCurrency(invoices)
+
+  const legacyContracts = []
+  for (const contractRow of legacyContractRows) {
+    const lineItems = await getContractLineItems(contractRow.id)
+    legacyContracts.push(mapContractRow(contractRow, lineItems))
+  }
 
   return mapClientRow(
     row,
     activityRows.map(activityRow => mapClientActivityRow(activityRow)),
-    legacyContractRows.map(contractRow => mapContractRow(contractRow)),
+    legacyContracts,
     projects,
     emailRows.map(emailRow => mapClientContactEmailRow(emailRow)),
     phoneRows.map(phoneRow => mapClientContactPhoneRow(phoneRow)),
@@ -61,6 +75,8 @@ export async function loadFullClient(id: string): Promise<Client> {
     contactRows.map(contactRow => mapClientContactRow(contactRow)),
     documentRows.map(documentRow => mapClientDocumentRow(documentRow)),
     interactions,
+    invoices,
+    balanceByCurrency,
   )
 }
 

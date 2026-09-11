@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   await requireAdmin(event)
 
   const id = getRouterParam(event, 'id')
-  const body = await readBody<{ status?: StaffStatus, onCall?: boolean, roles?: StaffRole[] }>(event)
+  const body = await readBody<{ status?: StaffStatus, onCall?: boolean, roles?: StaffRole[], managerId?: string | null }>(event)
 
   if (!id) {
     throw createError({ statusCode: 400, statusMessage: 'Missing staff id' })
@@ -26,9 +26,14 @@ export default defineEventHandler(async (event) => {
   const status = body.status ?? existing.status
   const onCall = body.onCall === undefined ? existing.on_call : Number(body.onCall)
   const roles = body.roles ?? parseStaffRoles(existing)
+  const managerId = body.managerId !== undefined ? body.managerId : existing.manager_id
 
-  await db.prepare('UPDATE staff SET status = ?, on_call = ?, role = ?, roles = ? WHERE id = ?')
-    .run(status, onCall, roles[0], JSON.stringify(roles), id)
+  if (managerId === id) {
+    throw createError({ statusCode: 400, statusMessage: 'A staff member cannot manage themselves' })
+  }
+
+  await db.prepare('UPDATE staff SET status = ?, on_call = ?, role = ?, roles = ?, manager_id = ? WHERE id = ?')
+    .run(status, onCall, roles[0], JSON.stringify(roles), managerId ?? null, id)
 
   if (body.onCall === true && !existing.on_call) {
     const title = 'You\'re on call'

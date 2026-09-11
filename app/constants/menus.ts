@@ -125,6 +125,24 @@ export const navMenu: NavMenu[] = [
         adminOnly: true,
       },
       {
+        title: 'BD Automations',
+        icon: 'i-lucide-route',
+        link: '/admin/bd-automations',
+        adminOnly: true,
+      },
+      {
+        title: 'BD Quotas',
+        icon: 'i-lucide-target',
+        link: '/admin/bd-quotas',
+        adminOnly: true,
+      },
+      {
+        title: 'Products',
+        icon: 'i-lucide-package',
+        link: '/admin/products',
+        adminOnly: true,
+      },
+      {
         title: 'Activity Log',
         icon: 'i-lucide-history',
         link: '/admin/activity',

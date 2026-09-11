@@ -7,6 +7,7 @@ definePageMeta({
 })
 
 const { summary, isLoading, fetchSummary } = useBdReports()
+const { progress: quotaProgress, fetchProgress } = useBdQuotas()
 
 function toDateInput(date: Date) {
   return date.toISOString().slice(0, 10)
@@ -19,11 +20,17 @@ async function refresh() {
   await fetchSummary({ from: from.value, to: to.value })
 }
 
+function currentPeriod() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
 onMounted(() => {
   const today = new Date()
   from.value = toDateInput(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000))
   to.value = toDateInput(today)
   refresh()
+  fetchProgress(currentPeriod())
 })
 
 function applyPreset(days: number) {
@@ -243,6 +250,113 @@ const amcByStatusData = computed(() => summary.value?.amc.byStatus.map(row => ({
                 No tenders in this range.
               </p>
               <BarChart v-else :data="summary.tenders.bySource" :categories="['count']" index="source" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <h3 class="text-sm font-medium text-muted-foreground">
+          Forecast
+        </h3>
+        <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-3 @3xl/main:grid-cols-6">
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Lead Win Rate</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow v-if="summary?.leads.winRate !== null && summary?.leads.winRate !== undefined" :value="summary.leads.winRate" suffix="%" />
+                <span v-else class="text-base text-muted-foreground">No decided deals</span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Avg Lead Deal Size</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow v-if="summary?.leads.averageDealSize !== null && summary?.leads.averageDealSize !== undefined" :value="summary.leads.averageDealSize" />
+                <span v-else class="text-base text-muted-foreground">—</span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Avg Lead Sales Cycle</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow v-if="summary?.leads.avgSalesCycleDays !== null && summary?.leads.avgSalesCycleDays !== undefined" :value="summary.leads.avgSalesCycleDays" suffix=" days" />
+                <span v-else class="text-base text-muted-foreground">—</span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Tender Win Rate</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow v-if="summary?.tenders.winRate !== null && summary?.tenders.winRate !== undefined" :value="summary.tenders.winRate" suffix="%" />
+                <span v-else class="text-base text-muted-foreground">No decided deals</span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Avg Tender Deal Size</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow v-if="summary?.tenders.averageDealSize !== null && summary?.tenders.averageDealSize !== undefined" :value="summary.tenders.averageDealSize" />
+                <span v-else class="text-base text-muted-foreground">—</span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card class="@container/card">
+            <CardHeader>
+              <CardDescription>Avg Tender Sales Cycle</CardDescription>
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                <NumberFlow v-if="summary?.tenders.avgSalesCycleDays !== null && summary?.tenders.avgSalesCycleDays !== undefined" :value="summary.tenders.avgSalesCycleDays" suffix=" days" />
+                <span v-else class="text-base text-muted-foreground">—</span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Won Over Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p v-if="!summary?.trend.length" class="text-sm text-muted-foreground">
+              No won deals in this range.
+            </p>
+            <AreaChart v-else :data="summary.trend" :categories="['leadsWon', 'tendersWon']" index="date" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <h3 class="text-sm font-medium text-muted-foreground">
+          Quota Progress
+        </h3>
+        <p class="text-xs text-muted-foreground -mt-1">
+          Weighted value won this calendar month against each rep's target — independent of the date range above.
+        </p>
+        <div v-if="!quotaProgress.length" class="text-sm text-muted-foreground">
+          No active BD/SM staff.
+        </div>
+        <div v-else class="grid grid-cols-1 gap-3 @xl/main:grid-cols-2 @3xl/main:grid-cols-3">
+          <Card v-for="rep in quotaProgress" :key="rep.staffId">
+            <CardHeader>
+              <CardDescription>{{ rep.staffName }}</CardDescription>
+              <CardTitle class="text-lg font-semibold tabular-nums">
+                {{ rep.achievedValue.toLocaleString() }}
+                <span v-if="rep.targetValue !== null" class="text-sm font-normal text-muted-foreground">
+                  / {{ rep.targetValue.toLocaleString() }}
+                </span>
+                <span v-else class="text-sm font-normal text-muted-foreground">(no target set)</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent v-if="rep.targetValue !== null">
+              <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div class="h-full rounded-full bg-primary" :style="{ width: `${Math.min(rep.percent ?? 0, 100)}%` }" />
+              </div>
+              <p class="mt-1 text-xs text-muted-foreground">
+                {{ rep.percent }}% of target
+              </p>
             </CardContent>
           </Card>
         </div>

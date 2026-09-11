@@ -59,6 +59,14 @@ export default defineEventHandler(async (event) => {
   const deadlineReminderSent = body.submissionDeadline !== undefined && body.submissionDeadline !== existing.submission_deadline ? 0 : existing.deadline_reminder_sent
   const now = new Date().toISOString()
 
+  const gatedStages: TenderStage[] = ['submitted', 'evaluation', 'won']
+  if (gatedStages.includes(stage) && stage !== existing.stage) {
+    const documentCount = await db.prepare('SELECT COUNT(*) AS count FROM tender_documents WHERE tender_id = ?').get(id) as { count: number | string }
+    if (Number(documentCount.count) === 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Attach at least one document before moving this tender past Preparing Bid.' })
+    }
+  }
+
   await db.prepare(`
     UPDATE tenders
     SET title = ?, issuing_authority = ?, reference_number = ?, contact_name = ?, contact_email = ?, contact_phone = ?,
@@ -116,6 +124,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const tender = await loadFullTender(id)
+  let tender = await loadFullTender(id)
+  if (stage !== existing.stage)
+    tender = await applyBdStageChangeRules('tender', tender)
+
   return { tender }
 })

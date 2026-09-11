@@ -1,0 +1,62 @@
+import type { ReceiptMethod } from '../../../../../app/types/invoice'
+import type { InvoiceRow } from '../../../../utils/invoices'
+
+interface NewReceiptBody {
+  amount?: number
+  method?: ReceiptMethod
+  reference?: string
+  receivedAt?: string
+}
+
+const VALID_METHODS: ReceiptMethod[] = ['cash', 'bank_transfer', 'cheque', 'mobile_money', 'card', 'other']
+
+export default defineEventHandler(async (event) => {
+  const user = await requireBd(event)
+
+  const invoiceId = getRouterParam(event, 'id')
+  const body = await readBody<NewReceiptBody>(event)
+
+  if (!invoiceId) {
+    throw createError({ statusCode: 400, statusMessage: 'Missing invoice id' })
+  }
+
+  if (body?.amount === undefined || body.amount <= 0) {
+    throw createError({ statusCode: 400, statusMessage: 'A positive amount is required' })
+  }
+
+  if (!body.method || !VALID_METHODS.includes(body.method)) {
+    throw createError({ statusCode: 400, statusMessage: 'A valid payment method is required' })
+  }
+
+  await ensureDb()
+  const db = useDatabase()
+
+  const invoice = await db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoiceId) as InvoiceRow | undefined
+  if (!invoice) {
+    throw createError({ statusCode: 404, statusMessage: 'Invoice not found' })
+  }
+
+  const id = await nextReceiptId()
+  const now = new Date().toISOString()
+
+  await db.prepare(`
+    INSERT INTO receipts (id, invoice_id, amount, method, received_date, reference, recorded_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, invoiceId, body.amount, body.method, body.receivedAt ?? now, body.reference?.trim() || null, user.id, now)
+
+  await recalculateInvoiceTotals(invoiceId)
+
+  await logInvoiceActivity({
+    invoiceId,
+    type: 'payment_received',
+    actorId: user.id,
+    actorName: user.name,
+    toValue: `${body.amount.toLocaleString()} ${invoice.currency}`,
+    message: `Payment of ${body.amount.toLocaleString()} ${invoice.currency} recorded`,
+  })
+
+  const client = await loadFullClient(invoice.client_id)
+
+  setResponseStatus(event, 201)
+  return { client }
+})

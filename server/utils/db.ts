@@ -637,6 +637,150 @@ async function migrate() {
   `)
 
   await db.exec('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sprint_id TEXT')
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS bd_automation_rules (
+      id TEXT PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      trigger TEXT NOT NULL,
+      field TEXT,
+      operator TEXT,
+      value TEXT,
+      to_stage TEXT,
+      set_assignee_id TEXT,
+      notify_staff_id TEXT,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS manager_id TEXT')
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS bd_quotas (
+      id TEXT PRIMARY KEY,
+      staff_id TEXT NOT NULL,
+      period TEXT NOT NULL,
+      target_value NUMERIC NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(staff_id, period)
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS products (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      unit_price NUMERIC NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'GHS',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS contract_line_items (
+      id TEXT PRIMARY KEY,
+      contract_id TEXT NOT NULL,
+      product_id TEXT,
+      product_name TEXT NOT NULL,
+      unit_price NUMERIC NOT NULL,
+      currency TEXT NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id TEXT PRIMARY KEY,
+      regarding_type TEXT NOT NULL,
+      regarding_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'quoted',
+      notes TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS quote_line_items (
+      id TEXT PRIMARY KEY,
+      quote_id TEXT NOT NULL,
+      product_id TEXT,
+      product_name TEXT NOT NULL,
+      unit_price NUMERIC NOT NULL,
+      currency TEXT NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoices (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      project_id TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      issue_date TEXT,
+      due_date TEXT,
+      notes TEXT,
+      currency TEXT NOT NULL DEFAULT 'GHS',
+      subtotal NUMERIC NOT NULL DEFAULT 0,
+      tax_rate NUMERIC NOT NULL DEFAULT 0,
+      tax_amount NUMERIC NOT NULL DEFAULT 0,
+      discount NUMERIC NOT NULL DEFAULT 0,
+      total NUMERIC NOT NULL DEFAULT 0,
+      amount_paid NUMERIC NOT NULL DEFAULT 0,
+      balance NUMERIC NOT NULL DEFAULT 0,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_items (
+      id TEXT PRIMARY KEY,
+      invoice_id TEXT NOT NULL,
+      description TEXT NOT NULL,
+      quantity NUMERIC NOT NULL DEFAULT 1,
+      unit_price NUMERIC NOT NULL DEFAULT 0,
+      line_total NUMERIC NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_activity (
+      id TEXT PRIMARY KEY,
+      invoice_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      actor_id TEXT,
+      actor_name TEXT,
+      from_value TEXT,
+      to_value TEXT,
+      message TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS receipts (
+      id TEXT PRIMARY KEY,
+      invoice_id TEXT NOT NULL,
+      amount NUMERIC NOT NULL,
+      method TEXT NOT NULL,
+      received_date TEXT NOT NULL,
+      reference TEXT,
+      recorded_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
 }
 
 export async function nextSequence(name: string): Promise<number> {
@@ -697,6 +841,56 @@ export async function nextMacroId() {
 export async function nextRuleId() {
   const n = await nextSequence('rule')
   return `RULE-${n}`
+}
+
+export async function nextBdAutomationRuleId() {
+  const n = await nextSequence('bd_automation_rule')
+  return `BDRULE-${n}`
+}
+
+export async function nextBdQuotaId() {
+  const n = await nextSequence('bd_quota')
+  return `QUOTA-${n}`
+}
+
+export async function nextProductId() {
+  const n = await nextSequence('product')
+  return `PROD-${n}`
+}
+
+export async function nextContractLineItemId() {
+  const n = await nextSequence('contract_line_item')
+  return `CLI-${n}`
+}
+
+export async function nextQuoteId() {
+  const n = await nextSequence('quote')
+  return `QUOTE-${n}`
+}
+
+export async function nextQuoteLineItemId() {
+  const n = await nextSequence('quote_line_item')
+  return `QLI-${n}`
+}
+
+export async function nextInvoiceId() {
+  const n = await nextSequence('invoice')
+  return `INV-${n}`
+}
+
+export async function nextInvoiceItemId() {
+  const n = await nextSequence('invoice_item')
+  return `ITEM-${n}`
+}
+
+export async function nextInvoiceActivityId() {
+  const n = await nextSequence('invoice_activity')
+  return `IACT-${n}`
+}
+
+export async function nextReceiptId() {
+  const n = await nextSequence('receipt')
+  return `RCPT-${n}`
 }
 
 export async function nextClientId() {

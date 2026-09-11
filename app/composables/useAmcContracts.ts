@@ -36,5 +36,21 @@ export function useAmcContracts() {
     return await updateContract(contractId, { status: 'cancelled' })
   }
 
-  return { updateContract, cancelContract }
+  async function addLineItem(contractId: string, payload: { productId?: string, productName: string, unitPrice: number, currency: string, quantity?: number }) {
+    const { client, project } = await $fetch<{ client: Client, project: Project | null }>(`/api/amc-contracts/${contractId}/line-items`, { method: 'POST', body: payload })
+    replaceClient(client)
+    if (project)
+      replaceProject(project)
+    return client
+  }
+
+  async function removeLineItem(contractId: string, itemId: string) {
+    const { client, project } = await $fetch<{ client: Client, project: Project | null }>(`/api/amc-contracts/${contractId}/line-items/${itemId}`, { method: 'DELETE' })
+    replaceClient(client)
+    if (project)
+      replaceProject(project)
+    return client
+  }
+
+  return { updateContract, cancelContract, addLineItem, removeLineItem }
 }

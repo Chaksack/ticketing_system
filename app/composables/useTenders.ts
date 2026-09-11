@@ -34,8 +34,8 @@ export interface TenderPatch {
 export function useTenders() {
   const tenders = useState<Tender[]>('tenders-list', () => [])
 
-  async function fetchTenders() {
-    const { tenders: rows } = await $fetch('/api/tenders')
+  async function fetchTenders(options?: { scope?: 'team' }) {
+    const { tenders: rows } = await $fetch('/api/tenders', { query: options?.scope ? { scope: options.scope } : undefined })
     tenders.value = rows
   }
 

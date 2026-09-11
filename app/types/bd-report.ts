@@ -8,6 +8,11 @@ export interface BdReportSummary {
     bySource: { source: string, count: number }[]
     estimatedValueTotal: number
     weightedValueTotal: number
+    wonCount: number
+    lostCount: number
+    winRate: number | null
+    averageDealSize: number | null
+    avgSalesCycleDays: number | null
   }
   tenders: {
     newCount: number
@@ -17,6 +22,11 @@ export interface BdReportSummary {
     bySource: { source: string, count: number }[]
     estimatedValueTotal: number
     weightedValueTotal: number
+    wonCount: number
+    lostCount: number
+    winRate: number | null
+    averageDealSize: number | null
+    avgSalesCycleDays: number | null
   }
   clients: {
     newCount: number
@@ -34,4 +44,5 @@ export interface BdReportSummary {
   projects: {
     newCount: number
   }
+  trend: { date: string, leadsWon: number, tendersWon: number }[]
 }

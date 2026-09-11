@@ -18,9 +18,13 @@ const { leads, fetchLeads, fetchLead, addLead } = useLeads()
 const { staff, fetchStaff } = useStaff()
 const route = useRoute()
 
+const viewScope = ref<'all' | 'team'>('all')
+
 onMounted(async () => {
   await Promise.all([fetchLeads(), fetchStaff()])
 })
+
+watch(viewScope, scope => fetchLeads(scope === 'team' ? { scope: 'team' } : undefined))
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
 
@@ -52,9 +56,15 @@ const leadFormSchema = toTypedSchema(z.object({
   assigneeIds: z.array(z.string()).optional(),
 }))
 
-const { handleSubmit, resetForm } = useForm({
+const { handleSubmit, resetForm, values } = useForm({
   validationSchema: leadFormSchema,
   initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'new', estimatedValue: '', assigneeIds: [] },
+})
+
+const { matches: duplicateMatches, check: checkDuplicate, reset: resetDuplicateCheck } = useDuplicateCheck('leads')
+
+watch([() => values.name, () => values.contactEmail, () => values.contactPhone], () => {
+  checkDuplicate({ name: values.name, email: values.contactEmail, phone: values.contactPhone })
 })
 
 const onSubmit = handleSubmit(async (values) => {
@@ -64,6 +74,7 @@ const onSubmit = handleSubmit(async (values) => {
       estimatedValue: values.estimatedValue ? Number(values.estimatedValue) : undefined,
     })
     resetForm()
+    resetDuplicateCheck()
     isAddOpen.value = false
     toast('Lead added', {
       description: `${lead.name} was added to the pipeline.`,
@@ -198,6 +209,17 @@ const onSubmit = handleSubmit(async (values) => {
               </FormItem>
             </FormField>
 
+            <Alert v-if="duplicateMatches.length">
+              <Icon name="i-lucide-triangle-alert" class="h-4 w-4" />
+              <AlertTitle>Possible duplicate</AlertTitle>
+              <AlertDescription>
+                <span v-for="(match, index) in duplicateMatches" :key="match.id">
+                  {{ match.label }} ({{ match.stage }})<span v-if="index < duplicateMatches.length - 1">, </span>
+                </span>
+                already exists. You can still add this lead.
+              </AlertDescription>
+            </Alert>
+
             <SheetFooter class="p-0">
               <Button type="submit">
                 Add Lead
@@ -207,6 +229,17 @@ const onSubmit = handleSubmit(async (values) => {
         </SheetContent>
       </Sheet>
     </div>
+
+    <Tabs v-model="viewScope">
+      <TabsList>
+        <TabsTrigger value="all">
+          All
+        </TabsTrigger>
+        <TabsTrigger value="team">
+          My Team
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
 
     <DataTable :data="leads" :columns="columns" @select="openLead">
       <template #toolbar="{ table }">

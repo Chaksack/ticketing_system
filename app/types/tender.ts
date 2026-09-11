@@ -13,7 +13,7 @@ export const TENDER_STAGE_PROBABILITY: Record<TenderStage, number> = {
   lost: 0,
 }
 
-export type TenderActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'deadline_updated' | 'document_added' | 'document_removed'
+export type TenderActivityType = 'stage_changed' | 'note_updated' | 'assignee_changed' | 'converted' | 'deadline_updated' | 'document_added' | 'document_removed' | 'automation_applied'
 
 export interface TenderActivity {
   id: string

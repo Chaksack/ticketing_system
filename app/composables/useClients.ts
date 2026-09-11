@@ -34,8 +34,8 @@ export function useClients() {
   const clients = useState<Client[]>('clients-list', () => [])
   const upcomingRenewals = useState<UpcomingRenewal[]>('clients-upcoming-renewals', () => [])
 
-  async function fetchClients() {
-    const { clients: rows } = await $fetch('/api/clients')
+  async function fetchClients(options?: { scope?: 'team' }) {
+    const { clients: rows } = await $fetch('/api/clients', { query: options?.scope ? { scope: options.scope } : undefined })
     clients.value = rows
   }
 

@@ -56,6 +56,10 @@ export default defineEventHandler(async (event) => {
   const nextStepReminderSent = body.nextStepAt !== undefined && body.nextStepAt !== existing.next_step_at ? 0 : existing.next_step_reminder_sent
   const now = new Date().toISOString()
 
+  if (stage === 'won' && stage !== existing.stage && estimatedValue === null) {
+    throw createError({ statusCode: 400, statusMessage: 'Add an estimated value before marking this lead as won.' })
+  }
+
   await db.prepare(`
     UPDATE leads
     SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ?, source = ?, stage = ?, estimated_value = ?, notes = ?,
@@ -113,6 +117,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const lead = await loadFullLead(id)
+  let lead = await loadFullLead(id)
+  if (stage !== existing.stage)
+    lead = await applyBdStageChangeRules('lead', lead)
+
   return { lead }
 })

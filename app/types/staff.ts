@@ -9,5 +9,6 @@ export interface StaffMember {
   status: StaffStatus
   onCall: boolean
   avatarUrl?: string
+  managerId?: string
   createdAt: string
 }

@@ -7,7 +7,23 @@ const props = defineProps<{
   contract: AmcContract
 }>()
 
-const { updateContract, cancelContract } = useAmcContracts()
+const { updateContract, cancelContract, addLineItem, removeLineItem } = useAmcContracts()
+const { products, fetchProducts } = useProducts()
+
+onMounted(() => {
+  if (!products.value.length)
+    fetchProducts()
+})
+
+async function onAddLineItem(item: { productId?: string, productName: string, unitPrice: number, currency: string, quantity: number }) {
+  await addLineItem(props.contract.id, item)
+}
+
+async function onRemoveLineItem(item: { id?: string }) {
+  if (!item.id)
+    return
+  await removeLineItem(props.contract.id, item.id)
+}
 
 const contractStatuses: { value: AmcContractStatus, label: string, badgeClass: string }[] = [
   { value: 'submitted', label: 'Submitted', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30' },
@@ -89,7 +105,18 @@ function formatDate(value: string) {
     </div>
     <p class="text-xs text-muted-foreground">
       {{ formatDate(contract.startDate) }} – {{ formatDate(contract.endDate) }}
+      <span v-if="contract.totalValue !== undefined"> · {{ contract.totalValue.toLocaleString() }}</span>
     </p>
+
+    <div class="flex flex-col gap-1.5 pt-1">
+      <Label class="text-xs text-muted-foreground">Line Items</Label>
+      <LineItemsEditor
+        :line-items="contract.lineItems"
+        :product-catalog="products"
+        @add="onAddLineItem"
+        @remove="onRemoveLineItem"
+      />
+    </div>
 
     <div class="flex flex-col gap-1.5 pt-1">
       <Label class="text-xs text-muted-foreground">Follow-up / Next Step</Label>

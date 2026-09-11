@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AcceptableValue } from 'reka-ui'
 import type { Client, ClientActivity, ClientStage } from '~/types/client'
+import type { InvoiceStatus, ReceiptMethod } from '~/types/invoice'
 import type { Project, ProjectStatus } from '~/types/project'
 import { toast } from 'vue-sonner'
 import AmcContractCard from '~/components/projects/AmcContractCard.vue'
@@ -17,6 +18,7 @@ const router = useRouter()
 const { updateClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone, addContact, removeContact, uploadDocument, removeDocument } = useClients()
 const { staff, fetchStaff } = useStaff()
 const { projectsForClient, fetchProjects, addProject } = useProjects()
+const { addInvoice, removeInvoice, addReceipt, removeReceipt } = useInvoices()
 
 onMounted(() => {
   if (!staff.value.length)
@@ -242,6 +244,129 @@ function activityLabel(activity: ClientActivity) {
     default:
       return activity.message ?? `${actor} updated this client`
   }
+}
+
+const invoiceStatusBadgeClass: Record<InvoiceStatus, string> = {
+  unpaid: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
+  partial: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
+  paid: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30',
+}
+
+const RECEIPT_METHODS: { value: ReceiptMethod, label: string }[] = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'mobile_money', label: 'Mobile Money' },
+  { value: 'card', label: 'Card' },
+  { value: 'other', label: 'Other' },
+]
+
+const isInvoiceFormOpen = ref(false)
+const newInvoiceLineItems = ref<{ description: string, quantity: number, unitPrice: number }[]>([])
+const newLineDescription = ref('')
+const newLineQuantity = ref('1')
+const newLineUnitPrice = ref('')
+const newInvoiceCurrency = ref('GHS')
+const newInvoiceTaxRate = ref('0')
+const newInvoiceDiscount = ref('0')
+const newInvoiceDueAt = ref('')
+const newInvoiceProjectId = ref<string>('')
+
+const newInvoiceSubtotal = computed(() => newInvoiceLineItems.value.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0))
+const newInvoiceTotal = computed(() => {
+  const taxAmount = newInvoiceSubtotal.value * (Number(newInvoiceTaxRate.value || 0) / 100)
+  return Math.max(newInvoiceSubtotal.value + taxAmount - Number(newInvoiceDiscount.value || 0), 0)
+})
+
+function onAddInvoiceLine() {
+  if (!newLineDescription.value.trim() || !newLineUnitPrice.value.trim())
+    return
+  newInvoiceLineItems.value = [...newInvoiceLineItems.value, {
+    description: newLineDescription.value.trim(),
+    quantity: Number(newLineQuantity.value) > 0 ? Number(newLineQuantity.value) : 1,
+    unitPrice: Number(newLineUnitPrice.value),
+  }]
+  newLineDescription.value = ''
+  newLineQuantity.value = '1'
+  newLineUnitPrice.value = ''
+}
+
+function onRemoveInvoiceLine(index: number) {
+  newInvoiceLineItems.value = newInvoiceLineItems.value.filter((_, i) => i !== index)
+}
+
+async function onCreateInvoice() {
+  if (!props.client || !newInvoiceLineItems.value.length)
+    return
+
+  try {
+    await addInvoice(props.client.id, {
+      lineItems: newInvoiceLineItems.value,
+      currency: newInvoiceCurrency.value.trim() || 'GHS',
+      taxRate: Number(newInvoiceTaxRate.value || 0),
+      discount: Number(newInvoiceDiscount.value || 0),
+      dueAt: newInvoiceDueAt.value || undefined,
+      projectId: newInvoiceProjectId.value || undefined,
+    })
+    newInvoiceLineItems.value = []
+    newInvoiceTaxRate.value = '0'
+    newInvoiceDiscount.value = '0'
+    newInvoiceDueAt.value = ''
+    newInvoiceProjectId.value = ''
+    isInvoiceFormOpen.value = false
+    toast('Invoice created')
+  }
+  catch (error: any) {
+    toast.error('Could not create invoice', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+}
+
+async function onDeleteInvoice(invoiceId: string) {
+  if (!props.client)
+    return
+  await removeInvoice(props.client.id, invoiceId)
+  toast('Invoice deleted')
+}
+
+const receiptDrafts = reactive<Record<string, { amount: string, method: ReceiptMethod, reference: string }>>({})
+
+function receiptDraft(invoiceId: string) {
+  if (!receiptDrafts[invoiceId])
+    receiptDrafts[invoiceId] = { amount: '', method: 'cash', reference: '' }
+  return receiptDrafts[invoiceId]
+}
+
+async function onRecordPayment(invoiceId: string) {
+  const draft = receiptDraft(invoiceId)
+  if (!draft.amount.trim())
+    return
+
+  try {
+    await addReceipt(invoiceId, {
+      amount: Number(draft.amount),
+      method: draft.method,
+      reference: draft.reference.trim() || undefined,
+    })
+    draft.amount = ''
+    draft.reference = ''
+    toast('Payment recorded')
+  }
+  catch (error: any) {
+    toast.error('Could not record payment', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+}
+
+async function onDeleteReceipt(invoiceId: string, receiptId: string) {
+  await removeReceipt(invoiceId, receiptId)
+  toast('Payment removed')
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function formatDateTime(value: string) {
@@ -552,6 +677,131 @@ function formatDateTime(value: string) {
                 <AmcContractCard v-for="contract in client.contracts" :key="contract.id" :contract="contract" />
               </div>
             </template>
+
+            <Separator />
+
+            <div class="flex flex-col gap-3">
+              <h4 class="text-sm font-medium flex items-center justify-between">
+                <span>Billing</span>
+                <Button size="sm" variant="outline" @click="isInvoiceFormOpen = !isInvoiceFormOpen">
+                  <Icon name="i-lucide-plus" class="mr-1.5 h-3.5 w-3.5" />
+                  New Invoice
+                </Button>
+              </h4>
+
+              <div v-if="client.balanceByCurrency.length" class="flex flex-wrap gap-2">
+                <Badge v-for="row in client.balanceByCurrency" :key="row.currency" variant="outline" class="bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30">
+                  Owes {{ row.balance.toLocaleString() }} {{ row.currency }}
+                </Badge>
+              </div>
+              <p v-else class="text-xs text-muted-foreground">
+                No outstanding balance.
+              </p>
+
+              <div v-if="isInvoiceFormOpen" class="flex flex-col gap-2 rounded-md border p-2">
+                <div v-for="(line, index) in newInvoiceLineItems" :key="index" class="flex items-center gap-2 rounded-md border p-1.5 text-xs">
+                  <span class="flex-1 truncate">{{ line.description }}</span>
+                  <span class="shrink-0 text-muted-foreground">{{ line.quantity }} × {{ line.unitPrice.toLocaleString() }}</span>
+                  <span class="shrink-0 font-medium tabular-nums">{{ (line.quantity * line.unitPrice).toLocaleString() }}</span>
+                  <Button size="icon-sm" variant="ghost" class="size-5 shrink-0" @click="onRemoveInvoiceLine(index)">
+                    <Icon name="i-lucide-x" class="size-3" />
+                  </Button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                  <Input v-model="newLineDescription" placeholder="Line description" class="h-8 text-xs" />
+                  <Input v-model="newLineQuantity" type="number" min="1" placeholder="Qty" class="h-8 text-xs" />
+                  <Input v-model="newLineUnitPrice" type="number" min="0" step="0.01" placeholder="Unit price" class="h-8 text-xs" />
+                </div>
+                <div class="flex justify-end">
+                  <Button size="sm" variant="outline" @click="onAddInvoiceLine">
+                    <Icon name="i-lucide-plus" class="mr-1 size-3.5" />
+                    Add Line
+                  </Button>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2">
+                  <Input v-model="newInvoiceCurrency" placeholder="Currency" class="h-8 text-xs" />
+                  <Input v-model="newInvoiceTaxRate" type="number" min="0" step="0.1" placeholder="Tax %" class="h-8 text-xs" />
+                  <Input v-model="newInvoiceDiscount" type="number" min="0" step="0.01" placeholder="Discount" class="h-8 text-xs" />
+                  <Input v-model="newInvoiceDueAt" type="date" class="h-8 text-xs" />
+                </div>
+                <Select v-model="newInvoiceProjectId">
+                  <SelectTrigger class="h-8 text-xs">
+                    <SelectValue placeholder="Link a project (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="project in client.projects" :key="project.id" :value="project.id">
+                      {{ project.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div class="flex items-center justify-between pt-1">
+                  <span class="text-xs text-muted-foreground">Total: {{ newInvoiceTotal.toLocaleString() }} {{ newInvoiceCurrency }}</span>
+                  <Button size="sm" :disabled="!newInvoiceLineItems.length" @click="onCreateInvoice">
+                    Create Invoice
+                  </Button>
+                </div>
+              </div>
+
+              <p v-if="!client.invoices.length" class="text-sm text-muted-foreground">
+                No invoices yet.
+              </p>
+              <div v-for="invoice in client.invoices" :key="invoice.id" class="flex flex-col gap-2 rounded-md border p-2 text-sm">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-medium truncate">{{ invoice.id }}</span>
+                  <Badge variant="outline" class="shrink-0" :class="invoiceStatusBadgeClass[invoice.status]">
+                    {{ invoice.status }}
+                  </Badge>
+                </div>
+                <div v-for="line in invoice.lineItems" :key="line.id" class="pl-2 text-xs text-muted-foreground">
+                  {{ line.description }} — {{ line.quantity }} × {{ line.unitPrice.toLocaleString() }} = {{ line.lineTotal.toLocaleString() }}
+                </div>
+                <p class="text-xs text-muted-foreground">
+                  Subtotal {{ invoice.subtotal.toLocaleString() }}
+                  <span v-if="invoice.taxRate"> · Tax {{ invoice.taxRate }}% ({{ invoice.taxAmount.toLocaleString() }})</span>
+                  <span v-if="invoice.discount"> · Discount {{ invoice.discount.toLocaleString() }}</span>
+                  · Total {{ invoice.total.toLocaleString() }} {{ invoice.currency }}
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  Paid {{ invoice.amountPaid.toLocaleString() }} · Balance {{ invoice.balance.toLocaleString() }}
+                  <span v-if="invoice.dueAt"> · Due {{ formatDate(invoice.dueAt) }}</span>
+                </p>
+
+                <div v-for="receipt in invoice.receipts" :key="receipt.id" class="flex items-center gap-2 pl-2 text-xs text-muted-foreground">
+                  <Icon name="i-lucide-receipt" class="size-3 shrink-0" />
+                  <span class="flex-1">{{ formatDate(receipt.receivedAt) }} · {{ receipt.amount.toLocaleString() }} {{ invoice.currency }} · {{ RECEIPT_METHODS.find(m => m.value === receipt.method)?.label ?? 'Other' }}</span>
+                  <Button size="icon-sm" variant="ghost" class="size-5 shrink-0" @click="onDeleteReceipt(invoice.id, receipt.id)">
+                    <Icon name="i-lucide-x" class="size-3" />
+                  </Button>
+                </div>
+
+                <div v-if="invoice.status !== 'paid'" class="flex items-center gap-1.5 pt-1">
+                  <Input v-model="receiptDraft(invoice.id).amount" type="number" min="0" step="0.01" placeholder="Amount" class="h-7 w-24 text-xs" />
+                  <Select v-model="receiptDraft(invoice.id).method">
+                    <SelectTrigger class="h-7 w-32 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem v-for="option in RECEIPT_METHODS" :key="option.value" :value="option.value">
+                        {{ option.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input v-model="receiptDraft(invoice.id).reference" placeholder="Reference (optional)" class="h-7 flex-1 text-xs" />
+                  <Button size="sm" variant="outline" class="h-7 shrink-0" @click="onRecordPayment(invoice.id)">
+                    Record Payment
+                  </Button>
+                </div>
+
+                <div class="flex justify-end">
+                  <Button size="sm" variant="ghost" class="h-6 text-destructive" @click="onDeleteInvoice(invoice.id)">
+                    Delete Invoice
+                  </Button>
+                </div>
+              </div>
+            </div>
 
             <Separator />
 

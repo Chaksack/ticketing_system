@@ -1,6 +1,7 @@
 import type { AmcContract } from './amc'
 import type { Assignee } from './assignee'
 import type { Interaction } from './interaction'
+import type { Invoice } from './invoice'
 import type { Project } from './project'
 
 export type ClientStage = 'lead' | 'contacted' | 'proposal' | 'negotiation' | 'active' | 'lost'
@@ -70,6 +71,8 @@ export interface Client {
   updatedAt: string
   activity: ClientActivity[]
   interactions: Interaction[]
+  invoices: Invoice[]
+  balanceByCurrency: { currency: string, balance: number }[]
   projects: Project[]
   /** Contracts predating Projects, not linked to any project (client-level "legacy" contracts). */
   contracts: AmcContract[]

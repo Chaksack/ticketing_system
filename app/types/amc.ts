@@ -1,3 +1,5 @@
+import type { LineItem } from './product'
+
 export interface AmcPlan {
   id: string
   name: string
@@ -28,5 +30,7 @@ export interface AmcContract {
   nextStep?: string
   nextStepAt?: string
   nextStepReminderSent: boolean
+  lineItems: LineItem[]
+  totalValue?: number
   createdAt: string
 }
