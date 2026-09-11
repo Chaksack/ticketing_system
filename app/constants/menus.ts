@@ -81,6 +81,17 @@ export const navMenu: NavMenu[] = [
     ],
   },
   {
+    heading: 'Finance',
+    items: [
+      {
+        title: 'Invoices',
+        icon: 'i-lucide-receipt',
+        link: '/invoices',
+        roles: ['bd', 'sm'],
+      },
+    ],
+  },
+  {
     heading: 'Support',
     items: [
       {

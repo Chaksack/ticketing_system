@@ -13,8 +13,8 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
   const db = useDatabase()
 
-  const invoice = await db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoiceId) as InvoiceRow | undefined
-  if (!invoice) {
+  const invoiceRow = await db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoiceId) as InvoiceRow | undefined
+  if (!invoiceRow) {
     throw createError({ statusCode: 404, statusMessage: 'Invoice not found' })
   }
 
@@ -29,11 +29,11 @@ export default defineEventHandler(async (event) => {
       type: 'payment_removed',
       actorId: user.id,
       actorName: user.name,
-      fromValue: `${Number(receipt.amount).toLocaleString()} ${invoice.currency}`,
-      message: `Payment of ${Number(receipt.amount).toLocaleString()} ${invoice.currency} removed`,
+      fromValue: `${Number(receipt.amount).toLocaleString()} ${invoiceRow.currency}`,
+      message: `Payment of ${Number(receipt.amount).toLocaleString()} ${invoiceRow.currency} removed`,
     })
   }
 
-  const client = await loadFullClient(invoice.client_id)
-  return { client }
+  const [client, invoice] = await Promise.all([loadFullClient(invoiceRow.client_id), loadFullInvoice(invoiceId)])
+  return { client, invoice }
 })

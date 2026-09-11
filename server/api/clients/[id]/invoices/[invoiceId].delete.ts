@@ -22,5 +22,5 @@ export default defineEventHandler(async (event) => {
   await db.prepare('DELETE FROM invoices WHERE id = ?').run(invoiceId)
 
   const client = await loadFullClient(clientId)
-  return { client }
+  return { client, invoiceId }
 })

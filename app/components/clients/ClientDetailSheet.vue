@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { AcceptableValue } from 'reka-ui'
 import type { Client, ClientActivity, ClientStage } from '~/types/client'
-import type { InvoiceStatus, ReceiptMethod } from '~/types/invoice'
 import type { Project, ProjectStatus } from '~/types/project'
 import { toast } from 'vue-sonner'
+import InvoiceCard from '~/components/invoices/InvoiceCard.vue'
 import AmcContractCard from '~/components/projects/AmcContractCard.vue'
 import { projectStatuses } from '~/components/projects/data'
 import { stages } from './data'
@@ -18,7 +18,7 @@ const router = useRouter()
 const { updateClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone, addContact, removeContact, uploadDocument, removeDocument } = useClients()
 const { staff, fetchStaff } = useStaff()
 const { projectsForClient, fetchProjects, addProject } = useProjects()
-const { addInvoice, removeInvoice, addReceipt, removeReceipt } = useInvoices()
+const { addInvoice } = useInvoices()
 
 onMounted(() => {
   if (!staff.value.length)
@@ -246,21 +246,6 @@ function activityLabel(activity: ClientActivity) {
   }
 }
 
-const invoiceStatusBadgeClass: Record<InvoiceStatus, string> = {
-  unpaid: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
-  partial: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
-  paid: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30',
-}
-
-const RECEIPT_METHODS: { value: ReceiptMethod, label: string }[] = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'cheque', label: 'Cheque' },
-  { value: 'mobile_money', label: 'Mobile Money' },
-  { value: 'card', label: 'Card' },
-  { value: 'other', label: 'Other' },
-]
-
 const isInvoiceFormOpen = ref(false)
 const newInvoiceLineItems = ref<{ description: string, quantity: number, unitPrice: number }[]>([])
 const newLineDescription = ref('')
@@ -321,52 +306,6 @@ async function onCreateInvoice() {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
-}
-
-async function onDeleteInvoice(invoiceId: string) {
-  if (!props.client)
-    return
-  await removeInvoice(props.client.id, invoiceId)
-  toast('Invoice deleted')
-}
-
-const receiptDrafts = reactive<Record<string, { amount: string, method: ReceiptMethod, reference: string }>>({})
-
-function receiptDraft(invoiceId: string) {
-  if (!receiptDrafts[invoiceId])
-    receiptDrafts[invoiceId] = { amount: '', method: 'cash', reference: '' }
-  return receiptDrafts[invoiceId]
-}
-
-async function onRecordPayment(invoiceId: string) {
-  const draft = receiptDraft(invoiceId)
-  if (!draft.amount.trim())
-    return
-
-  try {
-    await addReceipt(invoiceId, {
-      amount: Number(draft.amount),
-      method: draft.method,
-      reference: draft.reference.trim() || undefined,
-    })
-    draft.amount = ''
-    draft.reference = ''
-    toast('Payment recorded')
-  }
-  catch (error: any) {
-    toast.error('Could not record payment', {
-      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
-    })
-  }
-}
-
-async function onDeleteReceipt(invoiceId: string, receiptId: string) {
-  await removeReceipt(invoiceId, receiptId)
-  toast('Payment removed')
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function formatDateTime(value: string) {
@@ -748,59 +687,7 @@ function formatDateTime(value: string) {
               <p v-if="!client.invoices.length" class="text-sm text-muted-foreground">
                 No invoices yet.
               </p>
-              <div v-for="invoice in client.invoices" :key="invoice.id" class="flex flex-col gap-2 rounded-md border p-2 text-sm">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="font-medium truncate">{{ invoice.id }}</span>
-                  <Badge variant="outline" class="shrink-0" :class="invoiceStatusBadgeClass[invoice.status]">
-                    {{ invoice.status }}
-                  </Badge>
-                </div>
-                <div v-for="line in invoice.lineItems" :key="line.id" class="pl-2 text-xs text-muted-foreground">
-                  {{ line.description }} — {{ line.quantity }} × {{ line.unitPrice.toLocaleString() }} = {{ line.lineTotal.toLocaleString() }}
-                </div>
-                <p class="text-xs text-muted-foreground">
-                  Subtotal {{ invoice.subtotal.toLocaleString() }}
-                  <span v-if="invoice.taxRate"> · Tax {{ invoice.taxRate }}% ({{ invoice.taxAmount.toLocaleString() }})</span>
-                  <span v-if="invoice.discount"> · Discount {{ invoice.discount.toLocaleString() }}</span>
-                  · Total {{ invoice.total.toLocaleString() }} {{ invoice.currency }}
-                </p>
-                <p class="text-xs text-muted-foreground">
-                  Paid {{ invoice.amountPaid.toLocaleString() }} · Balance {{ invoice.balance.toLocaleString() }}
-                  <span v-if="invoice.dueAt"> · Due {{ formatDate(invoice.dueAt) }}</span>
-                </p>
-
-                <div v-for="receipt in invoice.receipts" :key="receipt.id" class="flex items-center gap-2 pl-2 text-xs text-muted-foreground">
-                  <Icon name="i-lucide-receipt" class="size-3 shrink-0" />
-                  <span class="flex-1">{{ formatDate(receipt.receivedAt) }} · {{ receipt.amount.toLocaleString() }} {{ invoice.currency }} · {{ RECEIPT_METHODS.find(m => m.value === receipt.method)?.label ?? 'Other' }}</span>
-                  <Button size="icon-sm" variant="ghost" class="size-5 shrink-0" @click="onDeleteReceipt(invoice.id, receipt.id)">
-                    <Icon name="i-lucide-x" class="size-3" />
-                  </Button>
-                </div>
-
-                <div v-if="invoice.status !== 'paid'" class="flex items-center gap-1.5 pt-1">
-                  <Input v-model="receiptDraft(invoice.id).amount" type="number" min="0" step="0.01" placeholder="Amount" class="h-7 w-24 text-xs" />
-                  <Select v-model="receiptDraft(invoice.id).method">
-                    <SelectTrigger class="h-7 w-32 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem v-for="option in RECEIPT_METHODS" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input v-model="receiptDraft(invoice.id).reference" placeholder="Reference (optional)" class="h-7 flex-1 text-xs" />
-                  <Button size="sm" variant="outline" class="h-7 shrink-0" @click="onRecordPayment(invoice.id)">
-                    Record Payment
-                  </Button>
-                </div>
-
-                <div class="flex justify-end">
-                  <Button size="sm" variant="ghost" class="h-6 text-destructive" @click="onDeleteInvoice(invoice.id)">
-                    Delete Invoice
-                  </Button>
-                </div>
-              </div>
+              <InvoiceCard v-for="invoice in client.invoices" :key="invoice.id" :invoice="invoice" :client-id="client.id" />
             </div>
 
             <Separator />

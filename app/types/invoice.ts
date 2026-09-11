@@ -38,6 +38,7 @@ export interface Receipt {
 export interface Invoice {
   id: string
   clientId: string
+  clientName?: string
   projectId?: string
   status: InvoiceStatus
   issuedAt?: string

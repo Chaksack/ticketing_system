@@ -76,6 +76,7 @@ export function mapReceiptRow(row: ReceiptRow): Receipt {
 export interface InvoiceRow {
   id: string
   client_id: string
+  client_name?: string | null
   project_id: string | null
   status: string
   issue_date: string | null
@@ -99,6 +100,7 @@ export function mapInvoiceRow(row: InvoiceRow, lineItems: InvoiceLineItem[] = []
   return {
     id: row.id,
     clientId: row.client_id,
+    clientName: row.client_name ?? undefined,
     projectId: row.project_id ?? undefined,
     status: row.status as Invoice['status'],
     issuedAt: row.issue_date ?? undefined,
@@ -163,9 +165,10 @@ export async function loadFullInvoice(id: string): Promise<Invoice> {
   const db = useDatabase()
 
   const row = await db.prepare(`
-    SELECT invoices.*, staff.name AS created_by_name
+    SELECT invoices.*, staff.name AS created_by_name, clients.name AS client_name
     FROM invoices
     LEFT JOIN staff ON staff.id = invoices.created_by
+    LEFT JOIN clients ON clients.id = invoices.client_id
     WHERE invoices.id = ?
   `).get(id) as InvoiceRow | undefined
 
@@ -209,6 +212,24 @@ export async function getInvoicesForClient(clientId: string): Promise<Invoice[]>
     invoices.push(await loadFullInvoice(row.id))
 
   return invoices
+}
+
+/**
+ * Lightweight list across every client — no nested line items/receipts/activity, matching the
+ * list-vs-detail convention used by leads/tenders (fetchLeads() is light, fetchLead(id) is full).
+ */
+export async function getAllInvoices(): Promise<Invoice[]> {
+  const db = useDatabase()
+
+  const rows = await db.prepare(`
+    SELECT invoices.*, staff.name AS created_by_name, clients.name AS client_name
+    FROM invoices
+    LEFT JOIN staff ON staff.id = invoices.created_by
+    LEFT JOIN clients ON clients.id = invoices.client_id
+    ORDER BY invoices.created_at DESC
+  `).all() as InvoiceRow[]
+
+  return rows.map(row => mapInvoiceRow(row))
 }
 
 export function computeBalanceByCurrency(invoices: Invoice[]): { currency: string, balance: number }[] {

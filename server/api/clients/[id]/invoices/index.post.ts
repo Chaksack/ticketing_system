@@ -75,8 +75,8 @@ export default defineEventHandler(async (event) => {
     message: `Invoice created for ${total.toLocaleString()} ${body.currency?.trim() || 'GHS'}`,
   })
 
-  const updatedClient = await loadFullClient(clientId)
+  const [updatedClient, invoice] = await Promise.all([loadFullClient(clientId), loadFullInvoice(id)])
 
   setResponseStatus(event, 201)
-  return { client: updatedClient }
+  return { client: updatedClient, invoice }
 })
