@@ -1,4 +1,4 @@
-import type { TicketPriority } from '../../../app/types/ticket'
+import type { TicketAttachment, TicketPriority } from '../../../app/types/ticket'
 
 interface NewTicketBody {
   subject?: string
@@ -8,13 +8,26 @@ interface NewTicketBody {
   category?: string
   priority?: TicketPriority
   referenceNumber?: string
-  attachments?: string[]
+  attachments?: TicketAttachment[]
   assigneeId?: string
 }
 
 const TICKETS_PER_IP_PER_HOUR = 5
 const TICKETS_PER_EMAIL_PER_HOUR = 5
 const HOUR_MS = 60 * 60 * 1000
+
+// This endpoint is public and unauthenticated, so attachment URLs can't be trusted at face
+// value — only accept ones that actually point at a blob our own upload endpoint produced,
+// otherwise a crafted request could get an arbitrary external link displayed as a "trusted"
+// ticket attachment to staff.
+function isTrustedAttachmentUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname.endsWith('.public.blob.vercel-storage.com')
+  }
+  catch {
+    return false
+  }
+}
 
 export default defineEventHandler(async (event) => {
   // This handler only ever receives POST requests (Nitro dispatches OPTIONS to
@@ -43,7 +56,8 @@ export default defineEventHandler(async (event) => {
 
   const id = await nextTicketId()
   const now = new Date().toISOString()
-  const attachments = body.attachments?.length ? JSON.stringify(body.attachments) : null
+  const validAttachments = (body.attachments ?? []).filter(a => a?.name && (!a.url || isTrustedAttachmentUrl(a.url)))
+  const attachments = validAttachments.length ? JSON.stringify(validAttachments) : null
   const { dueAt, firstResponseDueAt } = await computeSlaDeadlines(body.priority, now)
 
   await db.prepare(`

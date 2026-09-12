@@ -44,6 +44,14 @@ export interface TicketTag {
   color: string
 }
 
+export interface TicketAttachment {
+  name: string
+  /** Absent for attachments recorded before file upload existed — filename only, nothing to link to. */
+  url?: string
+  type?: string
+  size?: number
+}
+
 export interface Ticket {
   id: string
   subject: string
@@ -54,7 +62,7 @@ export interface Ticket {
   status: TicketStatus
   priority: TicketPriority
   referenceNumber?: string
-  attachments?: string[]
+  attachments?: TicketAttachment[]
   createdAt: string
   updatedAt: string
   replies: TicketReply[]

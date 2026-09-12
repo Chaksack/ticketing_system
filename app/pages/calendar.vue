@@ -81,7 +81,11 @@ const startField = useDateTimeField()
 const endField = useDateTimeField()
 
 const isDetailOpen = ref(false)
-const selectedEvent = ref<CalendarEvent | null>(null)
+const selectedEventId = ref<string | null>(null)
+// Looked up live from `events` (rather than snapshotting the object at open-time) so the sheet
+// reflects any edit made elsewhere without needing to reopen it — matches every other detail
+// sheet in the app (tickets, leads, clients, tenders, projects, invoices, admin).
+const selectedEvent = computed(() => events.value.find(e => e.id === selectedEventId.value) ?? null)
 
 const isDayViewOpen = ref(false)
 const selectedDay = ref<Date | null>(null)
@@ -182,7 +186,7 @@ async function onSubmitForm() {
 }
 
 function openDetail(event: CalendarEvent) {
-  selectedEvent.value = event
+  selectedEventId.value = event.id
   isDetailOpen.value = true
 }
 

@@ -11,7 +11,7 @@ import type { Sprint } from '../../app/types/sprint'
 import type { StaffMember, StaffRole } from '../../app/types/staff'
 import type { Task } from '../../app/types/task'
 import type { Tender, TenderActivity, TenderDocument } from '../../app/types/tender'
-import type { Ticket, TicketActivity, TicketReply, TicketTag } from '../../app/types/ticket'
+import type { Ticket, TicketActivity, TicketAttachment, TicketReply, TicketTag } from '../../app/types/ticket'
 
 export interface StaffRow {
   id: string
@@ -89,7 +89,11 @@ export function mapTicketRow(
     status: row.status as Ticket['status'],
     priority: row.priority as Ticket['priority'],
     referenceNumber: row.reference_number ?? undefined,
-    attachments: row.attachments ? JSON.parse(row.attachments) : [],
+    // Tickets created before real file upload existed stored attachments as bare filename
+    // strings; normalize those to { name } so the type is consistent either way.
+    attachments: row.attachments
+      ? (JSON.parse(row.attachments) as (string | TicketAttachment)[]).map(entry => typeof entry === 'string' ? { name: entry } : entry)
+      : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? row.created_at,
     replies,

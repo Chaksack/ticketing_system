@@ -349,10 +349,15 @@ function formatDate(value: string) {
                 Attachments
               </h4>
               <div class="flex flex-wrap gap-2">
-                <Badge v-for="file in ticket.attachments" :key="file" variant="outline" class="gap-1">
-                  <Icon name="i-lucide-paperclip" class="h-3 w-3" />
-                  {{ file }}
-                </Badge>
+                <a
+                  v-for="file in ticket.attachments" :key="file.name" :href="file.url" target="_blank" rel="noopener noreferrer"
+                  :class="!file.url && 'pointer-events-none'"
+                >
+                  <Badge variant="outline" class="gap-1" :class="file.url && 'hover:bg-accent'">
+                    <Icon name="i-lucide-paperclip" class="h-3 w-3" />
+                    {{ file.name }}
+                  </Badge>
+                </a>
               </div>
             </div>
 

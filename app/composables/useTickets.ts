@@ -1,4 +1,4 @@
-import type { Ticket, TicketPriority, TicketStatus } from '~/types/ticket'
+import type { Ticket, TicketAttachment, TicketPriority, TicketStatus } from '~/types/ticket'
 
 export interface NewTicket {
   subject: string
@@ -8,7 +8,7 @@ export interface NewTicket {
   category: string
   priority: TicketPriority
   referenceNumber?: string
-  attachments?: string[]
+  attachments?: TicketAttachment[]
   assigneeId?: string
 }
 
@@ -40,7 +40,11 @@ export function useTickets() {
   }
 
   async function fetchTicket(id: string) {
-    const { ticket } = await $fetch(`/api/tickets/${id}`)
+    // Explicit generic: /api/tickets/attachments sits at the same path depth as the
+    // dynamic /api/tickets/[id] route, which makes Nitro's typed-fetch inference for this
+    // template-literal call ambiguous (a type-level analog of a routing collision, not a
+    // runtime one — the server itself resolves the literal path correctly either way).
+    const { ticket } = await $fetch<{ ticket: Ticket }>(`/api/tickets/${id}`)
     replaceTicket(ticket)
     return ticket
   }
@@ -58,13 +62,13 @@ export function useTickets() {
   }
 
   async function updateStatus(ticketId: string, status: TicketStatus) {
-    const { ticket } = await $fetch(`/api/tickets/${ticketId}`, { method: 'PATCH', body: { status } })
+    const { ticket } = await $fetch<{ ticket: Ticket }>(`/api/tickets/${ticketId}`, { method: 'PATCH', body: { status } })
     replaceTicket(ticket)
     return ticket
   }
 
   async function updateTicket(ticketId: string, patch: TicketPatch) {
-    const { ticket } = await $fetch(`/api/tickets/${ticketId}`, { method: 'PATCH', body: patch })
+    const { ticket } = await $fetch<{ ticket: Ticket }>(`/api/tickets/${ticketId}`, { method: 'PATCH', body: patch })
     replaceTicket(ticket)
     return ticket
   }

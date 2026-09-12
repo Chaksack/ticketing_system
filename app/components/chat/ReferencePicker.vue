@@ -31,6 +31,7 @@ const runSearch = useDebounceFn(async (q: string) => {
       leads: { id: string, name: string }[]
       clients: { id: string, name: string }[]
       tasks: { id: string, title: string }[]
+      projects: { id: string, name: string, clientName: string | null }[]
     }>('/api/search', { query: { q } })
 
     results.value = [
@@ -38,6 +39,7 @@ const runSearch = useDebounceFn(async (q: string) => {
       ...data.leads.map(l => ({ id: l.id, label: l.name, group: 'Leads' })),
       ...data.clients.map(c => ({ id: c.id, label: c.name, group: 'Clients' })),
       ...data.tasks.map(t => ({ id: t.id, label: t.title, group: 'Tasks' })),
+      ...data.projects.map(p => ({ id: p.id, label: p.clientName ? `${p.name} · ${p.clientName}` : p.name, group: 'Projects' })),
     ]
   }
   finally {
@@ -64,12 +66,12 @@ function onSelect(option: ReferenceOption) {
     </PopoverTrigger>
     <PopoverContent class="w-[320px] p-0" align="start">
       <Command :filter-function="(list: ReferenceOption[]) => list">
-        <CommandInput v-model="query" placeholder="Search tasks, leads, tickets, clients…" />
+        <CommandInput v-model="query" placeholder="Search tasks, leads, tickets, clients, projects…" />
         <CommandList>
           <CommandEmpty>
             {{ query.trim().length < 2 ? 'Type at least 2 characters…' : 'No matches found.' }}
           </CommandEmpty>
-          <template v-for="group in ['Tickets', 'Leads', 'Clients', 'Tasks']" :key="group">
+          <template v-for="group in ['Tickets', 'Leads', 'Clients', 'Tasks', 'Projects']" :key="group">
             <CommandGroup v-if="results.some(r => r.group === group)" :heading="group">
               <CommandItem
                 v-for="option in results.filter(r => r.group === group)"

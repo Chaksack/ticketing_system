@@ -38,6 +38,18 @@ export function useInvoices() {
       invoices.value[index] = invoice
   }
 
+  // Mirrors server/utils/invoices.ts's computeBalanceByCurrency, so the header summary on
+  // /invoices stays correct immediately after a mutation instead of only refreshing on reload.
+  function recomputeBalanceByCurrency() {
+    const totals = new Map<string, number>()
+    for (const invoice of invoices.value) {
+      if (invoice.balance <= 0)
+        continue
+      totals.set(invoice.currency, (totals.get(invoice.currency) ?? 0) + invoice.balance)
+    }
+    balanceByCurrency.value = [...totals.entries()].map(([currency, balance]) => ({ currency, balance }))
+  }
+
   async function fetchInvoices() {
     const { invoices: rows, balanceByCurrency: balances } = await $fetch<{ invoices: Invoice[], balanceByCurrency: { currency: string, balance: number }[] }>('/api/invoices')
     invoices.value = rows
@@ -54,6 +66,7 @@ export function useInvoices() {
     const { client, invoice } = await $fetch<{ client: Client, invoice: Invoice }>(`/api/clients/${clientId}/invoices`, { method: 'POST', body: payload })
     replaceClient(client)
     replaceInvoice(invoice)
+    recomputeBalanceByCurrency()
     return client
   }
 
@@ -61,6 +74,7 @@ export function useInvoices() {
     const { client } = await $fetch<{ client: Client, invoiceId: string }>(`/api/clients/${clientId}/invoices/${invoiceId}`, { method: 'DELETE' })
     replaceClient(client)
     invoices.value = invoices.value.filter(i => i.id !== invoiceId)
+    recomputeBalanceByCurrency()
     return client
   }
 
@@ -68,6 +82,7 @@ export function useInvoices() {
     const { client, invoice } = await $fetch<{ client: Client, invoice: Invoice }>(`/api/invoices/${invoiceId}/receipts`, { method: 'POST', body: payload })
     replaceClient(client)
     replaceInvoice(invoice)
+    recomputeBalanceByCurrency()
     return client
   }
 
@@ -75,6 +90,7 @@ export function useInvoices() {
     const { client, invoice } = await $fetch<{ client: Client, invoice: Invoice }>(`/api/invoices/${invoiceId}/receipts/${receiptId}`, { method: 'DELETE' })
     replaceClient(client)
     replaceInvoice(invoice)
+    recomputeBalanceByCurrency()
     return client
   }
 
