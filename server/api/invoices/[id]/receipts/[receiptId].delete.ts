@@ -1,7 +1,7 @@
 import type { InvoiceRow } from '../../../../utils/invoices'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireBd(event)
+  const user = await requireBilling(event)
 
   const invoiceId = getRouterParam(event, 'id')
   const receiptId = getRouterParam(event, 'receiptId')
@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
   const receipt = await db.prepare('SELECT amount FROM receipts WHERE id = ? AND invoice_id = ?').get(receiptId, invoiceId) as { amount: number | string } | undefined
 
   await db.prepare('DELETE FROM receipts WHERE id = ? AND invoice_id = ?').run(receiptId, invoiceId)
+  await deleteJournalEntryBySource('receipt', receiptId)
   await recalculateInvoiceTotals(invoiceId)
 
   if (receipt) {

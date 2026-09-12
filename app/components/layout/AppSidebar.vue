@@ -15,6 +15,7 @@ const ROLE_LABELS: Record<StaffRole, string> = {
   agent: 'Agent',
   bd: 'BD Executive',
   sm: 'Sales & Marketing Exec',
+  finance: 'Finance Executive',
   engineer: 'Engineer',
   engineering_coordinator: 'Engineering Coordinator',
   engineering_lead: 'Engineering Lead',

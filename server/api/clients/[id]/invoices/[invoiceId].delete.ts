@@ -1,5 +1,5 @@
 export default defineEventHandler(async (event) => {
-  await requireBd(event)
+  await requireBilling(event)
 
   const clientId = getRouterParam(event, 'id')
   const invoiceId = getRouterParam(event, 'invoiceId')

@@ -9,6 +9,7 @@ const ROLE_LABELS: Record<string, string> = {
   agent: 'Agent',
   bd: 'BD Executive',
   sm: 'Sales & Marketing Exec',
+  finance: 'Finance Executive',
 }
 
 const { currentUser } = useAuth()

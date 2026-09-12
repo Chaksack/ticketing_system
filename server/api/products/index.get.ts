@@ -1,7 +1,7 @@
 import type { ProductRow } from '../../utils/products'
 
 export default defineEventHandler(async (event) => {
-  await requireBd(event)
+  await requireBilling(event)
   await ensureDb()
 
   const db = useDatabase()

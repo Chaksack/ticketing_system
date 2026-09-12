@@ -5,6 +5,7 @@ export interface CalendarEventPayload {
   title: string
   description?: string
   location?: string
+  activityType?: string | null
   startAt: string
   endAt: string
   attendeeIds?: string[]

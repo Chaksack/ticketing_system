@@ -15,7 +15,7 @@ interface NewInvoiceBody {
 }
 
 export default defineEventHandler(async (event) => {
-  const user = await requireBd(event)
+  const user = await requireBilling(event)
 
   const clientId = getRouterParam(event, 'id')
   const body = await readBody<NewInvoiceBody>(event)

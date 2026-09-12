@@ -5,6 +5,7 @@ interface UpdateEventBody {
   title?: string
   description?: string | null
   location?: string | null
+  activityType?: string | null
   startAt?: string
   endAt?: string
   attendeeIds?: string[]
@@ -33,6 +34,7 @@ export default defineEventHandler(async (event) => {
   const title = body.title?.trim() || existing.title
   const description = body.description !== undefined ? body.description : existing.description
   const location = body.location !== undefined ? body.location : existing.location
+  const activityType = body.activityType !== undefined ? (body.activityType?.trim() || null) : existing.activity_type
   const startAt = body.startAt ?? existing.start_at
   const endAt = body.endAt ?? existing.end_at
 
@@ -46,9 +48,9 @@ export default defineEventHandler(async (event) => {
 
   await db.prepare(`
     UPDATE calendar_events
-    SET title = ?, description = ?, location = ?, start_at = ?, end_at = ?, regarding_type = ?, regarding_id = ?, reminder_sent = ?, updated_at = ?
+    SET title = ?, description = ?, location = ?, activity_type = ?, start_at = ?, end_at = ?, regarding_type = ?, regarding_id = ?, reminder_sent = ?, updated_at = ?
     WHERE id = ?
-  `).run(title, description, location, startAt, endAt, regardingType, regardingId, reminderSent, new Date().toISOString(), id)
+  `).run(title, description, location, activityType, startAt, endAt, regardingType, regardingId, reminderSent, new Date().toISOString(), id)
 
   if (body.attendeeIds)
     await setEventAttendees(id, body.attendeeIds)

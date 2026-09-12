@@ -1,4 +1,4 @@
-import type { ChannelType, ChatChannel, ChatMessage } from '../../app/types/chat'
+import type { ChannelType, ChatChannel, ChatMessage, MessageReaction } from '../../app/types/chat'
 import type { AssigneeRef } from './assignees'
 
 export interface ChatChannelRow {
@@ -23,7 +23,7 @@ export interface ChatMessageRow {
   attachment_size?: number | null
 }
 
-export function mapChatMessageRow(row: ChatMessageRow): ChatMessage {
+export function mapChatMessageRow(row: ChatMessageRow, reactions: MessageReaction[] = []): ChatMessage {
   return {
     id: row.id,
     channelId: row.channel_id,
@@ -36,7 +36,69 @@ export function mapChatMessageRow(row: ChatMessageRow): ChatMessage {
     attachmentName: row.attachment_name ?? undefined,
     attachmentType: row.attachment_type ?? undefined,
     attachmentSize: row.attachment_size ?? undefined,
+    reactions,
   }
+}
+
+export interface ChatReactionRow {
+  message_id: string
+  emoji: string
+  staff_id: string
+  staff_name: string
+}
+
+/** Aggregates raw reaction rows into one MessageReaction[] per message id, in one bulk query. */
+export async function getReactionsForMessages(messageIds: string[], currentStaffId: string): Promise<Map<string, MessageReaction[]>> {
+  const result = new Map<string, MessageReaction[]>()
+  if (!messageIds.length)
+    return result
+
+  const db = useDatabase()
+  const rows = await db.prepare(`
+    SELECT chat_message_reactions.message_id AS message_id, chat_message_reactions.emoji AS emoji,
+      chat_message_reactions.staff_id AS staff_id, staff.name AS staff_name
+    FROM chat_message_reactions
+    JOIN staff ON staff.id = chat_message_reactions.staff_id
+    WHERE chat_message_reactions.message_id = ANY(?)
+    ORDER BY chat_message_reactions.created_at ASC
+  `).all(messageIds as unknown as string) as ChatReactionRow[]
+
+  const byMessageAndEmoji = new Map<string, Map<string, ChatReactionRow[]>>()
+  for (const row of rows) {
+    const byEmoji = byMessageAndEmoji.get(row.message_id) ?? new Map<string, ChatReactionRow[]>()
+    const group = byEmoji.get(row.emoji) ?? []
+    group.push(row)
+    byEmoji.set(row.emoji, group)
+    byMessageAndEmoji.set(row.message_id, byEmoji)
+  }
+
+  for (const [messageId, byEmoji] of byMessageAndEmoji) {
+    const reactions: MessageReaction[] = [...byEmoji.entries()].map(([emoji, group]) => ({
+      emoji,
+      count: group.length,
+      reactedByMe: group.some(row => row.staff_id === currentStaffId),
+      staffNames: group.map(row => row.staff_name),
+    }))
+    result.set(messageId, reactions)
+  }
+
+  return result
+}
+
+/** Toggles a staff member's reaction on a message: adds it if absent, removes it if already reacted. */
+export async function toggleMessageReaction(messageId: string, staffId: string, emoji: string) {
+  const db = useDatabase()
+
+  const existing = await db.prepare('SELECT id FROM chat_message_reactions WHERE message_id = ? AND staff_id = ? AND emoji = ?').get(messageId, staffId, emoji) as { id: string } | undefined
+
+  if (existing) {
+    await db.prepare('DELETE FROM chat_message_reactions WHERE id = ?').run(existing.id)
+    return
+  }
+
+  const id = await nextChatReactionId()
+  await db.prepare('INSERT INTO chat_message_reactions (id, message_id, staff_id, emoji, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(id, messageId, staffId, emoji, new Date().toISOString())
 }
 
 export async function getChannelMembers(channelId: string): Promise<AssigneeRef[]> {

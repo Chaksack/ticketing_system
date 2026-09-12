@@ -3,6 +3,8 @@ import type { CalendarEvent } from '~/types/calendar-event'
 import type { RegardingType } from '~/types/interaction'
 import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
 import { toast } from 'vue-sonner'
+import { ACTIVITY_TYPE_SUGGESTIONS, activityTypeBadgeClass, activityTypeDotClass } from '~/lib/activityType'
+import { downloadCalendarReportPdf } from '~/lib/calendarReportPdf'
 
 const { currentUser } = useAuth()
 const { staff, fetchStaff } = useStaff()
@@ -81,12 +83,16 @@ const endField = useDateTimeField()
 const isDetailOpen = ref(false)
 const selectedEvent = ref<CalendarEvent | null>(null)
 
+const isDayViewOpen = ref(false)
+const selectedDay = ref<Date | null>(null)
+
 const isFormOpen = ref(false)
 const isEditing = ref(false)
 const editingId = ref<string | null>(null)
 const formTitle = ref('')
 const formDescription = ref('')
 const formLocation = ref('')
+const formActivityType = ref('')
 const formAttendeeIds = ref<string[]>([])
 const formRegardingType = ref<RegardingType | undefined>(undefined)
 const formRegardingId = ref<string | undefined>(undefined)
@@ -97,6 +103,7 @@ function openCreateForm(date?: Date) {
   formTitle.value = ''
   formDescription.value = ''
   formLocation.value = ''
+  formActivityType.value = ''
   formAttendeeIds.value = currentUser.value ? [currentUser.value.id] : []
   formRegardingType.value = undefined
   formRegardingId.value = undefined
@@ -118,6 +125,7 @@ function openEditForm(event: CalendarEvent) {
   formTitle.value = event.title
   formDescription.value = event.description ?? ''
   formLocation.value = event.location ?? ''
+  formActivityType.value = event.activityType ?? ''
   formAttendeeIds.value = event.attendees.map(a => a.id)
   formRegardingType.value = event.regardingType
   formRegardingId.value = event.regardingId
@@ -125,6 +133,7 @@ function openEditForm(event: CalendarEvent) {
   endField.setFromIso(event.endAt)
   isFormOpen.value = true
   isDetailOpen.value = false
+  isDayViewOpen.value = false
 }
 
 async function onSubmitForm() {
@@ -140,31 +149,33 @@ async function onSubmitForm() {
         title: formTitle.value.trim(),
         description: formDescription.value || undefined,
         location: formLocation.value || undefined,
+        activityType: formActivityType.value.trim() || null,
         startAt,
         endAt,
         attendeeIds: formAttendeeIds.value,
         regardingType: formRegardingType.value ?? null,
         regardingId: formRegardingId.value ?? null,
       })
-      toast('Meeting updated')
+      toast('Activity updated')
     }
     else {
       await addEvent({
         title: formTitle.value.trim(),
         description: formDescription.value || undefined,
         location: formLocation.value || undefined,
+        activityType: formActivityType.value.trim() || null,
         startAt,
         endAt,
         attendeeIds: formAttendeeIds.value,
         regardingType: formRegardingType.value ?? null,
         regardingId: formRegardingId.value ?? null,
       })
-      toast('Meeting scheduled')
+      toast('Activity scheduled')
     }
     isFormOpen.value = false
   }
   catch (error: any) {
-    toast.error('Could not save meeting', {
+    toast.error('Could not save activity', {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
@@ -181,7 +192,7 @@ async function onDeleteEvent() {
 
   await removeEvent(selectedEvent.value.id)
   isDetailOpen.value = false
-  toast('Meeting deleted')
+  toast('Activity deleted')
 }
 
 function formatTime(value: string) {
@@ -190,6 +201,50 @@ function formatTime(value: string) {
 
 function formatRange(event: CalendarEvent) {
   return `${df.format(new Date(event.startAt))} · ${formatTime(event.startAt)} – ${formatTime(event.endAt)}`
+}
+
+const selectedDayEvents = computed(() => {
+  if (!selectedDay.value)
+    return []
+  return [...(eventsByDay.value.get(dayKey(selectedDay.value)) ?? [])]
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+})
+
+function openDayView(date: Date) {
+  selectedDay.value = date
+  isDayViewOpen.value = true
+}
+
+function onDayViewAdd() {
+  isDayViewOpen.value = false
+  openCreateForm(selectedDay.value ?? undefined)
+}
+
+function onDayViewSelect(event: CalendarEvent) {
+  isDayViewOpen.value = false
+  openDetail(event)
+}
+
+async function onDayViewExport() {
+  if (!selectedDay.value)
+    return
+  const from = new Date(selectedDay.value)
+  from.setHours(0, 0, 0, 0)
+  const to = new Date(selectedDay.value)
+  to.setHours(23, 59, 59, 999)
+  await downloadCalendarReportPdf(selectedDayEvents.value, { from: from.toISOString(), to: to.toISOString() })
+}
+
+async function onExportMonth() {
+  const from = new Date(viewMonth.value.getFullYear(), viewMonth.value.getMonth(), 1)
+  const to = new Date(viewMonth.value.getFullYear(), viewMonth.value.getMonth() + 1, 0, 23, 59, 59)
+  const monthEvents = events.value
+    .filter((event) => {
+      const start = new Date(event.startAt)
+      return start >= from && start <= to
+    })
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+  await downloadCalendarReportPdf(monthEvents, { from: from.toISOString(), to: to.toISOString() })
 }
 
 const today = new Date()
@@ -209,13 +264,19 @@ function isCurrentMonth(date: Date) {
           Calendar
         </h2>
         <p class="text-muted-foreground">
-          Team meetings and events.
+          Meetings, site visits, client visits, and other scheduled activities.
         </p>
       </div>
-      <Button @click="openCreateForm()">
-        <Icon name="i-lucide-plus" class="mr-2 h-4 w-4" />
-        New Meeting
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" @click="onExportMonth">
+          <Icon name="i-lucide-download" class="mr-2 h-4 w-4" />
+          Export Month
+        </Button>
+        <Button @click="openCreateForm()">
+          <Icon name="i-lucide-plus" class="mr-2 h-4 w-4" />
+          New Activity
+        </Button>
+      </div>
     </div>
 
     <div class="flex items-center justify-between gap-2">
@@ -242,7 +303,7 @@ function isCurrentMonth(date: Date) {
         :key="date.toISOString()"
         class="min-h-28 border-b border-r p-1.5 flex flex-col gap-1 cursor-pointer hover:bg-accent/40"
         :class="{ 'bg-muted/30': !isCurrentMonth(date) }"
-        @click="openCreateForm(date)"
+        @click="openDayView(date)"
       >
         <span class="text-xs" :class="isToday(date) ? 'font-bold text-primary' : 'text-muted-foreground'">
           {{ date.getDate() }}
@@ -255,6 +316,7 @@ function isCurrentMonth(date: Date) {
             class="truncate rounded bg-primary/10 px-1 py-0.5 text-left text-[11px] font-medium text-primary hover:bg-primary/20"
             @click.stop="openDetail(event)"
           >
+            <span class="mr-1 inline-block size-1.5 rounded-full align-middle" :class="activityTypeDotClass(event.activityType)" />
             <Icon v-if="event.regardingLabel" name="i-lucide-link" class="mr-0.5 inline size-2.5 align-[-1px]" />
             {{ formatTime(event.startAt) }} {{ event.title }}
           </button>
@@ -265,10 +327,19 @@ function isCurrentMonth(date: Date) {
       </div>
     </div>
 
+    <DayViewSheet
+      v-model:open="isDayViewOpen"
+      :date="selectedDay"
+      :events="selectedDayEvents"
+      @add="onDayViewAdd"
+      @select="onDayViewSelect"
+      @export="onDayViewExport"
+    />
+
     <Sheet v-model:open="isFormOpen">
       <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
         <SheetHeader class="p-0">
-          <SheetTitle>{{ isEditing ? 'Edit Meeting' : 'New Meeting' }}</SheetTitle>
+          <SheetTitle>{{ isEditing ? 'Edit Activity' : 'New Activity' }}</SheetTitle>
         </SheetHeader>
         <div class="flex flex-col gap-4 pt-4">
           <div class="flex flex-col gap-1.5">
@@ -276,12 +347,19 @@ function isCurrentMonth(date: Date) {
             <Input v-model="formTitle" placeholder="e.g. Client kickoff call" />
           </div>
           <div class="flex flex-col gap-1.5">
+            <Label class="text-xs text-muted-foreground">Activity Type</Label>
+            <Input v-model="formActivityType" list="activity-type-suggestions" placeholder="e.g. Meeting, Site Visit, Scouting" />
+            <datalist id="activity-type-suggestions">
+              <option v-for="suggestion in ACTIVITY_TYPE_SUGGESTIONS" :key="suggestion" :value="suggestion" />
+            </datalist>
+          </div>
+          <div class="flex flex-col gap-1.5">
             <Label class="text-xs text-muted-foreground">Description</Label>
             <Textarea v-model="formDescription" rows="3" placeholder="Optional agenda or notes" />
           </div>
           <div class="flex flex-col gap-1.5">
             <Label class="text-xs text-muted-foreground">Location / Link</Label>
-            <Input v-model="formLocation" placeholder="Meeting room, or a video call link" />
+            <Input v-model="formLocation" placeholder="Meeting room, site address, or a video call link" />
           </div>
 
           <div class="grid grid-cols-2 gap-3">
@@ -333,7 +411,7 @@ function isCurrentMonth(date: Date) {
 
           <SheetFooter class="p-0">
             <Button :disabled="!formTitle.trim()" @click="onSubmitForm">
-              {{ isEditing ? 'Save Changes' : 'Schedule Meeting' }}
+              {{ isEditing ? 'Save Changes' : 'Schedule Activity' }}
             </Button>
           </SheetFooter>
         </div>
@@ -348,6 +426,9 @@ function isCurrentMonth(date: Date) {
             <SheetDescription>{{ formatRange(selectedEvent) }}</SheetDescription>
           </SheetHeader>
           <div class="flex flex-col gap-4 pt-4">
+            <Badge v-if="selectedEvent.activityType" :class="activityTypeBadgeClass(selectedEvent.activityType)" class="w-fit">
+              {{ selectedEvent.activityType }}
+            </Badge>
             <p v-if="selectedEvent.location" class="text-sm flex items-center gap-1.5">
               <Icon name="i-lucide-map-pin" class="size-3.5 text-muted-foreground" />
               {{ selectedEvent.location }}

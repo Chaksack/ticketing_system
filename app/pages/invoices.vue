@@ -6,7 +6,7 @@ import DataTableToolbar from '~/components/invoices/DataTableToolbar.vue'
 import InvoiceDetailSheet from '~/components/invoices/InvoiceDetailSheet.vue'
 
 definePageMeta({
-  middleware: 'bd',
+  middleware: 'billing',
 })
 
 const { invoices, balanceByCurrency, fetchInvoices } = useInvoices()

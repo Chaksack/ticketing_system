@@ -17,6 +17,7 @@ export function useAuth() {
   const isAgent = computed(() => currentUser.value?.roles.includes('agent') ?? false)
   const isBd = computed(() => currentUser.value?.roles.includes('bd') ?? false)
   const isSm = computed(() => currentUser.value?.roles.includes('sm') ?? false)
+  const isFinance = computed(() => currentUser.value?.roles.includes('finance') ?? false)
   const isEngineer = computed(() => currentUser.value?.roles.includes('engineer') ?? false)
   const isEngineeringCoordinator = computed(() => currentUser.value?.roles.includes('engineering_coordinator') ?? false)
   const isEngineeringLead = computed(() => currentUser.value?.roles.includes('engineering_lead') ?? false)
@@ -57,5 +58,5 @@ export function useAuth() {
     currentUser.value = null
   }
 
-  return { currentUser, authReady, isAdmin, isAgent, isBd, isSm, isEngineer, isEngineeringCoordinator, isEngineeringLead, isLoggedIn, ensureAuth, login, logout }
+  return { currentUser, authReady, isAdmin, isAgent, isBd, isSm, isFinance, isEngineer, isEngineeringCoordinator, isEngineeringLead, isLoggedIn, ensureAuth, login, logout }
 }

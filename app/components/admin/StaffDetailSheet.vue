@@ -29,6 +29,7 @@ const roleOptions = [
   { value: 'agent', label: 'Agent' },
   { value: 'bd', label: 'BD Executive' },
   { value: 'sm', label: 'Sales & Marketing Exec' },
+  { value: 'finance', label: 'Finance Executive' },
   { value: 'engineer', label: 'Engineer' },
   { value: 'engineering_coordinator', label: 'Engineering Coordinator' },
   { value: 'engineering_lead', label: 'Engineering Lead' },

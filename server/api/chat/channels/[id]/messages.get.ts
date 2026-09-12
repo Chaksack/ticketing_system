@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
     LIMIT 100
   `).all(channelId) as ChatMessageRow[]
 
-  const messages = rows.map(mapChatMessageRow).reverse()
+  const reactionsByMessage = await getReactionsForMessages(rows.map(row => row.id), user.id)
+  const messages = rows.map(row => mapChatMessageRow(row, reactionsByMessage.get(row.id) ?? [])).reverse()
   return { messages }
 })

@@ -84,6 +84,28 @@ export async function requireBd(event: H3Event): Promise<SessionUser> {
   return user
 }
 
+/** Gates the Finance area — finance and admin only. */
+export async function requireFinance(event: H3Event): Promise<SessionUser> {
+  const user = await requireSessionUser(event)
+
+  if (!user.roles.includes('finance') && !user.roles.includes('admin')) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  return user
+}
+
+/** Gates billing (invoices/receipts/the product catalog) — a BD/SM + Finance shared concern. */
+export async function requireBilling(event: H3Event): Promise<SessionUser> {
+  const user = await requireSessionUser(event)
+
+  if (!user.roles.includes('bd') && !user.roles.includes('sm') && !user.roles.includes('finance') && !user.roles.includes('admin')) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  return user
+}
+
 export async function requireAgent(event: H3Event): Promise<SessionUser> {
   const user = await requireSessionUser(event)
 

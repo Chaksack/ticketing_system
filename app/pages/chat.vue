@@ -4,11 +4,12 @@ import type { PresenceState } from '~/types/presence'
 import { useMediaQuery } from '@vueuse/core'
 import { toast } from 'vue-sonner'
 import MessageBody from '~/components/chat/MessageBody.vue'
+import ReactionPicker from '~/components/chat/ReactionPicker.vue'
 import ReferencePicker from '~/components/chat/ReferencePicker.vue'
 
 const { currentUser } = useAuth()
 const { staff, fetchStaff } = useStaff()
-const { channels, messagesByChannel, fetchChannels, openDirectChannel, createGroupChannel, updateChannel, fetchMessages, sendMessage, markRead } = useChat()
+const { channels, messagesByChannel, fetchChannels, openDirectChannel, createGroupChannel, updateChannel, fetchMessages, sendMessage, toggleReaction, markRead } = useChat()
 const { getPresence, fetchPresences } = usePresence()
 const route = useRoute()
 const router = useRouter()
@@ -50,20 +51,12 @@ async function selectChannel(channelId: string) {
   router.replace({ query: { ...route.query, channel: channelId } })
   await fetchMessages(channelId)
   await markRead(channelId)
-  await scrollToBottom()
 }
 
 function backToList() {
   activeChannelId.value = null
   const { channel: _omit, ...rest } = route.query
   router.replace({ query: rest })
-}
-
-const messageListEl = ref<HTMLElement>()
-async function scrollToBottom() {
-  await nextTick()
-  if (messageListEl.value)
-    messageListEl.value.scrollTop = messageListEl.value.scrollHeight
 }
 
 onMounted(async () => {
@@ -170,7 +163,6 @@ async function onSend() {
   clearPendingAttachment()
   try {
     await sendMessage(activeChannelId.value, body, file)
-    await scrollToBottom()
   }
   catch (error: any) {
     toast.error('Could not send message', {
@@ -283,6 +275,23 @@ function isGroupEnd(index: number) {
 function metaLabel(message: ChatMessage) {
   const time = new Date(message.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   return message.authorId === currentUser.value?.id ? `You · ${time}` : time
+}
+
+function authorInitials(name: string) {
+  return name.split(' ').map(n => n[0]).slice(0, 2).join('')
+}
+
+async function onToggleReaction(messageId: string, emoji: string) {
+  if (!activeChannelId.value)
+    return
+  try {
+    await toggleReaction(activeChannelId.value, messageId, emoji)
+  }
+  catch (error: any) {
+    toast.error('Could not react to message', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
 }
 
 function formatListTime(value: string) {
@@ -419,59 +428,89 @@ function formatListTime(value: string) {
           </Button>
         </div>
 
-        <div ref="messageListEl" class="flex-1 min-h-0 overflow-y-auto flex flex-col p-3 md:p-4">
-          <div
-            v-for="(message, index) in activeMessages"
-            :key="message.id"
-            class="flex flex-col"
-            :class="[isGroupStart(index) ? 'mt-3' : 'mt-0.5', message.authorId === currentUser?.id ? 'items-end' : 'items-start']"
-          >
-            <span
-              v-if="isGroupStart(index) && activeChannel.type === 'group' && message.authorId !== currentUser?.id"
-              class="px-1 mb-0.5 text-[11px] font-medium text-muted-foreground"
-            >
-              {{ message.authorName }}
-            </span>
-            <div
-              class="max-w-[85%] md:max-w-[70%] rounded-2xl px-3 py-2 text-sm break-words"
-              :class="[
-                message.authorId === currentUser?.id ? 'bg-primary text-primary-foreground' : 'bg-muted',
-                message.authorId === currentUser?.id && isGroupEnd(index) ? 'rounded-br-md' : '',
-                message.authorId !== currentUser?.id && isGroupEnd(index) ? 'rounded-bl-md' : '',
-              ]"
-            >
-              <MessageBody v-if="message.body" :body="message.body" />
-              <a
-                v-if="message.attachmentUrl && isImageAttachment(message)"
-                :href="message.attachmentUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="mt-1 block"
-                :class="message.body && 'pt-1'"
-              >
-                <img :src="message.attachmentUrl" :alt="message.attachmentName" class="max-h-64 max-w-full rounded-lg object-contain">
-              </a>
-              <a
-                v-else-if="message.attachmentUrl"
-                :href="message.attachmentUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="mt-1 flex items-center gap-1.5 rounded-md border border-current/15 px-2 py-1.5 text-xs hover:bg-black/5"
-                :class="message.body && 'mt-2'"
-              >
-                <Icon name="i-lucide-paperclip" class="h-3.5 w-3.5 shrink-0" />
-                <span class="truncate">{{ message.attachmentName }}</span>
-                <span class="shrink-0 opacity-70">{{ formatFileSize(message.attachmentSize) }}</span>
-              </a>
-            </div>
-            <span v-if="isGroupEnd(index)" class="text-[10px] text-muted-foreground px-1 mt-0.5">
-              {{ metaLabel(message) }}
-            </span>
-          </div>
-          <p v-if="!activeMessages.length" class="text-center text-sm text-muted-foreground py-6">
-            No messages yet. Say hello!
-          </p>
-        </div>
+        <MessageScrollerProvider :key="activeChannelId ?? undefined" :auto-scroll="true" default-scroll-position="end">
+          <MessageScroller class="flex-1 min-h-0">
+            <MessageScrollerViewport class="p-3 md:p-4">
+              <MessageScrollerContent class="gap-0.5">
+                <MessageScrollerItem
+                  v-for="(message, index) in activeMessages"
+                  :key="message.id"
+                  :message-id="message.id"
+                  :scroll-anchor="index === activeMessages.length - 1"
+                  :class="isGroupStart(index) ? 'mt-3' : ''"
+                >
+                  <Message :align="message.authorId === currentUser?.id ? 'end' : 'start'">
+                    <MessageAvatar v-if="isGroupEnd(index) && activeChannel.type === 'group' && message.authorId !== currentUser?.id">
+                      <Avatar class="size-7">
+                        <AvatarFallback class="text-[10px]">
+                          {{ authorInitials(message.authorName) }}
+                        </AvatarFallback>
+                      </Avatar>
+                    </MessageAvatar>
+                    <MessageContent>
+                      <MessageHeader v-if="isGroupStart(index) && activeChannel.type === 'group' && message.authorId !== currentUser?.id">
+                        {{ message.authorName }}
+                      </MessageHeader>
+                      <Bubble
+                        class="flex-row items-end gap-1"
+                        :variant="message.authorId === currentUser?.id ? 'default' : 'muted'"
+                        :align="message.authorId === currentUser?.id ? 'end' : 'start'"
+                      >
+                        <BubbleContent>
+                          <MessageBody v-if="message.body" :body="message.body" />
+                          <a
+                            v-if="message.attachmentUrl && isImageAttachment(message)"
+                            :href="message.attachmentUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="mt-1 block"
+                            :class="message.body && 'pt-1'"
+                          >
+                            <img :src="message.attachmentUrl" :alt="message.attachmentName" class="max-h-64 max-w-full rounded-lg object-contain">
+                          </a>
+                          <a
+                            v-else-if="message.attachmentUrl"
+                            :href="message.attachmentUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="mt-1 flex items-center gap-1.5 rounded-md border border-current/15 px-2 py-1.5 text-xs hover:bg-black/5"
+                            :class="message.body && 'mt-2'"
+                          >
+                            <Icon name="i-lucide-paperclip" class="h-3.5 w-3.5 shrink-0" />
+                            <span class="truncate">{{ message.attachmentName }}</span>
+                            <span class="shrink-0 opacity-70">{{ formatFileSize(message.attachmentSize) }}</span>
+                          </a>
+                          <BubbleReactions v-if="message.reactions.length" :align="message.authorId === currentUser?.id ? 'end' : 'start'">
+                            <button
+                              v-for="reaction in message.reactions"
+                              :key="reaction.emoji"
+                              type="button"
+                              class="flex items-center gap-0.5 rounded-full px-1 transition-colors hover:bg-background/60"
+                              :class="reaction.reactedByMe && 'ring-1 ring-primary'"
+                              :title="reaction.staffNames.join(', ')"
+                              @click="onToggleReaction(message.id, reaction.emoji)"
+                            >
+                              <span>{{ reaction.emoji }}</span>
+                              <span class="text-[10px] text-muted-foreground">{{ reaction.count }}</span>
+                            </button>
+                          </BubbleReactions>
+                        </BubbleContent>
+                        <ReactionPicker @pick="(emoji) => onToggleReaction(message.id, emoji)" />
+                      </Bubble>
+                      <MessageFooter v-if="isGroupEnd(index)">
+                        {{ metaLabel(message) }}
+                      </MessageFooter>
+                    </MessageContent>
+                  </Message>
+                </MessageScrollerItem>
+              </MessageScrollerContent>
+              <p v-if="!activeMessages.length" class="text-center text-sm text-muted-foreground py-6">
+                No messages yet. Say hello!
+              </p>
+            </MessageScrollerViewport>
+            <MessageScrollerButton />
+          </MessageScroller>
+        </MessageScrollerProvider>
 
         <div class="border-t bg-background shrink-0">
           <div v-if="pendingAttachment" class="flex items-center gap-2 px-3 pt-2 md:px-4">

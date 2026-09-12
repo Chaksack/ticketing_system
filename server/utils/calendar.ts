@@ -7,6 +7,7 @@ export interface CalendarEventRow {
   title: string
   description: string | null
   location: string | null
+  activity_type: string | null
   start_at: string
   end_at: string
   created_by: string | null
@@ -24,6 +25,7 @@ export function mapCalendarEventRow(row: CalendarEventRow, attendees: AssigneeRe
     title: row.title,
     description: row.description ?? undefined,
     location: row.location ?? undefined,
+    activityType: row.activity_type ?? undefined,
     startAt: row.start_at,
     endAt: row.end_at,
     attendees,

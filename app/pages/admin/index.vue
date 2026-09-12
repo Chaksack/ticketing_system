@@ -66,6 +66,7 @@ const roleOptions = [
   { value: 'agent', label: 'Agent' },
   { value: 'bd', label: 'BD Executive' },
   { value: 'sm', label: 'Sales & Marketing Exec' },
+  { value: 'finance', label: 'Finance Executive' },
   { value: 'engineer', label: 'Engineer' },
   { value: 'engineering_coordinator', label: 'Engineering Coordinator' },
   { value: 'engineering_lead', label: 'Engineering Lead' },
@@ -74,7 +75,7 @@ const roleOptions = [
 const staffFormSchema = toTypedSchema(z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  roles: z.array(z.enum(['admin', 'agent', 'bd', 'sm', 'engineer', 'engineering_coordinator', 'engineering_lead'])).min(1, { message: 'Select at least one role.' }),
+  roles: z.array(z.enum(['admin', 'agent', 'bd', 'sm', 'finance', 'engineer', 'engineering_coordinator', 'engineering_lead'])).min(1, { message: 'Select at least one role.' }),
 }))
 
 const { handleSubmit, resetForm, values, setFieldValue } = useForm({

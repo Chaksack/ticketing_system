@@ -6,6 +6,7 @@ export interface CalendarEvent {
   title: string
   description?: string
   location?: string
+  activityType?: string
   startAt: string
   endAt: string
   attendees: Assignee[]

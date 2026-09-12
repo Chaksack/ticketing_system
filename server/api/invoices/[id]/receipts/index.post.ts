@@ -11,7 +11,7 @@ interface NewReceiptBody {
 const VALID_METHODS: ReceiptMethod[] = ['cash', 'bank_transfer', 'cheque', 'mobile_money', 'card', 'other']
 
 export default defineEventHandler(async (event) => {
-  const user = await requireBd(event)
+  const user = await requireBilling(event)
 
   const invoiceId = getRouterParam(event, 'id')
   const body = await readBody<NewReceiptBody>(event)
@@ -38,11 +38,16 @@ export default defineEventHandler(async (event) => {
 
   const id = await nextReceiptId()
   const now = new Date().toISOString()
+  const receivedAt = body.receivedAt ?? now
+
+  // Posted before the receipt itself is written — if the ledger rejects it (e.g. a closed fiscal
+  // period), nothing is recorded, so a receipt can never exist without its matching GL entry.
+  await postReceiptToLedger({ id, amount: body.amount, receivedAt, recordedBy: user.id }, { id: invoiceId })
 
   await db.prepare(`
     INSERT INTO receipts (id, invoice_id, amount, method, received_date, reference, recorded_by, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, invoiceId, body.amount, body.method, body.receivedAt ?? now, body.reference?.trim() || null, user.id, now)
+  `).run(id, invoiceId, body.amount, body.method, receivedAt, body.reference?.trim() || null, user.id, now)
 
   await recalculateInvoiceTotals(invoiceId)
 

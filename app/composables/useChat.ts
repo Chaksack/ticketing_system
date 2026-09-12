@@ -57,6 +57,16 @@ export function useChat() {
     return message
   }
 
+  async function toggleReaction(channelId: string, messageId: string, emoji: string) {
+    const { message } = await $fetch<{ message: ChatMessage }>(`/api/chat/messages/${messageId}/reactions`, { method: 'POST', body: { emoji } })
+    const current = messagesByChannel.value[channelId] ?? []
+    messagesByChannel.value = {
+      ...messagesByChannel.value,
+      [channelId]: current.map(existing => existing.id === messageId ? message : existing),
+    }
+    return message
+  }
+
   async function markRead(channelId: string) {
     await $fetch(`/api/chat/channels/${channelId}/read`, { method: 'POST' })
     const channel = channels.value.find(c => c.id === channelId)
@@ -75,6 +85,7 @@ export function useChat() {
     updateChannel,
     fetchMessages,
     sendMessage,
+    toggleReaction,
     markRead,
   }
 }

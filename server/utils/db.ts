@@ -577,6 +577,17 @@ async function migrate() {
   await db.exec('ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS attachment_size INTEGER')
 
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_message_reactions (
+      id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL,
+      staff_id TEXT NOT NULL,
+      emoji TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(message_id, staff_id, emoji)
+    )
+  `)
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS calendar_events (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -601,6 +612,7 @@ async function migrate() {
 
   await db.exec('ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS regarding_type TEXT')
   await db.exec('ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS regarding_id TEXT')
+  await db.exec('ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS activity_type TEXT')
 
   await db.exec('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_id TEXT')
 
@@ -781,6 +793,70 @@ async function migrate() {
       created_at TEXT NOT NULL
     )
   `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS accounts (
+      code TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      parent_code TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      description TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  // The two control accounts the receipt-posting integration hard-depends on — structural,
+  // like a table existing, not "starter" business data (nothing else is auto-created).
+  const accountsSeedNow = new Date().toISOString()
+  await db.prepare(`
+    INSERT INTO accounts (code, name, type, is_active, description, created_at, updated_at)
+    SELECT '1010', 'Cash', 'asset', 1, 'Default cash account for recorded receipts', ?, ?
+    WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '1010')
+  `).run(accountsSeedNow, accountsSeedNow)
+
+  await db.prepare(`
+    INSERT INTO accounts (code, name, type, is_active, description, created_at, updated_at)
+    SELECT '1200', 'Accounts Receivable', 'asset', 1, 'Default AR control account for client invoices', ?, ?
+    WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '1200')
+  `).run(accountsSeedNow, accountsSeedNow)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS fiscal_periods (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open',
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id TEXT PRIMARY KEY,
+      period_id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      memo TEXT,
+      source TEXT NOT NULL DEFAULT 'manual',
+      source_id TEXT,
+      posted_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS journal_entry_lines (
+      id TEXT PRIMARY KEY,
+      entry_id TEXT NOT NULL,
+      account_code TEXT NOT NULL,
+      debit NUMERIC NOT NULL DEFAULT 0,
+      credit NUMERIC NOT NULL DEFAULT 0,
+      memo TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
 }
 
 export async function nextSequence(name: string): Promise<number> {
@@ -891,6 +967,16 @@ export async function nextInvoiceActivityId() {
 export async function nextReceiptId() {
   const n = await nextSequence('receipt')
   return `RCPT-${n}`
+}
+
+export async function nextJournalEntryId() {
+  const n = await nextSequence('journal_entry')
+  return `JE-${n}`
+}
+
+export async function nextJournalEntryLineId() {
+  const n = await nextSequence('journal_entry_line')
+  return `JEL-${n}`
 }
 
 export async function nextClientId() {
@@ -1006,6 +1092,11 @@ export async function nextChannelId() {
 export async function nextChatMessageId() {
   const n = await nextSequence('chat_message')
   return `MSG-${n}`
+}
+
+export async function nextChatReactionId() {
+  const n = await nextSequence('chat_reaction')
+  return `RXN-${n}`
 }
 
 export async function nextEventId() {
