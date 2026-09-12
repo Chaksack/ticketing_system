@@ -25,6 +25,15 @@ export async function createNotification(input: NewNotification) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
   `).run(id, input.staffId, input.type, input.title, input.body, input.url ?? null, input.ticketId ?? null, input.taskId ?? null, input.leadId ?? null, input.contractId ?? null, input.eventId ?? null, now)
 
+  // Best-effort: a Slack failure (revoked token, rate limit, not connected) must never break the
+  // notification that's already been recorded in-app.
+  try {
+    await sendSlackDmToStaff(input.staffId, { title: input.title, body: input.body, url: input.url })
+  }
+  catch (error) {
+    console.error('[notifications] Slack delivery failed', error)
+  }
+
   return id
 }
 

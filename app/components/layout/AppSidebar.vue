@@ -31,10 +31,16 @@ const teams = computed(() => [
   },
 ])
 
+function isItemOrGroupVisible(item: NavLink | NavGroup | NavSectionTitle, admin: boolean, roles: StaffRole[]) {
+  if ('children' in item)
+    return item.children.some(child => isNavItemVisible(child, admin, roles))
+  return isNavItemVisible(item, admin, roles)
+}
+
 const visibleNavMenu = computed(() => navMenu
   .map(group => ({
     ...group,
-    items: group.items.filter(item => isNavItemVisible(item, isAdmin.value, currentUser.value?.roles ?? [])),
+    items: group.items.filter(item => isItemOrGroupVisible(item, isAdmin.value, currentUser.value?.roles ?? [])),
   }))
   .filter(group => group.items.length > 0))
 
@@ -51,6 +57,7 @@ const { sidebar } = useAppSettings()
         <SidebarGroupLabel v-if="nav.heading">
           {{ nav.heading }}
         </SidebarGroupLabel>
+        <LayoutSidebarChatChannels v-if="nav.heading === 'Team'" />
         <component :is="resolveNavItemComponent(item)" v-for="(item, index) in nav.items" :key="index" :item="item" />
       </SidebarGroup>
       <SidebarGroup class="mt-auto">

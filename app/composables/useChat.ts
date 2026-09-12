@@ -1,4 +1,4 @@
-import type { ChatChannel, ChatMessage } from '~/types/chat'
+import type { BrowsableChatChannel, ChatChannel, ChatMessage } from '~/types/chat'
 
 export function useChat() {
   const channels = useState<ChatChannel[]>('chat-channels', () => [])
@@ -16,6 +16,28 @@ export function useChat() {
   async function fetchChannels() {
     const { channels: rows } = await $fetch<{ channels: ChatChannel[] }>('/api/chat/channels')
     channels.value = rows
+  }
+
+  async function fetchBrowsableChannels() {
+    const { channels: rows } = await $fetch<{ channels: BrowsableChatChannel[] }>('/api/chat/channels/browsable')
+    return rows
+  }
+
+  async function createProjectChannel(projectId: string, name?: string) {
+    const { channel } = await $fetch<{ channel: ChatChannel }>('/api/chat/channels', { method: 'POST', body: { type: 'project', projectId, name } })
+    upsertChannel(channel)
+    return channel
+  }
+
+  async function joinChannel(channelId: string) {
+    const { channel } = await $fetch<{ channel: ChatChannel }>(`/api/chat/channels/${channelId}/join`, { method: 'POST' })
+    upsertChannel(channel)
+    return channel
+  }
+
+  async function leaveChannel(channelId: string) {
+    await $fetch(`/api/chat/channels/${channelId}/leave`, { method: 'POST' })
+    channels.value = channels.value.filter(c => c.id !== channelId)
   }
 
   async function fetchUnreadCount() {
@@ -79,9 +101,13 @@ export function useChat() {
     messagesByChannel,
     unreadCount,
     fetchChannels,
+    fetchBrowsableChannels,
     fetchUnreadCount,
     openDirectChannel,
     createGroupChannel,
+    createProjectChannel,
+    joinChannel,
+    leaveChannel,
     updateChannel,
     fetchMessages,
     sendMessage,

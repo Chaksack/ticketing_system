@@ -1,6 +1,6 @@
 import type { Assignee } from './assignee'
 
-export type ChannelType = 'direct' | 'group'
+export type ChannelType = 'direct' | 'group' | 'project'
 
 /** The fixed quick-react set — shared by the client picker and the server's validation. */
 export const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉', '😮', '😢', '🙏', '👀'] as const
@@ -34,5 +34,12 @@ export interface ChatChannel {
   members: Assignee[]
   lastMessage?: ChatMessage
   unreadCount: number
+  projectId?: string
+  projectName?: string
   createdAt: string
+}
+
+/** A project channel as shown in the "Browse channels" picker — not necessarily one the viewer has joined. */
+export interface BrowsableChatChannel extends ChatChannel {
+  joined: boolean
 }

@@ -550,6 +550,8 @@ async function migrate() {
     )
   `)
 
+  await db.exec('ALTER TABLE chat_channels ADD COLUMN IF NOT EXISTS project_id TEXT')
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS chat_channel_members (
       channel_id TEXT NOT NULL,
@@ -631,6 +633,37 @@ async function migrate() {
       occurred_at TEXT NOT NULL,
       logged_by TEXT,
       created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS ml_models (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      weights TEXT NOT NULL,
+      trained_at TEXT NOT NULL,
+      training_examples INTEGER NOT NULL,
+      metrics TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS staff_integrations (
+      id TEXT PRIMARY KEY,
+      staff_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      access_token TEXT,
+      refresh_token TEXT,
+      token_expires_at TEXT,
+      scope TEXT,
+      external_account_id TEXT,
+      external_account_label TEXT,
+      metadata TEXT,
+      connected_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(staff_id, provider)
     )
   `)
 
@@ -1102,4 +1135,9 @@ export async function nextChatReactionId() {
 export async function nextEventId() {
   const n = await nextSequence('calendar_event')
   return `EVENT-${n}`
+}
+
+export async function nextStaffIntegrationId() {
+  const n = await nextSequence('staff_integration')
+  return `INTG-${n}`
 }

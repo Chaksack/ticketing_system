@@ -399,6 +399,10 @@ function formatDateTime(value: string) {
 
             <Separator />
 
+            <AiSuggestionCard regarding-type="tender" :regarding-id="tender.id" />
+
+            <Separator />
+
             <InteractionsSection regarding-type="tender" :regarding-id="tender.id" :interactions="tender.interactions" />
 
             <Separator />

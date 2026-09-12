@@ -3,7 +3,7 @@ import type { SidebarMenuButtonVariants } from '~/components/ui/sidebar'
 import type { NavGroup } from '~/types/nav'
 import { useSidebar } from '~/components/ui/sidebar'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   item: NavGroup
   size?: SidebarMenuButtonVariants['size']
 }>(), {
@@ -11,8 +11,12 @@ withDefaults(defineProps<{
 })
 
 const { setOpenMobile } = useSidebar()
+const { currentUser, isAdmin } = useAuth()
+const route = useRoute()
 
-const openCollapsible = ref(false)
+const visibleChildren = computed(() => props.item.children.filter(child => isNavItemVisible(child, isAdmin.value, currentUser.value?.roles ?? [])))
+
+const openCollapsible = ref(visibleChildren.value.some(child => child.link === route.path))
 </script>
 
 <template>
@@ -37,7 +41,7 @@ const openCollapsible = ref(false)
         <CollapsibleContent>
           <SidebarMenuSub>
             <SidebarMenuSubItem
-              v-for="subItem in item.children"
+              v-for="subItem in visibleChildren"
               :key="subItem.title"
             >
               <SidebarMenuSubButton as-child :data-active="subItem.link === $route.path">

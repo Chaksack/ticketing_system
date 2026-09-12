@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import type { ChatMessage } from '~/types/chat'
+import type { BrowsableChatChannel, ChatChannel, ChatMessage } from '~/types/chat'
 import type { PresenceState } from '~/types/presence'
 import { useMediaQuery } from '@vueuse/core'
 import { toast } from 'vue-sonner'
 import MessageBody from '~/components/chat/MessageBody.vue'
 import ReactionPicker from '~/components/chat/ReactionPicker.vue'
 import ReferencePicker from '~/components/chat/ReferencePicker.vue'
+import { channelOtherMember, channelDisplayName as sharedChannelDisplayName } from '~/lib/chatChannel'
 
 const { currentUser } = useAuth()
 const { staff, fetchStaff } = useStaff()
-const { channels, messagesByChannel, fetchChannels, openDirectChannel, createGroupChannel, updateChannel, fetchMessages, sendMessage, toggleReaction, markRead } = useChat()
+const { channels, messagesByChannel, fetchChannels, fetchBrowsableChannels, openDirectChannel, createGroupChannel, createProjectChannel, joinChannel, leaveChannel, updateChannel, fetchMessages, sendMessage, toggleReaction, markRead } = useChat()
+const { projects, fetchProjects } = useProjects()
 const { getPresence, fetchPresences } = usePresence()
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +22,9 @@ const activeChannelId = ref<string | null>(null)
 const activeMessages = computed(() => activeChannelId.value ? (messagesByChannel.value[activeChannelId.value] ?? []) : [])
 const activeChannel = computed(() => channels.value.find(c => c.id === activeChannelId.value) ?? null)
 
+const projectChannels = computed(() => channels.value.filter(c => c.type === 'project'))
+const conversationChannels = computed(() => channels.value.filter(c => c.type !== 'project'))
+
 const PRESENCE_LABEL: Record<PresenceState, string> = {
   online: 'Online',
   away: 'Away',
@@ -27,22 +32,19 @@ const PRESENCE_LABEL: Record<PresenceState, string> = {
   offline: 'Offline',
 }
 
-function otherMember(channel: typeof channels.value[number]) {
-  return channel.type === 'direct' ? channel.members.find(m => m.id !== currentUser.value?.id) : undefined
+function otherMember(channel: ChatChannel) {
+  return channelOtherMember(channel, currentUser.value?.id)
 }
 
-function channelDisplayName(channel: typeof channels.value[number]) {
-  if (channel.type === 'group')
-    return channel.name ?? 'Group chat'
-
-  return otherMember(channel)?.name ?? 'Direct message'
+function channelDisplayName(channel: ChatChannel) {
+  return sharedChannelDisplayName(channel, currentUser.value?.id)
 }
 
-function channelPresence(channel: typeof channels.value[number]) {
+function channelPresence(channel: ChatChannel) {
   return getPresence(otherMember(channel)?.id)
 }
 
-function channelInitials(channel: typeof channels.value[number]) {
+function channelInitials(channel: ChatChannel) {
   return channelDisplayName(channel).split(' ').map(n => n[0]).slice(0, 2).join('')
 }
 
@@ -189,16 +191,6 @@ function isImageAttachment(message: ChatMessage) {
   return message.attachmentType?.startsWith('image/') ?? false
 }
 
-function lastMessagePreview(channel: typeof channels.value[number]) {
-  if (!channel.lastMessage)
-    return ''
-  if (channel.lastMessage.body)
-    return channel.lastMessage.body
-  if (channel.lastMessage.attachmentName)
-    return `📎 ${channel.lastMessage.attachmentName}`
-  return ''
-}
-
 function onInsertReference(token: string) {
   draft.value = draft.value ? `${draft.value} ${token} ` : `${token} `
 }
@@ -247,6 +239,75 @@ async function onSaveGroup() {
   isEditGroupOpen.value = false
 }
 
+const isChannelPickerOpen = ref(false)
+const browsableChannels = ref<BrowsableChatChannel[]>([])
+const isLoadingBrowsable = ref(false)
+const joiningChannelId = ref<string | null>(null)
+const newChannelProjectId = ref<string | undefined>(undefined)
+const newChannelName = ref('')
+const isCreatingChannel = ref(false)
+
+async function openChannelPicker() {
+  isChannelPickerOpen.value = true
+  newChannelProjectId.value = undefined
+  newChannelName.value = ''
+  isLoadingBrowsable.value = true
+  try {
+    if (!projects.value.length)
+      await fetchProjects()
+    browsableChannels.value = await fetchBrowsableChannels()
+  }
+  finally {
+    isLoadingBrowsable.value = false
+  }
+}
+
+async function onJoinChannel(channelId: string) {
+  joiningChannelId.value = channelId
+  try {
+    await joinChannel(channelId)
+    browsableChannels.value = browsableChannels.value.map(c => c.id === channelId ? { ...c, joined: true } : c)
+  }
+  catch (error: any) {
+    toast.error('Could not join channel', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    joiningChannelId.value = null
+  }
+}
+
+async function onCreateChannel() {
+  if (!newChannelProjectId.value)
+    return
+
+  isCreatingChannel.value = true
+  try {
+    const channel = await createProjectChannel(newChannelProjectId.value, newChannelName.value.trim() || undefined)
+    isChannelPickerOpen.value = false
+    await selectChannel(channel.id)
+  }
+  catch (error: any) {
+    toast.error('Could not create channel', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    isCreatingChannel.value = false
+  }
+}
+
+async function onLeaveChannel() {
+  if (!activeChannelId.value || activeChannel.value?.type !== 'project')
+    return
+
+  const channelId = activeChannelId.value
+  backToList()
+  await leaveChannel(channelId)
+  toast('Left channel')
+}
+
 // Consecutive messages from the same author within a short window are visually grouped
 // (name shown once at the top of the burst, timestamp shown once at the bottom) — same
 // convention as Slack/WhatsApp, rather than repeating the meta line on every bubble.
@@ -293,16 +354,6 @@ async function onToggleReaction(messageId: string, emoji: string) {
     })
   }
 }
-
-function formatListTime(value: string) {
-  const date = new Date(value)
-  const now = new Date()
-  if (date.toDateString() === now.toDateString())
-    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
-  if (now.getTime() - date.getTime() < 6 * 24 * 60 * 60 * 1000)
-    return date.toLocaleDateString(undefined, { weekday: 'short' })
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
 </script>
 
 <template>
@@ -316,6 +367,9 @@ function formatListTime(value: string) {
           Chats
         </h2>
         <div class="flex items-center gap-1">
+          <Button size="icon-sm" variant="ghost" aria-label="Browse or create channels" @click="openChannelPicker">
+            <Icon name="i-lucide-hash" class="size-4" />
+          </Button>
           <Popover v-model:open="isNewDmOpen">
             <PopoverTrigger as-child>
               <Button size="icon-sm" variant="ghost" aria-label="New direct message">
@@ -344,45 +398,34 @@ function formatListTime(value: string) {
 
       <ScrollArea class="flex-1 min-h-0">
         <div class="flex flex-col">
-          <button
-            v-for="channel in channels"
+          <div class="flex items-center justify-between px-4 pt-3 pb-1 md:px-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Channels</span>
+            <button type="button" class="text-xs text-muted-foreground hover:text-foreground" @click="openChannelPicker">
+              Browse
+            </button>
+          </div>
+          <ChannelListItem
+            v-for="channel in projectChannels"
             :key="channel.id"
-            type="button"
-            class="w-full flex items-center gap-3 border-b px-4 py-3 text-left transition-colors active:bg-accent/60 md:mx-1 md:w-[calc(100%-0.5rem)] md:rounded-md md:border-b-0 md:px-2 md:py-2 md:hover:bg-accent"
-            :class="{ 'bg-accent': channel.id === activeChannelId }"
+            :channel="channel"
+            :active="channel.id === activeChannelId"
+            :current-user-id="currentUser?.id"
             @click="selectChannel(channel.id)"
-          >
-            <div class="relative shrink-0">
-              <Avatar class="size-12 md:size-9">
-                <AvatarFallback class="text-sm md:text-xs">
-                  {{ channelInitials(channel) }}
-                </AvatarFallback>
-              </Avatar>
-              <PresenceDot :state="channelPresence(channel)?.state" class="absolute -bottom-0.5 -right-0.5" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between gap-2">
-                <span class="truncate font-medium">{{ channelDisplayName(channel) }}</span>
-                <span v-if="channel.lastMessage" class="shrink-0 text-[11px]" :class="channel.unreadCount ? 'font-medium text-primary' : 'text-muted-foreground'">
-                  {{ formatListTime(channel.lastMessage.createdAt) }}
-                </span>
-              </div>
-              <div class="flex items-center justify-between gap-2 mt-0.5">
-                <p class="truncate text-sm text-muted-foreground">
-                  <template v-if="channel.lastMessage">
-                    <span v-if="channel.lastMessage.authorId === currentUser?.id">You: </span>{{ lastMessagePreview(channel) }}
-                  </template>
-                  <template v-else>
-                    No messages yet
-                  </template>
-                </p>
-                <Badge v-if="channel.unreadCount > 0" variant="default" class="h-5 min-w-5 shrink-0 justify-center rounded-full px-1.5 text-[10px]">
-                  {{ channel.unreadCount }}
-                </Badge>
-              </div>
-            </div>
-          </button>
-          <p v-if="!channels.length" class="px-4 py-6 text-center text-sm text-muted-foreground">
+          />
+          <p v-if="!projectChannels.length" class="px-4 pb-3 text-sm text-muted-foreground md:px-3">
+            No channels joined yet.
+          </p>
+
+          <span class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:px-3">Direct Messages</span>
+          <ChannelListItem
+            v-for="channel in conversationChannels"
+            :key="channel.id"
+            :channel="channel"
+            :active="channel.id === activeChannelId"
+            :current-user-id="currentUser?.id"
+            @click="selectChannel(channel.id)"
+          />
+          <p v-if="!conversationChannels.length" class="px-4 pb-6 text-center text-sm text-muted-foreground">
             No conversations yet. Start a direct message or group above.
           </p>
         </div>
@@ -401,7 +444,10 @@ function formatListTime(value: string) {
           <div class="relative shrink-0">
             <Avatar class="size-9">
               <AvatarFallback class="text-xs">
-                {{ channelInitials(activeChannel) }}
+                <Icon v-if="activeChannel.type === 'project'" name="i-lucide-hash" class="size-4" />
+                <template v-else>
+                  {{ channelInitials(activeChannel) }}
+                </template>
               </AvatarFallback>
             </Avatar>
             <PresenceDot v-if="activeChannel.type === 'direct'" :state="channelPresence(activeChannel)?.state" class="absolute -bottom-0.5 -right-0.5" />
@@ -411,7 +457,12 @@ function formatListTime(value: string) {
               {{ channelDisplayName(activeChannel) }}
             </div>
             <div class="text-xs text-muted-foreground truncate leading-tight">
-              <template v-if="activeChannel.type === 'group'">
+              <template v-if="activeChannel.type === 'project'">
+                {{ activeChannel.members.length }} members<template v-if="activeChannel.projectName">
+                  · {{ activeChannel.projectName }}
+                </template>
+              </template>
+              <template v-else-if="activeChannel.type === 'group'">
                 {{ activeChannel.members.length }} members
               </template>
               <template v-else-if="channelPresence(activeChannel)?.statusText">
@@ -425,6 +476,9 @@ function formatListTime(value: string) {
           </div>
           <Button v-if="activeChannel.type === 'group'" size="icon-sm" variant="ghost" class="shrink-0" @click="openEditGroup">
             <Icon name="i-lucide-settings" class="size-4" />
+          </Button>
+          <Button v-if="activeChannel.type === 'project'" size="icon-sm" variant="ghost" class="shrink-0 text-destructive" aria-label="Leave channel" @click="onLeaveChannel">
+            <Icon name="i-lucide-log-out" class="size-4" />
           </Button>
         </div>
 
@@ -582,6 +636,77 @@ function formatListTime(value: string) {
           </div>
           <Button :disabled="!editGroupName.trim()" @click="onSaveGroup">
             Save Changes
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+
+    <Sheet v-model:open="isChannelPickerOpen">
+      <SheetContent side="right" class="w-full sm:max-w-md p-6 overflow-y-auto">
+        <SheetHeader class="p-0">
+          <SheetTitle>Channels</SheetTitle>
+          <SheetDescription>
+            Channels are linked to a project — join one to follow along, or create a new one.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div class="flex flex-col gap-2 pt-4">
+          <Label class="text-xs text-muted-foreground">Browse</Label>
+          <p v-if="isLoadingBrowsable" class="text-sm text-muted-foreground">
+            Loading…
+          </p>
+          <template v-else>
+            <div v-for="channel in browsableChannels" :key="channel.id" class="flex items-center justify-between gap-2 rounded-md border p-2.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <Icon name="i-lucide-hash" class="size-4 shrink-0 text-muted-foreground" />
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium">
+                    {{ channel.name }}
+                  </p>
+                  <p v-if="channel.projectName" class="truncate text-xs text-muted-foreground">
+                    {{ channel.projectName }}
+                  </p>
+                </div>
+              </div>
+              <Button
+                v-if="!channel.joined" size="sm" variant="outline" :disabled="joiningChannelId === channel.id"
+                @click="onJoinChannel(channel.id)"
+              >
+                {{ joiningChannelId === channel.id ? 'Joining…' : 'Join' }}
+              </Button>
+              <Button v-else size="sm" variant="ghost" @click="isChannelPickerOpen = false; selectChannel(channel.id)">
+                Open
+              </Button>
+            </div>
+            <p v-if="!browsableChannels.length" class="text-sm text-muted-foreground">
+              No channels yet — create the first one below.
+            </p>
+          </template>
+        </div>
+
+        <Separator class="my-4" />
+
+        <div class="flex flex-col gap-4">
+          <Label class="text-xs text-muted-foreground">Create a channel</Label>
+          <div class="flex flex-col gap-1.5">
+            <Label class="text-xs text-muted-foreground">Project</Label>
+            <Select v-model="newChannelProjectId">
+              <SelectTrigger class="w-full">
+                <SelectValue placeholder="Select a project" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="project in projects" :key="project.id" :value="project.id">
+                  {{ project.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label class="text-xs text-muted-foreground">Channel Name (optional)</Label>
+            <Input v-model="newChannelName" placeholder="Defaults to the project name" />
+          </div>
+          <Button :disabled="!newChannelProjectId || isCreatingChannel" @click="onCreateChannel">
+            {{ isCreatingChannel ? 'Creating…' : 'Create Channel' }}
           </Button>
         </div>
       </SheetContent>

@@ -526,6 +526,10 @@ function formatDateTime(value: string) {
 
             <Separator />
 
+            <AiSuggestionCard regarding-type="client" :regarding-id="client.id" />
+
+            <Separator />
+
             <InteractionsSection regarding-type="client" :regarding-id="client.id" :interactions="client.interactions" />
 
             <Separator />

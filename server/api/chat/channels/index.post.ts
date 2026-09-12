@@ -1,8 +1,9 @@
 interface NewChannelBody {
-  type?: 'direct' | 'group'
+  type?: 'direct' | 'group' | 'project'
   staffId?: string
   name?: string
   memberIds?: string[]
+  projectId?: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -35,6 +36,25 @@ export default defineEventHandler(async (event) => {
     await db.prepare('INSERT INTO chat_channels (id, type, name, created_by, created_at) VALUES (?, \'direct\', NULL, ?, ?)').run(id, user.id, now)
     await db.prepare('INSERT INTO chat_channel_members (channel_id, staff_id, joined_at) VALUES (?, ?, ?)').run(id, user.id, now)
     await db.prepare('INSERT INTO chat_channel_members (channel_id, staff_id, joined_at) VALUES (?, ?, ?)').run(id, body.staffId, now)
+
+    const channel = await loadChannelForUser(id, user.id)
+    return { channel }
+  }
+
+  if (body.type === 'project') {
+    if (!body.projectId) {
+      throw createError({ statusCode: 400, statusMessage: 'projectId is required' })
+    }
+
+    const project = await db.prepare('SELECT name FROM projects WHERE id = ?').get(body.projectId) as { name: string } | undefined
+    if (!project) {
+      throw createError({ statusCode: 404, statusMessage: 'Project not found' })
+    }
+
+    const id = await nextChannelId()
+    await db.prepare('INSERT INTO chat_channels (id, type, name, created_by, project_id, created_at) VALUES (?, \'project\', ?, ?, ?, ?)')
+      .run(id, body.name?.trim() || project.name, user.id, body.projectId, now)
+    await db.prepare('INSERT INTO chat_channel_members (channel_id, staff_id, joined_at) VALUES (?, ?, ?)').run(id, user.id, now)
 
     const channel = await loadChannelForUser(id, user.id)
     return { channel }

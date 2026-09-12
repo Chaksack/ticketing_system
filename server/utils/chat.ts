@@ -1,4 +1,4 @@
-import type { ChannelType, ChatChannel, ChatMessage, MessageReaction } from '../../app/types/chat'
+import type { BrowsableChatChannel, ChannelType, ChatChannel, ChatMessage, MessageReaction } from '../../app/types/chat'
 import type { AssigneeRef } from './assignees'
 
 export interface ChatChannelRow {
@@ -7,6 +7,8 @@ export interface ChatChannelRow {
   name: string | null
   created_by: string | null
   created_at: string
+  project_id: string | null
+  project_name?: string | null
 }
 
 export interface ChatMessageRow {
@@ -118,10 +120,45 @@ export async function isChannelMember(channelId: string, staffId: string): Promi
   return !!row
 }
 
+interface BrowsableChannelRow extends ChatChannelRow {
+  joined: number
+}
+
+/** Every project channel, with the project's name and whether the current user has already joined — used by the "Browse channels" picker. */
+export async function getBrowsableProjectChannels(userId: string): Promise<BrowsableChatChannel[]> {
+  const db = useDatabase()
+
+  const rows = await db.prepare(`
+    SELECT chat_channels.*, projects.name AS project_name,
+      (SELECT 1 FROM chat_channel_members WHERE chat_channel_members.channel_id = chat_channels.id AND chat_channel_members.staff_id = ?) AS joined
+    FROM chat_channels
+    LEFT JOIN projects ON projects.id = chat_channels.project_id
+    WHERE chat_channels.type = 'project'
+    ORDER BY chat_channels.created_at DESC
+  `).all(userId) as BrowsableChannelRow[]
+
+  return rows.map(row => ({
+    id: row.id,
+    type: 'project' as ChannelType,
+    name: row.name ?? undefined,
+    members: [],
+    unreadCount: 0,
+    projectId: row.project_id ?? undefined,
+    projectName: row.project_name ?? undefined,
+    createdAt: row.created_at,
+    joined: !!row.joined,
+  }))
+}
+
 export async function loadChannelForUser(channelId: string, userId: string): Promise<ChatChannel | null> {
   const db = useDatabase()
 
-  const channelRow = await db.prepare('SELECT * FROM chat_channels WHERE id = ?').get(channelId) as ChatChannelRow | undefined
+  const channelRow = await db.prepare(`
+    SELECT chat_channels.*, projects.name AS project_name
+    FROM chat_channels
+    LEFT JOIN projects ON projects.id = chat_channels.project_id
+    WHERE chat_channels.id = ?
+  `).get(channelId) as ChatChannelRow | undefined
   if (!channelRow)
     return null
 
@@ -151,6 +188,8 @@ export async function loadChannelForUser(channelId: string, userId: string): Pro
     members,
     lastMessage: lastMessageRow ? mapChatMessageRow(lastMessageRow) : undefined,
     unreadCount: Number(unreadRow.count),
+    projectId: channelRow.project_id ?? undefined,
+    projectName: channelRow.project_name ?? undefined,
     createdAt: channelRow.created_at,
   }
 }

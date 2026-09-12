@@ -83,6 +83,8 @@ On first boot, `server/plugins/db.ts` runs the schema migration and seeds:
 | `NUXT_PUBLIC_PORTAL_CORS_ORIGINS` | For embedding | Comma-separated origins allowed to call `POST /api/tickets` cross-origin |
 | `NUXT_GMAIL_CLIENT_ID` / `NUXT_GMAIL_CLIENT_SECRET` / `NUXT_GMAIL_REFRESH_TOKEN` / `NUXT_GMAIL_SENDER` | For email | Send + receive all ticket/staff email via Gmail — see "Email (Gmail API)" |
 | `NUXT_CRON_SECRET` | For Vercel | Authenticates Vercel Cron's calls to `/api/cron/*` — see "Background jobs on Vercel" |
+| `NUXT_INTEGRATIONS_ENCRYPTION_KEY` | For Integrations | Encrypts connected third-party account tokens at rest — see "Integrations" |
+| `NUXT_SLACK_CLIENT_ID` / `NUXT_SLACK_CLIENT_SECRET` | For Slack | Per-user Slack connect in Settings → Integrations — see "Integrations" |
 
 See `.env.example` for the full template.
 
@@ -148,6 +150,32 @@ need closer to real-time reply capture). Both routes call the exact same underly
 the `setInterval` plugin does (`server/utils/sweeps.ts`, `server/utils/gmail.ts`), so there's
 one implementation either way — set `NUXT_CRON_SECRET` (and the matching `CRON_SECRET` env var
 in your Vercel project settings) so only Vercel's own cron requests can trigger them.
+
+## Integrations (Settings → Integrations)
+
+Staff can connect their own third-party accounts from Settings → Integrations. The framework is
+provider-agnostic (`server/utils/integrations/providers.ts` is a small registry; the actual
+`/api/integrations/[provider]/{connect,callback,status}` routes are generic and shared by every
+provider), so adding a new one is one registry entry plus whatever that provider actually does
+with the connection — no new OAuth plumbing.
+
+Tokens are encrypted at rest (AES-256-GCM, `server/utils/crypto.ts`) with
+`NUXT_INTEGRATIONS_ENCRYPTION_KEY` — generate one with
+`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` and set it in
+`.env` locally and in your Vercel project for production. Losing/rotating this key invalidates
+every connected account (they'll need to reconnect).
+
+**Slack** is the first provider — connecting it DMs you on Slack for the same events that
+already trigger a push/in-app notification (`createNotification()` in
+`server/utils/notifications.ts` fires the Slack DM, best-effort — a Slack failure never blocks
+the underlying notification). One-time setup, at https://api.slack.com/apps:
+
+1. Create an app, then under **OAuth & Permissions** add an OAuth redirect URL of
+   `<your-site-url>/api/integrations/slack/callback` (register one per environment —
+   `http://localhost:3000/...` for local dev, your production URL separately).
+2. Under **Scopes → Bot Token Scopes**, add `chat:write` and `im:write`.
+3. Set `NUXT_SLACK_CLIENT_ID`/`NUXT_SLACK_CLIENT_SECRET` from **Basic Information** in `.env`
+   (and your Vercel project for production).
 
 ## App Settings
 

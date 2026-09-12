@@ -140,6 +140,9 @@ export default defineNuxtConfig({
     vapidPrivateKey: '',
     vapidSubject: '',
     siteUrl: 'http://localhost:3000',
+    integrationsEncryptionKey: '',
+    slackClientId: '',
+    slackClientSecret: '',
     public: {
       vapidPublicKey: '',
       portalCorsOrigins: '',

@@ -4,9 +4,10 @@
 
 <template>
   <SettingsLayout>
-    <SettingsNotificationsForm />
+    <SettingsIntegrationsForm />
   </SettingsLayout>
 </template>
 
 <style scoped>
+
 </style>

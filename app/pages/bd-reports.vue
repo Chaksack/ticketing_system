@@ -8,6 +8,30 @@ definePageMeta({
 
 const { summary, isLoading, fetchSummary } = useBdReports()
 const { progress: quotaProgress, fetchProgress } = useBdQuotas()
+const { status: modelStatus, isTraining, fetchStatus: fetchModelStatus, retrain: retrainModel } = useConversionModel()
+
+async function onRetrainModel() {
+  try {
+    const result = await retrainModel()
+
+    if (!result.trained) {
+      toast('Not enough decided deals to train yet', {
+        description: `${result.trainingExamples} of ${result.minTrainingExamples} needed decided deals so far.`,
+      })
+      return
+    }
+
+    const accuracyNote = result.accuracy !== null ? ` — ${Math.round(result.accuracy * 100)}% held-out accuracy` : ''
+    toast('Conversion model retrained', {
+      description: `Trained on ${result.trainingExamples} decided deals${accuracyNote}.`,
+    })
+  }
+  catch (error: any) {
+    toast.error('Could not retrain model', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+}
 
 function toDateInput(date: Date) {
   return date.toISOString().slice(0, 10)
@@ -31,6 +55,7 @@ onMounted(() => {
   to.value = toDateInput(today)
   refresh()
   fetchProgress(currentPeriod())
+  fetchModelStatus()
 })
 
 function applyPreset(days: number) {
@@ -324,6 +349,38 @@ const amcByStatusData = computed(() => summary.value?.amc.byStatus.map(row => ({
               No won deals in this range.
             </p>
             <AreaChart v-else :data="summary.trend" :categories="['leadsWon', 'tendersWon']" index="date" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <h3 class="text-sm font-medium text-muted-foreground">
+          Conversion Model
+        </h3>
+        <p class="text-xs text-muted-foreground -mt-1">
+          An in-house model trained on your own decided leads and tenders — it predicts win probability and surfaces as an AI suggestion on each lead/tender/client. Retrains automatically overnight; use this to refresh it immediately after a data change.
+        </p>
+        <Card>
+          <CardContent class="flex flex-wrap items-center justify-between gap-3 pt-6">
+            <div class="flex flex-col gap-1 text-sm">
+              <template v-if="modelStatus?.trained">
+                <span class="font-medium">Trained on {{ modelStatus.trainingExamples }} decided deals</span>
+                <span class="text-xs text-muted-foreground">
+                  Last trained {{ modelStatus.trainedAt ? new Date(modelStatus.trainedAt).toLocaleString() : '—' }}
+                  <template v-if="modelStatus.accuracy !== null"> · {{ Math.round(modelStatus.accuracy * 100) }}% held-out accuracy</template>
+                </span>
+              </template>
+              <template v-else>
+                <span class="font-medium">Not enough data to train yet</span>
+                <span class="text-xs text-muted-foreground">
+                  {{ modelStatus?.trainingExamples ?? 0 }} of {{ modelStatus?.minTrainingExamples ?? 20 }} needed decided deals so far.
+                </span>
+              </template>
+            </div>
+            <Button size="sm" variant="outline" :disabled="isTraining" @click="onRetrainModel">
+              <Icon name="i-lucide-refresh-cw" class="mr-1.5 size-3.5" :class="{ 'animate-spin': isTraining }" />
+              {{ isTraining ? 'Training…' : 'Retrain Now' }}
+            </Button>
           </CardContent>
         </Card>
       </div>

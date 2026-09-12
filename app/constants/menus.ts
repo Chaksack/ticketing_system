@@ -5,11 +5,6 @@ export const navMenu: NavMenu[] = [
     heading: 'Team',
     items: [
       {
-        title: 'Chat',
-        icon: 'i-lucide-message-square',
-        link: '/chat',
-      },
-      {
         title: 'Calendar',
         icon: 'i-lucide-calendar-days',
         link: '/calendar',
@@ -31,46 +26,64 @@ export const navMenu: NavMenu[] = [
         roles: ['bd', 'sm'],
       },
       {
-        title: 'Tasks',
+        title: 'Pipeline',
+        icon: 'i-lucide-trending-up',
+        children: [
+          {
+            title: 'Leads',
+            icon: 'i-lucide-target',
+            link: '/leads',
+            roles: ['bd', 'sm'],
+          },
+          {
+            title: 'Tenders',
+            icon: 'i-lucide-gavel',
+            link: '/tenders',
+            roles: ['bd', 'sm'],
+          },
+          {
+            title: 'Clients',
+            icon: 'i-lucide-users',
+            link: '/clients',
+            roles: ['bd', 'sm'],
+          },
+        ],
+      },
+      {
+        title: 'Work',
         icon: 'i-lucide-calendar-check-2',
-        link: '/tasks',
-        roles: ['bd', 'sm'],
+        children: [
+          {
+            title: 'Tasks',
+            icon: 'i-lucide-calendar-check-2',
+            link: '/tasks',
+            roles: ['bd', 'sm'],
+          },
+          {
+            title: 'Sprints',
+            icon: 'i-lucide-rocket',
+            link: '/sprints',
+            roles: ['bd', 'sm'],
+          },
+        ],
       },
       {
-        title: 'Sprints',
-        icon: 'i-lucide-rocket',
-        link: '/sprints',
-        roles: ['bd', 'sm'],
-      },
-      {
-        title: 'Leads',
-        icon: 'i-lucide-target',
-        link: '/leads',
-        roles: ['bd', 'sm'],
-      },
-      {
-        title: 'Tenders',
-        icon: 'i-lucide-gavel',
-        link: '/tenders',
-        roles: ['bd', 'sm'],
-      },
-      {
-        title: 'Clients',
-        icon: 'i-lucide-users',
-        link: '/clients',
-        roles: ['bd', 'sm'],
-      },
-      {
-        title: 'AMC Plans',
-        icon: 'i-lucide-construction',
-        link: '/amc-plans',
-        roles: ['bd', 'sm'],
-      },
-      {
-        title: 'Projects',
-        icon: 'i-lucide-folder-kanban',
-        link: '/projects',
-        roles: ['bd', 'sm'],
+        title: 'Delivery',
+        icon: 'i-lucide-package-check',
+        children: [
+          {
+            title: 'AMC Plans',
+            icon: 'i-lucide-construction',
+            link: '/amc-plans',
+            roles: ['bd', 'sm'],
+          },
+          {
+            title: 'Projects',
+            icon: 'i-lucide-folder-kanban',
+            link: '/projects',
+            roles: ['bd', 'sm'],
+          },
+        ],
       },
       {
         title: 'Reports',
@@ -90,22 +103,28 @@ export const navMenu: NavMenu[] = [
         roles: ['bd', 'sm', 'finance'],
       },
       {
-        title: 'Chart of Accounts',
-        icon: 'i-lucide-list-tree',
-        link: '/chart-of-accounts',
-        roles: ['finance'],
-      },
-      {
-        title: 'Journal Entries',
+        title: 'Ledger',
         icon: 'i-lucide-book-text',
-        link: '/journal-entries',
-        roles: ['finance'],
-      },
-      {
-        title: 'Fiscal Periods',
-        icon: 'i-lucide-calendar-range',
-        link: '/fiscal-periods',
-        roles: ['finance'],
+        children: [
+          {
+            title: 'Chart of Accounts',
+            icon: 'i-lucide-list-tree',
+            link: '/chart-of-accounts',
+            roles: ['finance'],
+          },
+          {
+            title: 'Journal Entries',
+            icon: 'i-lucide-book-text',
+            link: '/journal-entries',
+            roles: ['finance'],
+          },
+          {
+            title: 'Fiscal Periods',
+            icon: 'i-lucide-calendar-range',
+            link: '/fiscal-periods',
+            roles: ['finance'],
+          },
+        ],
       },
     ],
   },
@@ -136,40 +155,52 @@ export const navMenu: NavMenu[] = [
         adminOnly: true,
       },
       {
-        title: 'SLA Policies',
-        icon: 'i-lucide-timer',
-        link: '/admin/sla',
-        adminOnly: true,
-      },
-      {
-        title: 'Macros',
-        icon: 'i-lucide-zap',
-        link: '/admin/macros',
-        adminOnly: true,
-      },
-      {
-        title: 'Automations',
+        title: 'Automation',
         icon: 'i-lucide-workflow',
-        link: '/admin/automations',
-        adminOnly: true,
+        children: [
+          {
+            title: 'Automations',
+            icon: 'i-lucide-workflow',
+            link: '/admin/automations',
+            adminOnly: true,
+          },
+          {
+            title: 'BD Automations',
+            icon: 'i-lucide-route',
+            link: '/admin/bd-automations',
+            adminOnly: true,
+          },
+        ],
       },
       {
-        title: 'BD Automations',
-        icon: 'i-lucide-route',
-        link: '/admin/bd-automations',
-        adminOnly: true,
-      },
-      {
-        title: 'BD Quotas',
-        icon: 'i-lucide-target',
-        link: '/admin/bd-quotas',
-        adminOnly: true,
-      },
-      {
-        title: 'Products',
-        icon: 'i-lucide-package',
-        link: '/admin/products',
-        adminOnly: true,
+        title: 'Configuration',
+        icon: 'i-lucide-settings-2',
+        children: [
+          {
+            title: 'SLA Policies',
+            icon: 'i-lucide-timer',
+            link: '/admin/sla',
+            adminOnly: true,
+          },
+          {
+            title: 'Macros',
+            icon: 'i-lucide-zap',
+            link: '/admin/macros',
+            adminOnly: true,
+          },
+          {
+            title: 'Products',
+            icon: 'i-lucide-package',
+            link: '/admin/products',
+            adminOnly: true,
+          },
+          {
+            title: 'BD Quotas',
+            icon: 'i-lucide-target',
+            link: '/admin/bd-quotas',
+            adminOnly: true,
+          },
+        ],
       },
       {
         title: 'Activity Log',
@@ -183,10 +214,9 @@ export const navMenu: NavMenu[] = [
     heading: 'Tools',
     items: [
       {
-        title: 'Integration',
-        icon: 'i-lucide-receipt',
-        link: '/invoices',
-        roles: ['bd', 'sm', 'finance'],
+        title: 'Integrations',
+        icon: 'i-lucide-plug',
+        link: '/settings/integrations',
       },
     ],
   },
