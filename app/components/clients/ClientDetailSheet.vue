@@ -526,7 +526,7 @@ function formatDateTime(value: string) {
 
             <Separator />
 
-            <AiSuggestionCard regarding-type="client" :regarding-id="client.id" />
+            <InsightsAiSuggestionCard regarding-type="client" :regarding-id="client.id" />
 
             <Separator />
 

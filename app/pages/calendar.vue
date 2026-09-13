@@ -331,7 +331,7 @@ function isCurrentMonth(date: Date) {
       </div>
     </div>
 
-    <DayViewSheet
+    <CalendarDayViewSheet
       v-model:open="isDayViewOpen"
       :date="selectedDay"
       :events="selectedDayEvents"

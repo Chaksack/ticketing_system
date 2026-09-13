@@ -40,6 +40,26 @@ const faqs = [
     q: 'How do I add or change my profile picture?',
     a: 'Go to Settings → Profile, click "Change photo" under your name, and choose a PNG, JPEG, WEBP, or GIF up to 2MB. It updates everywhere your name appears — the sidebar, activity timelines, and assignee pickers. Click "Remove" to go back to your initials.',
   },
+  {
+    q: 'What\'s the difference between a Chat group and a Chat channel?',
+    a: 'A group is invite-only — you explicitly add the people in it, like a DM but with more than one other person. A channel is linked to a Project and is self-service: anyone can browse and join one from the hash icon in Chat, no invite needed.',
+  },
+  {
+    q: 'Why doesn\'t the AI suggestion on a lead show a percentage?',
+    a: 'The win-probability model needs at least 20 of your own decided (won or lost) leads and tenders before it trains — below that, showing a number would just be noise. Until then the card still shows the simpler "going cold" signal based on days since last contact, which doesn\'t need any training data, plus how many more decided deals are needed before the score turns on.',
+  },
+  {
+    q: 'How is an invoice\'s balance calculated?',
+    a: 'You never set it directly — it\'s recalculated automatically every time a receipt (payment) is recorded or removed: balance = total minus the sum of receipts. The status (Unpaid/Partial/Paid) follows the same recalculation, and every payment posts a matching entry to the general ledger behind the scenes.',
+  },
+  {
+    q: 'Does marking a Quote as "Invoiced" create a real invoice?',
+    a: 'No — Quotes and Invoices are separate, unconnected records. "Invoiced" is just a status label on the quote for your own tracking; create the actual Invoice separately from the client\'s Finance section once the deal is billable.',
+  },
+  {
+    q: 'Can I connect Slack or Gmail on someone else\'s behalf?',
+    a: 'No — Settings → Integrations and the Mail page\'s Gmail connection are both per-person. Each staff member connects their own account and only ever sees notifications or mail addressed to them.',
+  },
 ]
 </script>
 
@@ -61,6 +81,12 @@ const faqs = [
         </TabsTrigger>
         <TabsTrigger value="bdsm">
           BD &amp; SM
+        </TabsTrigger>
+        <TabsTrigger value="finance">
+          Finance
+        </TabsTrigger>
+        <TabsTrigger value="calchat">
+          Calendar &amp; Chat
         </TabsTrigger>
         <TabsTrigger value="portal">
           Submitting a Ticket
@@ -84,8 +110,9 @@ const faqs = [
           <CardHeader>
             <CardTitle>What is this?</CardTitle>
             <CardDescription>
-              A support desk for IBS: customers report issues, staff resolve them, and the
-              system tracks response times and keeps the queue moving automatically.
+              One system covering support tickets, BD/sales pipeline, finance, and team
+              tools — tracking everything automatically instead of relying on someone to
+              chase it by hand.
             </CardDescription>
           </CardHeader>
           <CardContent class="flex flex-col gap-4 text-sm">
@@ -93,19 +120,20 @@ const faqs = [
               Customers submit requests through a public portal — no account required. Each
               submission becomes a <strong>ticket</strong>: it's automatically assigned to a
               support agent, given an SLA deadline based on its priority, and on-call staff
-              are paged. From there, agents work the ticket — replying to the customer,
-              leaving internal notes, tagging it, and updating its status — until it's
-              resolved and eventually closed.
+              are paged. From there, agents work the ticket until it's resolved and
+              eventually closed. Alongside that, BD/SM staff run the sales pipeline (Leads,
+              Tenders, Clients, Projects, Quotes), Finance tracks invoices and the general
+              ledger, and everyone shares Calendar, Chat, and Tasks/Sprints.
             </p>
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="rounded-md border p-3">
                 <p class="font-medium">
-                  Two roles
+                  Roles
                 </p>
                 <p class="text-muted-foreground">
-                  <strong>Agents</strong> work tickets day-to-day. <strong>Admins</strong> do
-                  everything an agent can, plus manage staff, SLA policies, macros,
-                  automation rules, and view reports.
+                  A staff member can hold one or more roles — Admin, Agent, BD, Sales &amp;
+                  Marketing, Finance, Engineer, Engineering Coordinator, Engineering Lead —
+                  and the sidebar only shows what your roles unlock. Admins see everything.
                 </p>
               </div>
               <div class="rounded-md border p-3">
@@ -134,11 +162,20 @@ const faqs = [
                   <NuxtLink to="/tickets" class="underline">
                     Tickets
                   </NuxtLink>
-                  is the main queue. Admin-only tools live under
-                  <NuxtLink to="/admin" class="underline">
-                    Admin
+                  is the support queue,
+                  <NuxtLink to="/" class="underline">
+                    Overview
                   </NuxtLink>
-                  in the sidebar.
+                  is the BD/SM dashboard, and
+                  <NuxtLink to="/chat" class="underline">
+                    Chat
+                  </NuxtLink>
+                  and
+                  <NuxtLink to="/calendar" class="underline">
+                    Calendar
+                  </NuxtLink>
+                  are shared by everyone. Admin- and Finance-only tools live under their own
+                  sidebar sections.
                 </p>
               </div>
             </div>
@@ -162,6 +199,22 @@ const faqs = [
               numbers for the same contact. When the deal is ready, click
               <strong>Convert to Client</strong> — this creates a real client record carrying
               over the lead's assignees and marks the lead "Won."
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tenders</CardTitle>
+              <CardDescription>
+                Track competitive/public bids from submission through award.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              A tender moves through Identified → Registered → Preparing → Submitted →
+              Evaluation → Won/Lost, alongside the issuing authority, a reference number,
+              a submission deadline (with its own reminder as it nears), and one or more
+              assignees. A Won tender can be <strong>Converted to Client</strong> the same
+              way a Won lead can.
             </CardContent>
           </Card>
 
@@ -214,12 +267,37 @@ const faqs = [
 
           <Card>
             <CardHeader>
-              <CardTitle>Tasks</CardTitle>
+              <CardTitle>Tasks &amp; Sprints</CardTitle>
+              <CardDescription>
+                A Jira-style kanban board, with sprint planning built in.
+              </CardDescription>
             </CardHeader>
             <CardContent class="text-sm text-muted-foreground">
-              A Jira-style board — Epics group Tasks, Tasks can have Subtasks. Assign one or
-              more staff, drag between status columns, and set a "remind me at" time to get
-              paged before something's due.
+              Epics group Tasks, and Tasks can have Subtasks. A Task either sits in the
+              Backlog or belongs to a Sprint — create a sprint, drag tasks into it (or use a
+              card's "Move to sprint" menu), then click <strong>Start Sprint</strong> to make
+              it active (starting one automatically completes whichever sprint was already
+              active — only one runs at a time). Drag cards between status columns as work
+              progresses, assign one or more staff per task, and set a "remind me at" time to
+              get paged before something's due. Click <strong>Complete Sprint</strong> when
+              it's done.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Quotes</CardTitle>
+              <CardDescription>
+                A pre-sale proposal, attached directly to a Lead or Tender.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Open a Lead or Tender and look for its Quotes section — build line items from
+              the shared Products catalog (Admin → Products), track the quote's status
+              through Quoted → Ordered → Invoiced, and download a branded PDF to send to the
+              prospect. Marking a quote "Invoiced" is just a label for your own tracking — it
+              doesn't create a real Invoice; do that from the client's Finance section once
+              the deal is billable.
             </CardContent>
           </Card>
 
@@ -228,9 +306,132 @@ const faqs = [
               <CardTitle>Finding things fast</CardTitle>
             </CardHeader>
             <CardContent class="text-sm text-muted-foreground">
-              Every list (Leads, Clients, Projects, Tasks) has a search box, sortable columns,
-              and dropdown filters — click a column header to sort, or the filter chips above
-              the table to narrow by stage/status/assignee.
+              Every list (Leads, Tenders, Clients, Projects, Tasks) has a search box, sortable
+              columns, and dropdown filters — click a column header to sort, or the filter
+              chips above the table to narrow by stage/status/assignee.
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="finance" class="mt-4">
+        <div class="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoices &amp; Receipts</CardTitle>
+              <CardDescription>
+                Bill a client and track what they still owe.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              An invoice belongs to a project, with its own line items, an optional tax rate
+              and discount, and a currency. Recording a receipt (a payment) against an
+              invoice automatically recalculates its amount paid, balance, and status
+              (Unpaid → Partial → Paid) — you never set those by hand.
+              <NuxtLink to="/invoices" class="underline">
+                Invoices
+              </NuxtLink>
+              (Finance section) lists every invoice across every client with an
+              outstanding-balance summary by currency; open a client's own detail view to
+              see just theirs.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>General Ledger</CardTitle>
+              <CardDescription>
+                A real double-entry ledger behind the numbers. Finance role only.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Every invoice payment automatically posts a balanced journal entry (Debit Cash
+              / Credit Accounts Receivable) — nothing here needs manual bookkeeping unless
+              you're recording something outside of client receipts. Finance staff maintain
+              the <strong>Chart of Accounts</strong> (asset/liability/equity/revenue/expense
+              accounts, each with a live balance computed from the ledger, never stored),
+              post manual <strong>Journal Entries</strong> (total debits must equal total
+              credits, or it's rejected), and open/close monthly
+              <strong>Fiscal Periods</strong> to lock the books once a month is finalized —
+              you can't post into a closed period.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Conversion Suggestions</CardTitle>
+              <CardDescription>
+                A model trained on your own won/lost history — not a third-party AI.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Every lead, tender, and client detail view shows an "AI Suggestion" card
+              combining two signals: a win-probability score from a small model trained on
+              your own decided (won/lost) leads and tenders, and a "going cold" flag based on
+              how long it's been since the last logged interaction. The model needs at least
+              20 decided deals before it'll show a probability — below that, the card just
+              shows how many more it needs and falls back to the contact-recency signal
+              alone. BD/SM staff can retrain it on demand from the
+              <NuxtLink to="/bd-reports" class="underline">
+                BD &amp; SM Reports
+              </NuxtLink> page (it also retrains automatically overnight).
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="calchat" class="mt-4">
+        <div class="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Calendar</CardTitle>
+              <CardDescription>
+                Meetings, site visits, and other scheduled activities.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Every event has a free-text activity type (Meeting, Site Visit, Client Visit,
+              Scouting, or anything else you type) shown as a colored badge. Click any day to
+              open its full agenda instead of jumping straight into a new event — from there
+              you can add an activity for that day or open an existing one. Export a month
+              (or a single day, from the day view) as a branded PDF report.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chat</CardTitle>
+              <CardDescription>
+                Direct messages, private groups, and project channels.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Chat has two kinds of conversations: <strong>Direct Messages/Groups</strong>
+              (invite-only — you add people explicitly) and <strong>Channels</strong> (linked
+              to a Project, self-service — anyone can browse and join one from the hash icon
+              next to the new-message buttons). React to any message with an emoji, and use
+              the @ button to mention a ticket, lead, client, task, or project inline — it
+              becomes a clickable link in the message. Your joined channels and conversations
+              also show in a "Chat" dropdown in the main sidebar for quick access without
+              opening the full page.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Integrations &amp; Personal Email</CardTitle>
+              <CardDescription>
+                Connect your own accounts — per person, not shared.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Settings → Integrations lets you connect your own Slack account — once
+              connected, you'll get a Slack DM for the same things that already trigger an
+              in-app or push notification (assignments, mentions, reminders); send yourself a
+              test message from the same screen to confirm it's working. Separately, the
+              Mail page lets you connect your own Gmail account to read and send personal
+              email from inside the app — distinct from the shared support inbox that handles
+              ticket replies.
             </CardContent>
           </Card>
         </div>
@@ -375,14 +576,44 @@ const faqs = [
 
           <Card>
             <CardHeader>
-              <CardTitle>Auto-assignment &amp; on-call paging</CardTitle>
+              <CardTitle>Auto-assignment, on-call paging &amp; escalation</CardTitle>
+            </CardHeader>
+            <CardContent class="flex flex-col gap-2 text-sm text-muted-foreground">
+              <p>
+                If no rule sets an assignee, the ticket goes to whichever active staff member
+                currently holds the fewest open/in-progress tickets. Separately, every active
+                on-call staff member (Admin → toggle "On-call" per staff member) gets a push
+                notification the moment a ticket is created, and again — once — the first
+                time it breaches its SLA.
+              </p>
+              <p>
+                <strong>Paging and escalation are different things that happen to fire
+                  together.</strong> Paging just notifies on-call staff; it doesn't reassign
+                anything. Escalating actually moves ownership of the ticket up a fixed chain
+                — Engineer → Engineering Coordinator → Engineering Lead — reassigning it to
+                the least-loaded active person at that next level. A ticket's first SLA
+                breach triggers both a page and (if it hasn't been escalated yet) a one-level
+                escalation; after that, anyone can also escalate a ticket manually at any
+                time from its detail view, independent of SLA status.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>BD Automations (Admin)</CardTitle>
+              <CardDescription>
+                The same idea as ticket automations, applied to Leads and Tenders.
+              </CardDescription>
             </CardHeader>
             <CardContent class="text-sm text-muted-foreground">
-              If no rule sets an assignee, the ticket goes to whichever active staff member
-              currently holds the fewest open/in-progress tickets. Separately, every active
-              on-call staff member (Admin → toggle "On-call" per staff member) gets a push
-              notification whenever a ticket is created, and again if that ticket later
-              breaches its SLA.
+              Two triggers instead of one: <strong>Created</strong> (matches the new
+              lead/tender's source) and <strong>Stage Changed</strong> (fires when a record
+              enters a specific stage — e.g. notify someone whenever a tender hits
+              "Evaluation"). Actions are also different from ticket rules: set an assignee
+              (only if the record doesn't already have one) and/or notify a staff member —
+              there's no status/priority/tag action here. New leads also always
+              auto-assign to the least-loaded active BD staff member, independent of any rule.
             </CardContent>
           </Card>
         </div>
@@ -395,9 +626,11 @@ const faqs = [
               <CardTitle>Staff (Admin)</CardTitle>
             </CardHeader>
             <CardContent class="text-sm text-muted-foreground">
-              Invite staff, set their role (admin/agent), enable/disable accounts, and
-              toggle on-call status. New staff get an emailed invite link to set their
-              password.
+              Invite staff and assign one or more roles — Admin, Agent, BD, Sales &amp;
+              Marketing, Finance, Engineer, Engineering Coordinator, Engineering Lead — each
+              unlocking a different slice of the sidebar. Enable/disable accounts and toggle
+              on-call status from the same screen. New staff get an emailed invite link to
+              set their password.
             </CardContent>
           </Card>
           <Card>
@@ -420,11 +653,35 @@ const faqs = [
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Automations (Admin)</CardTitle>
+              <CardTitle>Automations &amp; BD Automations (Admin)</CardTitle>
             </CardHeader>
             <CardContent class="text-sm text-muted-foreground">
-              Build condition → action rules that fire on ticket creation. See
-              "Automation &amp; SLA" for how matching works.
+              Build condition → action rules that fire on ticket creation, or on a lead/tender
+              being created or changing stage. See "Automation &amp; SLA" for how matching
+              works for each.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>BD Quotas (Admin)</CardTitle>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              Set a monthly target value per BD/SM staff member. Progress is the value of
+              their leads and tenders that moved to Won during that calendar month — shown
+              as a progress bar on the
+              <NuxtLink to="/bd-reports" class="underline">
+                BD &amp; SM Reports
+              </NuxtLink> page, independent of whatever date range is set there.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Products (Admin)</CardTitle>
+            </CardHeader>
+            <CardContent class="text-sm text-muted-foreground">
+              The shared catalog (name, description, unit price, currency) that BD/SM staff
+              pick from when building Quote line items, rather than typing them freehand.
+              Maintaining the catalog itself is admin-only.
             </CardContent>
           </Card>
           <Card>

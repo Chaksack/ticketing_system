@@ -404,7 +404,7 @@ async function onToggleReaction(messageId: string, emoji: string) {
               Browse
             </button>
           </div>
-          <ChannelListItem
+          <ChatChannelListItem
             v-for="channel in projectChannels"
             :key="channel.id"
             :channel="channel"
@@ -417,7 +417,7 @@ async function onToggleReaction(messageId: string, emoji: string) {
           </p>
 
           <span class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:px-3">Direct Messages</span>
-          <ChannelListItem
+          <ChatChannelListItem
             v-for="channel in conversationChannels"
             :key="channel.id"
             :channel="channel"

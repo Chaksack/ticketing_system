@@ -399,7 +399,7 @@ function formatDateTime(value: string) {
 
             <Separator />
 
-            <AiSuggestionCard regarding-type="tender" :regarding-id="tender.id" />
+            <InsightsAiSuggestionCard regarding-type="tender" :regarding-id="tender.id" />
 
             <Separator />
 
