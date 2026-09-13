@@ -14,7 +14,7 @@ const emit = defineEmits<{
 
 const open = defineModel<boolean>('open', { default: false })
 
-const { staff: allStaff, updateStatus, setOnCall, updateRoles, updateManager, removeStaff } = useStaff()
+const { staff: allStaff, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, removeStaff } = useStaff()
 
 const managerOptions = computed(() => allStaff.value.filter(s => s.status === 'active' && s.id !== props.staff?.id))
 
@@ -89,6 +89,20 @@ async function onManagerChange(value: AcceptableValue) {
   toast('Manager updated', {
     description: managerName ? `${props.staff.name} now reports to ${managerName}.` : `${props.staff.name} has no manager set.`,
   })
+}
+
+const hourlyRateDraft = ref('')
+
+watch(() => props.staff, (staff) => {
+  hourlyRateDraft.value = staff?.hourlyRate !== undefined ? String(staff.hourlyRate) : ''
+}, { immediate: true })
+
+async function onSaveHourlyRate() {
+  if (!props.staff)
+    return
+
+  await updateHourlyRate(props.staff.id, hourlyRateDraft.value.trim() ? Number(hourlyRateDraft.value) : null)
+  toast('Hourly rate updated')
 }
 
 async function onDelete() {
@@ -198,6 +212,20 @@ function formatDate(value: string) {
                 :disabled="staff.status === 'disabled'"
                 @update:model-value="onOnCallChange"
               />
+            </div>
+
+            <Separator />
+
+            <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-0.5">
+                <Label for="hourly-rate">Hourly Rate</Label>
+                <span class="text-xs text-muted-foreground">
+                  Cost rate used when this person logs time — feeds project profitability reporting.
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <Input id="hourly-rate" v-model="hourlyRateDraft" type="number" min="0" step="0.01" placeholder="0.00" class="h-8 w-24 text-xs" @blur="onSaveHourlyRate" />
+              </div>
             </div>
 
             <Separator />

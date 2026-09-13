@@ -187,6 +187,7 @@ export async function deleteJournalEntryBySource(source: JournalEntrySource, sou
 
 const CASH_ACCOUNT_CODE = '1010'
 const ACCOUNTS_RECEIVABLE_CODE = '1200'
+const ACCOUNTS_PAYABLE_CODE = '2010'
 
 /** Posts Debit Cash / Credit Accounts Receivable for a receipt recorded against a client invoice. */
 export async function postReceiptToLedger(receipt: { id: string, amount: number, receivedAt: string, recordedBy?: string }, invoice: { id: string, description?: string }) {
@@ -199,6 +200,36 @@ export async function postReceiptToLedger(receipt: { id: string, amount: number,
     lines: [
       { accountCode: CASH_ACCOUNT_CODE, debit: receipt.amount, memo: `Receipt ${receipt.id}` },
       { accountCode: ACCOUNTS_RECEIVABLE_CODE, credit: receipt.amount, memo: `Invoice ${invoice.id}` },
+    ],
+  })
+}
+
+/** Posts Debit [expense account] / Credit Accounts Payable the moment a vendor bill is recorded — unlike client invoices, a vendor bill posts to the GL immediately, since AP has no equivalent of AR's deferred-posting shortcut. */
+export async function postVendorBillToLedger(bill: { id: string, expenseAccountCode: string, total: number, billDate: string, createdBy?: string }) {
+  await postJournalEntry({
+    entryDate: bill.billDate,
+    memo: `Vendor bill ${bill.id}`,
+    source: 'vendor_bill',
+    sourceId: bill.id,
+    postedBy: bill.createdBy,
+    lines: [
+      { accountCode: bill.expenseAccountCode, debit: bill.total, memo: `Bill ${bill.id}` },
+      { accountCode: ACCOUNTS_PAYABLE_CODE, credit: bill.total, memo: `Bill ${bill.id}` },
+    ],
+  })
+}
+
+/** Posts Debit Accounts Payable / Credit Cash for a payment recorded against a vendor bill. */
+export async function postVendorPaymentToLedger(payment: { id: string, billId: string, amount: number, paidDate: string, recordedBy?: string }) {
+  await postJournalEntry({
+    entryDate: payment.paidDate,
+    memo: `Payment for bill ${payment.billId}`,
+    source: 'vendor_payment',
+    sourceId: payment.id,
+    postedBy: payment.recordedBy,
+    lines: [
+      { accountCode: ACCOUNTS_PAYABLE_CODE, debit: payment.amount, memo: `Payment ${payment.id}` },
+      { accountCode: CASH_ACCOUNT_CODE, credit: payment.amount, memo: `Bill ${payment.billId}` },
     ],
   })
 }

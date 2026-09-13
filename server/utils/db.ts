@@ -702,6 +702,7 @@ async function migrate() {
   `)
 
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS manager_id TEXT')
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC')
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS bd_quotas (
@@ -856,6 +857,12 @@ async function migrate() {
     WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '1200')
   `).run(accountsSeedNow, accountsSeedNow)
 
+  await db.prepare(`
+    INSERT INTO accounts (code, name, type, is_active, description, created_at, updated_at)
+    SELECT '2010', 'Accounts Payable', 'liability', 1, 'Default AP control account for vendor bills', ?, ?
+    WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '2010')
+  `).run(accountsSeedNow, accountsSeedNow)
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS fiscal_periods (
       id TEXT PRIMARY KEY,
@@ -889,6 +896,110 @@ async function migrate() {
       credit NUMERIC NOT NULL DEFAULT 0,
       memo TEXT,
       created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS budgets (
+      id TEXT PRIMARY KEY,
+      period_id TEXT NOT NULL,
+      account_code TEXT NOT NULL,
+      amount NUMERIC NOT NULL,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (period_id, account_code)
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS vendors (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      contact_name TEXT,
+      contact_email TEXT,
+      contact_phone TEXT,
+      address TEXT,
+      notes TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS vendor_bills (
+      id TEXT PRIMARY KEY,
+      vendor_id TEXT NOT NULL,
+      expense_account_code TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'unpaid',
+      bill_date TEXT NOT NULL,
+      due_date TEXT,
+      reference TEXT,
+      notes TEXT,
+      currency TEXT NOT NULL DEFAULT 'GHS',
+      subtotal NUMERIC NOT NULL DEFAULT 0,
+      tax_rate NUMERIC NOT NULL DEFAULT 0,
+      tax_amount NUMERIC NOT NULL DEFAULT 0,
+      total NUMERIC NOT NULL DEFAULT 0,
+      amount_paid NUMERIC NOT NULL DEFAULT 0,
+      balance NUMERIC NOT NULL DEFAULT 0,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS vendor_bill_items (
+      id TEXT PRIMARY KEY,
+      bill_id TEXT NOT NULL,
+      description TEXT NOT NULL,
+      quantity NUMERIC NOT NULL DEFAULT 1,
+      unit_price NUMERIC NOT NULL DEFAULT 0,
+      line_total NUMERIC NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS payment_runs (
+      id TEXT PRIMARY KEY,
+      payment_date TEXT NOT NULL,
+      method TEXT NOT NULL,
+      reference TEXT,
+      total NUMERIC NOT NULL DEFAULT 0,
+      created_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS vendor_payments (
+      id TEXT PRIMARY KEY,
+      bill_id TEXT NOT NULL,
+      payment_run_id TEXT,
+      amount NUMERIC NOT NULL,
+      method TEXT NOT NULL,
+      paid_date TEXT NOT NULL,
+      reference TEXT,
+      recorded_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS timesheets (
+      id TEXT PRIMARY KEY,
+      staff_id TEXT NOT NULL,
+      task_id TEXT NOT NULL,
+      work_date TEXT NOT NULL,
+      hours NUMERIC NOT NULL,
+      hourly_rate NUMERIC NOT NULL DEFAULT 0,
+      billable INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     )
   `)
 }
@@ -1011,6 +1122,41 @@ export async function nextJournalEntryId() {
 export async function nextJournalEntryLineId() {
   const n = await nextSequence('journal_entry_line')
   return `JEL-${n}`
+}
+
+export async function nextBudgetId() {
+  const n = await nextSequence('budget')
+  return `BUDGET-${n}`
+}
+
+export async function nextVendorId() {
+  const n = await nextSequence('vendor')
+  return `VENDOR-${n}`
+}
+
+export async function nextVendorBillId() {
+  const n = await nextSequence('vendor_bill')
+  return `BILL-${n}`
+}
+
+export async function nextVendorBillItemId() {
+  const n = await nextSequence('vendor_bill_item')
+  return `BITEM-${n}`
+}
+
+export async function nextPaymentRunId() {
+  const n = await nextSequence('payment_run')
+  return `RUN-${n}`
+}
+
+export async function nextVendorPaymentId() {
+  const n = await nextSequence('vendor_payment')
+  return `VPMT-${n}`
+}
+
+export async function nextTimesheetId() {
+  const n = await nextSequence('timesheet')
+  return `TS-${n}`
 }
 
 export async function nextClientId() {

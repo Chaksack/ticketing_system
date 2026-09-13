@@ -28,6 +28,7 @@ export interface StaffRow {
   reset_expires_at: string | null
   avatar_url: string | null
   manager_id?: string | null
+  hourly_rate?: number | string | null
   created_at: string
 }
 
@@ -45,6 +46,7 @@ export function mapStaffRow(row: StaffRow): StaffMember {
     onCall: !!row.on_call,
     avatarUrl: row.avatar_url ?? undefined,
     managerId: row.manager_id ?? undefined,
+    hourlyRate: row.hourly_rate ? Number(row.hourly_rate) : undefined,
     createdAt: row.created_at,
   }
 }

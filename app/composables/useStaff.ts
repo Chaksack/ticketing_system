@@ -48,10 +48,17 @@ export function useStaff() {
       staff.value[index] = updated
   }
 
+  async function updateHourlyRate(id: string, hourlyRate: number | null) {
+    const { staff: updated } = await $fetch<{ staff: StaffMember }>(`/api/staff/${id}`, { method: 'PATCH', body: { hourlyRate } })
+    const index = staff.value.findIndex(s => s.id === id)
+    if (index !== -1)
+      staff.value[index] = updated
+  }
+
   async function removeStaff(id: string) {
     await $fetch(`/api/staff/${id}`, { method: 'DELETE' })
     staff.value = staff.value.filter(s => s.id !== id)
   }
 
-  return { staff, onCallStaff, fetchStaff, getStaff, addStaff, updateStatus, setOnCall, updateRoles, updateManager, removeStaff }
+  return { staff, onCallStaff, fetchStaff, getStaff, addStaff, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, removeStaff }
 }

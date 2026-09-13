@@ -1,4 +1,4 @@
-export type JournalEntrySource = 'manual' | 'receipt'
+export type JournalEntrySource = 'manual' | 'receipt' | 'vendor_bill' | 'vendor_payment'
 
 export interface JournalEntryLine {
   id: string

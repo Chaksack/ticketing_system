@@ -2,6 +2,7 @@
 import type { AcceptableValue } from 'reka-ui'
 import type { AmcContractStatus } from '~/types/amc'
 import type { Project, ProjectStatus } from '~/types/project'
+import type { ProjectProfitabilityRow } from '~/types/project-profitability'
 import type { Task } from '~/types/task'
 import { toast } from 'vue-sonner'
 import { priorities } from '~/components/tasks/data'
@@ -25,6 +26,20 @@ const { updateProject, removeProject, assignAmc } = useProjects()
 const { plans, fetchPlans } = useAmcPlans()
 const { fetchTasksForProject } = useTasks()
 const { statuses: taskStatuses, fetchStatuses: fetchTaskStatuses } = useTaskStatuses()
+const { isFinance, isAdmin } = useAuth()
+const { fetchProfitability } = useProjectProfitability()
+
+const canSeeProfitability = computed(() => isFinance.value || isAdmin.value)
+const profitability = ref<ProjectProfitabilityRow | null>(null)
+
+async function loadProfitability() {
+  if (!props.project || !canSeeProfitability.value)
+    return
+  const rows = await fetchProfitability(props.project.id)
+  profitability.value = rows[0] ?? null
+}
+
+watch(() => props.project?.id, loadProfitability, { immediate: true })
 
 const newContractStatuses: { value: AmcContractStatus, label: string }[] = [
   { value: 'submitted', label: 'Submitted' },
@@ -399,6 +414,37 @@ async function onDelete() {
 
               <AmcContractCard v-for="contract in project.contracts" :key="contract.id" :contract="contract" />
             </div>
+
+            <template v-if="canSeeProfitability">
+              <Separator />
+
+              <div class="flex flex-col gap-2">
+                <h4 class="text-sm font-medium">
+                  Cost &amp; Profitability
+                </h4>
+                <div v-if="profitability" class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                  <div class="flex flex-col gap-0.5 rounded-md border p-2">
+                    <span class="text-xs text-muted-foreground">Revenue</span>
+                    <span class="tabular-nums font-medium">{{ profitability.revenue.toLocaleString() }}</span>
+                  </div>
+                  <div class="flex flex-col gap-0.5 rounded-md border p-2">
+                    <span class="text-xs text-muted-foreground">Cost</span>
+                    <span class="tabular-nums font-medium">{{ profitability.cost.toLocaleString() }}</span>
+                  </div>
+                  <div class="flex flex-col gap-0.5 rounded-md border p-2">
+                    <span class="text-xs text-muted-foreground">Margin</span>
+                    <span class="tabular-nums font-medium" :class="profitability.margin < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'">{{ profitability.margin.toLocaleString() }}</span>
+                  </div>
+                  <div class="flex flex-col gap-0.5 rounded-md border p-2">
+                    <span class="text-xs text-muted-foreground">Margin %</span>
+                    <span class="tabular-nums font-medium">{{ profitability.marginPct === null ? '—' : `${profitability.marginPct.toFixed(1)}%` }}</span>
+                  </div>
+                </div>
+                <p v-else class="text-xs text-muted-foreground">
+                  No invoices or logged time against this project yet.
+                </p>
+              </div>
+            </template>
 
             <Separator />
 

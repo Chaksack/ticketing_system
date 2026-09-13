@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   await requireAdmin(event)
 
   const id = getRouterParam(event, 'id')
-  const body = await readBody<{ status?: StaffStatus, onCall?: boolean, roles?: StaffRole[], managerId?: string | null }>(event)
+  const body = await readBody<{ status?: StaffStatus, onCall?: boolean, roles?: StaffRole[], managerId?: string | null, hourlyRate?: number | null }>(event)
 
   if (!id) {
     throw createError({ statusCode: 400, statusMessage: 'Missing staff id' })
@@ -27,13 +27,14 @@ export default defineEventHandler(async (event) => {
   const onCall = body.onCall === undefined ? existing.on_call : Number(body.onCall)
   const roles = body.roles ?? parseStaffRoles(existing)
   const managerId = body.managerId !== undefined ? body.managerId : existing.manager_id
+  const hourlyRate = body.hourlyRate !== undefined ? body.hourlyRate : existing.hourly_rate
 
   if (managerId === id) {
     throw createError({ statusCode: 400, statusMessage: 'A staff member cannot manage themselves' })
   }
 
-  await db.prepare('UPDATE staff SET status = ?, on_call = ?, role = ?, roles = ?, manager_id = ? WHERE id = ?')
-    .run(status, onCall, roles[0], JSON.stringify(roles), managerId ?? null, id)
+  await db.prepare('UPDATE staff SET status = ?, on_call = ?, role = ?, roles = ?, manager_id = ?, hourly_rate = ? WHERE id = ?')
+    .run(status, onCall, roles[0], JSON.stringify(roles), managerId ?? null, hourlyRate ?? null, id)
 
   if (body.onCall === true && !existing.on_call) {
     const title = 'You\'re on call'

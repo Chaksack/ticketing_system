@@ -29,6 +29,14 @@ function monthLabel(key: string) {
   return new Date(Date.UTC(year!, month! - 1, 1)).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 }
 
+/** Pure month-boundary math for a 'YYYY-MM' id — used both to create a fiscal period row and, for Budgeting, to compute a period's date range without requiring one to exist yet. */
+export function periodRangeFromId(id: string) {
+  const [year, month] = id.split('-').map(Number)
+  const startDate = new Date(Date.UTC(year!, month! - 1, 1)).toISOString()
+  const endDate = new Date(Date.UTC(year!, month!, 0, 23, 59, 59, 999)).toISOString()
+  return { startDate, endDate, label: monthLabel(id) }
+}
+
 /**
  * Resolves (auto-creating if needed, defaulting to 'open') the fiscal period covering the given
  * date, and throws if that period already exists and is closed. Journal entries always post
@@ -46,15 +54,13 @@ export async function resolveOpenPeriodForDate(dateIso: string): Promise<FiscalP
     return mapFiscalPeriodRow(existing)
   }
 
-  const [year, month] = id.split('-').map(Number)
-  const startDate = new Date(Date.UTC(year!, month! - 1, 1)).toISOString()
-  const endDate = new Date(Date.UTC(year!, month!, 0, 23, 59, 59, 999)).toISOString()
+  const { startDate, endDate, label } = periodRangeFromId(id)
   const now = new Date().toISOString()
 
   await db.prepare(`
     INSERT INTO fiscal_periods (id, label, start_date, end_date, status, created_at)
     VALUES (?, ?, ?, ?, 'open', ?)
-  `).run(id, monthLabel(id), startDate, endDate, now)
+  `).run(id, label, startDate, endDate, now)
 
-  return { id, label: monthLabel(id), startDate, endDate, status: 'open', createdAt: now }
+  return { id, label, startDate, endDate, status: 'open', createdAt: now }
 }

@@ -10,5 +10,6 @@ export interface StaffMember {
   onCall: boolean
   avatarUrl?: string
   managerId?: string
+  hourlyRate?: number
   createdAt: string
 }

@@ -119,6 +119,22 @@ export async function requireAgent(event: H3Event): Promise<SessionUser> {
   return user
 }
 
+/** True for admin, finance, and engineering leadership — the roles allowed to see other staff members' logged time. */
+export function isCapacityViewer(user: SessionUser): boolean {
+  return user.roles.includes('admin') || user.roles.includes('finance') || user.roles.includes('engineering_lead') || user.roles.includes('engineering_coordinator')
+}
+
+/** Gates cross-staff time/capacity visibility (the resource utilization view, and reading other people's timesheets) — admin, finance, and engineering leadership. */
+export async function requireCapacityView(event: H3Event): Promise<SessionUser> {
+  const user = await requireSessionUser(event)
+
+  if (!isCapacityViewer(user)) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  return user
+}
+
 /** Gates engineering-only areas — engineer, engineering_coordinator, and engineering_lead hold identical access here, alongside admin. */
 export async function requireEngineer(event: H3Event): Promise<SessionUser> {
   const user = await requireSessionUser(event)

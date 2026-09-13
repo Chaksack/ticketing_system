@@ -14,6 +14,11 @@ export const navMenu: NavMenu[] = [
         icon: 'i-lucide-mail',
         link: '/email',
       },
+      {
+        title: 'Timesheets',
+        icon: 'i-lucide-clock',
+        link: '/timesheets',
+      },
     ],
   },
   {
@@ -126,6 +131,42 @@ export const navMenu: NavMenu[] = [
           },
         ],
       },
+      {
+        title: 'Financial Statements',
+        icon: 'i-lucide-file-bar-chart',
+        link: '/financial-statements',
+        roles: ['finance'],
+      },
+      {
+        title: 'Budgets',
+        icon: 'i-lucide-target',
+        link: '/budgets',
+        roles: ['finance'],
+      },
+      {
+        title: 'Vendors',
+        icon: 'i-lucide-truck',
+        link: '/vendors',
+        roles: ['finance'],
+      },
+      {
+        title: 'Vendor Bills',
+        icon: 'i-lucide-file-text',
+        link: '/vendor-bills',
+        roles: ['finance'],
+      },
+      {
+        title: 'Payment Runs',
+        icon: 'i-lucide-banknote',
+        link: '/payment-runs',
+        roles: ['finance'],
+      },
+      {
+        title: 'Project Profitability',
+        icon: 'i-lucide-line-chart',
+        link: '/project-profitability',
+        roles: ['finance'],
+      },
     ],
   },
   {
@@ -142,6 +183,12 @@ export const navMenu: NavMenu[] = [
         icon: 'i-lucide-bar-chart-3',
         link: '/reports',
         adminOnly: true,
+      },
+      {
+        title: 'Resource Utilization',
+        icon: 'i-lucide-gauge',
+        link: '/resource-utilization',
+        roles: ['engineering_lead', 'engineering_coordinator', 'finance'],
       },
     ],
   },
