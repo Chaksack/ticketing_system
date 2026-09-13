@@ -202,6 +202,12 @@ export const navMenu: NavMenu[] = [
     heading: 'Administration',
     items: [
       {
+        title: 'Executive Dashboard',
+        icon: 'i-lucide-layout-dashboard',
+        link: '/executive-dashboard',
+        adminOnly: true,
+      },
+      {
         title: 'Admin',
         icon: 'i-lucide-shield',
         link: '/admin',
