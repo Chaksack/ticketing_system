@@ -8,6 +8,8 @@ const props = defineProps<{
   task?: Task | null
   type?: TaskType
   parentTaskId?: string
+  /** Pre-selects (and is only meaningful for) a new task created from within a Project's own view. */
+  projectId?: string
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -16,6 +18,7 @@ const { addTask, updateTask, epics } = useTasks()
 const { staff, fetchStaff } = useStaff()
 const { statuses, fetchStatuses } = useTaskStatuses()
 const { sprints, fetchSprints } = useSprints()
+const { projects, fetchProjects } = useProjects()
 
 onMounted(() => {
   if (!staff.value.length)
@@ -24,6 +27,8 @@ onMounted(() => {
     fetchStatuses()
   if (!sprints.value.length)
     fetchSprints()
+  if (!projects.value.length)
+    fetchProjects()
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
@@ -53,6 +58,7 @@ const priority = ref<TaskPriority>('medium')
 const assigneeIds = ref<string[]>([])
 const epicId = ref('none')
 const sprintId = ref('none')
+const projectId = ref('none')
 const color = ref<string>(epicColors[0]!)
 
 function resetForm() {
@@ -63,6 +69,7 @@ function resetForm() {
   assigneeIds.value = []
   epicId.value = 'none'
   sprintId.value = 'none'
+  projectId.value = props.projectId ?? 'none'
   color.value = epicColors[0]!
   startField.reset()
   dueField.reset()
@@ -81,6 +88,7 @@ watch(open, (isOpen) => {
     assigneeIds.value = props.task.assignees.map(a => a.id)
     epicId.value = props.task.epicId ?? 'none'
     sprintId.value = props.task.sprintId ?? 'none'
+    projectId.value = props.task.projectId ?? 'none'
     color.value = props.task.color ?? epicColors[0]!
     startField.setFromIso(props.task.startDate)
     dueField.setFromIso(props.task.dueDate)
@@ -104,6 +112,7 @@ async function onSubmit() {
     assigneeIds: assigneeIds.value,
     epicId: effectiveType.value === 'task' && epicId.value !== 'none' ? epicId.value : undefined,
     sprintId: effectiveType.value !== 'epic' && sprintId.value !== 'none' ? sprintId.value : undefined,
+    projectId: projectId.value !== 'none' ? projectId.value : undefined,
     startDate: startField.toIso(),
     dueDate: dueField.toIso(),
     remindAt: remindField.toIso(),
@@ -229,6 +238,23 @@ async function onSubmit() {
               </SelectItem>
               <SelectItem v-for="sprint in sprints" :key="sprint.id" :value="sprint.id">
                 {{ sprint.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <Label>Project (optional)</Label>
+          <Select v-model="projectId">
+            <SelectTrigger class="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">
+                No project
+              </SelectItem>
+              <SelectItem v-for="project in projects" :key="project.id" :value="project.id">
+                {{ project.name }}
               </SelectItem>
             </SelectContent>
           </Select>

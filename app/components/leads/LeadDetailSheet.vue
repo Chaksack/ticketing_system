@@ -279,7 +279,7 @@ function formatDateTime(value: string) {
 
 <template>
   <Sheet v-model:open="open">
-    <SheetContent side="right" class="w-full sm:max-w-lg p-0">
+    <SheetContent side="right" class="w-full sm:max-w-2xl p-0">
       <template v-if="lead">
         <SheetHeader class="p-6 pb-0">
           <SheetDescription class="font-mono text-xs">

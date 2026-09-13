@@ -40,19 +40,19 @@ function hasAny(text: string, words: string[]) {
   return words.some(word => text.includes(word))
 }
 
-function canSeeTickets(user: SessionUser) {
+export function canSeeTickets(user: SessionUser) {
   return user.roles.some(role => role === 'agent' || role === 'admin' || role === 'engineer' || role === 'engineering_coordinator' || role === 'engineering_lead')
 }
 
-function canSeeClients(user: SessionUser) {
+export function canSeeClients(user: SessionUser) {
   return user.roles.some(role => role === 'bd' || role === 'sm' || role === 'admin')
 }
 
-function isAdminUser(user: SessionUser) {
+export function isAdminUser(user: SessionUser) {
   return user.roles.includes('admin')
 }
 
-async function ticketStatusBreakdown(): Promise<AssistantSection[]> {
+export async function ticketStatusBreakdown(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT status, COUNT(*) AS count FROM tickets GROUP BY status').all() as { status: string, count: number }[]
 
@@ -65,7 +65,7 @@ async function ticketStatusBreakdown(): Promise<AssistantSection[]> {
   }]
 }
 
-async function ticketPriorityBreakdown(): Promise<AssistantSection[]> {
+export async function ticketPriorityBreakdown(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT priority, COUNT(*) AS count FROM tickets GROUP BY priority').all() as { priority: string, count: number }[]
 
@@ -78,7 +78,7 @@ async function ticketPriorityBreakdown(): Promise<AssistantSection[]> {
   }]
 }
 
-async function slaBreachSummary(): Promise<AssistantSection[]> {
+export async function slaBreachSummary(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const nowIso = new Date().toISOString()
 
@@ -101,7 +101,7 @@ async function slaBreachSummary(): Promise<AssistantSection[]> {
   }]
 }
 
-async function myTickets(user: SessionUser): Promise<AssistantSection[]> {
+export async function myTickets(user: SessionUser): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT status, COUNT(*) AS count FROM tickets WHERE assignee_id = ? GROUP BY status').all(user.id) as { status: string, count: number }[]
 
@@ -114,7 +114,7 @@ async function myTickets(user: SessionUser): Promise<AssistantSection[]> {
   }]
 }
 
-async function ticketVolume(): Promise<AssistantSection[]> {
+export async function ticketVolume(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
@@ -132,7 +132,7 @@ async function ticketVolume(): Promise<AssistantSection[]> {
   }]
 }
 
-async function clientsByStage(): Promise<AssistantSection[]> {
+export async function clientsByStage(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT stage, COUNT(*) AS count FROM clients GROUP BY stage').all() as { stage: string, count: number }[]
 
@@ -145,7 +145,7 @@ async function clientsByStage(): Promise<AssistantSection[]> {
   }]
 }
 
-async function myClients(user: SessionUser): Promise<AssistantSection[]> {
+export async function myClients(user: SessionUser): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT stage, COUNT(*) AS count FROM clients WHERE assigned_to = ? GROUP BY stage').all(user.id) as { stage: string, count: number }[]
 
@@ -158,7 +158,7 @@ async function myClients(user: SessionUser): Promise<AssistantSection[]> {
   }]
 }
 
-async function contractsExpiringSoon(): Promise<AssistantSection[]> {
+export async function contractsExpiringSoon(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const now = new Date()
   const in30Days = new Date(now.getTime() + 30 * DAY_MS).toISOString()
@@ -186,7 +186,7 @@ async function contractsExpiringSoon(): Promise<AssistantSection[]> {
   }]
 }
 
-async function contractCounts(): Promise<AssistantSection[]> {
+export async function contractCounts(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT status, end_date FROM client_amc_contracts').all() as { status: string, end_date: string }[]
 
@@ -210,7 +210,7 @@ async function contractCounts(): Promise<AssistantSection[]> {
   }]
 }
 
-async function onCallStaff(): Promise<AssistantSection[]> {
+export async function onCallStaff(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT name FROM staff WHERE on_call = 1 AND status = \'active\'').all() as { name: string }[]
 
@@ -223,7 +223,7 @@ async function onCallStaff(): Promise<AssistantSection[]> {
   }]
 }
 
-async function staffHeadcount(): Promise<AssistantSection[]> {
+export async function staffHeadcount(): Promise<AssistantSection[]> {
   const db = useDatabase()
   const rows = await db.prepare('SELECT role, roles FROM staff').all() as { role: string, roles: string | null }[]
 
@@ -239,7 +239,7 @@ async function staffHeadcount(): Promise<AssistantSection[]> {
   }]
 }
 
-async function overview(user: SessionUser): Promise<AssistantSection[]> {
+export async function overview(user: SessionUser): Promise<AssistantSection[]> {
   const sections: AssistantSection[] = []
 
   if (canSeeTickets(user))

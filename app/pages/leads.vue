@@ -107,7 +107,7 @@ const onSubmit = handleSubmit(async (values) => {
             Add Lead
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
+        <SheetContent side="right" class="w-full sm:max-w-xl overflow-y-auto p-6">
           <SheetHeader class="p-0">
             <SheetTitle>Add Lead</SheetTitle>
             <SheetDescription>

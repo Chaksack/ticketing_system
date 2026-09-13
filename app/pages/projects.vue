@@ -6,6 +6,15 @@ import { toast } from 'vue-sonner'
 import * as z from 'zod'
 import { projectStatuses } from '~/components/projects/data'
 import ProjectDetailSheet from '~/components/projects/ProjectDetailSheet.vue'
+import { PROJECT_STATUS_PROGRESS } from '~/types/project'
+
+const PROGRESS_BAR_CLASS: Record<string, string> = {
+  planned: 'bg-muted-foreground/50',
+  active: 'bg-primary',
+  on_hold: 'bg-amber-500',
+  completed: 'bg-emerald-500',
+  cancelled: 'bg-destructive',
+}
 
 definePageMeta({
   middleware: 'bd',
@@ -255,8 +264,10 @@ function formatDate(value?: string) {
             <TableHead>Name</TableHead>
             <TableHead>Client</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Progress</TableHead>
             <TableHead>Start</TableHead>
             <TableHead>End</TableHead>
+            <TableHead>Tasks</TableHead>
             <TableHead>AMC Contracts</TableHead>
           </TableRow>
         </TableHeader>
@@ -279,6 +290,18 @@ function formatDate(value?: string) {
                   {{ statusLabel(project.status) }}
                 </Badge>
               </TableCell>
+              <TableCell>
+                <div class="flex items-center gap-2">
+                  <div class="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                    <div
+                      class="h-full rounded-full"
+                      :class="PROGRESS_BAR_CLASS[project.status]"
+                      :style="{ width: `${PROJECT_STATUS_PROGRESS[project.status]}%` }"
+                    />
+                  </div>
+                  <span class="text-xs text-muted-foreground">{{ PROJECT_STATUS_PROGRESS[project.status] }}%</span>
+                </div>
+              </TableCell>
               <TableCell class="text-muted-foreground">
                 {{ formatDate(project.startDate) }}
               </TableCell>
@@ -286,12 +309,15 @@ function formatDate(value?: string) {
                 {{ formatDate(project.endDate) }}
               </TableCell>
               <TableCell class="text-muted-foreground">
+                {{ project.taskCount }}
+              </TableCell>
+              <TableCell class="text-muted-foreground">
                 {{ project.contracts.length }}
               </TableCell>
             </TableRow>
           </template>
           <TableRow v-else>
-            <TableCell :colspan="6" class="h-24 text-center">
+            <TableCell :colspan="8" class="h-24 text-center">
               No projects match your filters.
             </TableCell>
           </TableRow>

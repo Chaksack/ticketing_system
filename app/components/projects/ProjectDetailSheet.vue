@@ -2,7 +2,12 @@
 import type { AcceptableValue } from 'reka-ui'
 import type { AmcContractStatus } from '~/types/amc'
 import type { Project, ProjectStatus } from '~/types/project'
+import type { Task } from '~/types/task'
 import { toast } from 'vue-sonner'
+import { priorities } from '~/components/tasks/data'
+import { getTaskDueStatus } from '~/lib/tasks'
+import { PROJECT_STATUS_PROGRESS } from '~/types/project'
+import TaskFormSheet from '../tasks/TaskFormSheet.vue'
 import AmcContractCard from './AmcContractCard.vue'
 import { projectStatuses } from './data'
 
@@ -18,6 +23,8 @@ const open = defineModel<boolean>('open', { default: false })
 
 const { updateProject, removeProject, assignAmc } = useProjects()
 const { plans, fetchPlans } = useAmcPlans()
+const { fetchTasksForProject } = useTasks()
+const { statuses: taskStatuses, fetchStatuses: fetchTaskStatuses } = useTaskStatuses()
 
 const newContractStatuses: { value: AmcContractStatus, label: string }[] = [
   { value: 'submitted', label: 'Submitted' },
@@ -28,9 +35,80 @@ const newContractStatuses: { value: AmcContractStatus, label: string }[] = [
 onMounted(() => {
   if (!plans.value.length)
     fetchPlans()
+  if (!taskStatuses.value.length)
+    fetchTaskStatuses()
 })
 
 const status = computed(() => projectStatuses.find(s => s.value === props.project?.status))
+const progressPercent = computed(() => props.project ? PROJECT_STATUS_PROGRESS[props.project.status] : 0)
+
+const PROGRESS_BAR_CLASS: Record<ProjectStatus, string> = {
+  planned: 'bg-muted-foreground/50',
+  active: 'bg-primary',
+  on_hold: 'bg-amber-500',
+  completed: 'bg-emerald-500',
+  cancelled: 'bg-destructive',
+}
+const progressBarClass = computed(() => props.project ? PROGRESS_BAR_CLASS[props.project.status] : 'bg-muted-foreground/50')
+
+const projectTasks = ref<Task[]>([])
+const isLoadingTasks = ref(false)
+
+async function loadProjectTasks() {
+  if (!props.project)
+    return
+  isLoadingTasks.value = true
+  try {
+    projectTasks.value = await fetchTasksForProject(props.project.id)
+  }
+  finally {
+    isLoadingTasks.value = false
+  }
+}
+
+watch(() => props.project?.id, loadProjectTasks, { immediate: true })
+
+const isTaskFormOpen = ref(false)
+const editingTask = ref<Task | null>(null)
+
+function openNewTask() {
+  editingTask.value = null
+  isTaskFormOpen.value = true
+}
+
+function openEditTask(task: Task) {
+  editingTask.value = task
+  isTaskFormOpen.value = true
+}
+
+// The task form writes through the global tasks composable, not this sheet's own local list —
+// refetch whenever it closes so a create/edit/status-change is reflected here too.
+watch(isTaskFormOpen, (isOpen) => {
+  if (!isOpen)
+    loadProjectTasks()
+})
+
+const DUE_BADGE_CLASS: Record<string, string> = {
+  'on-track': 'text-muted-foreground',
+  'due-soon': 'text-amber-600 dark:text-amber-400',
+  'overdue': 'text-destructive',
+}
+
+function taskStatusLabel(task: Task) {
+  return taskStatuses.value.find(s => s.id === task.status)?.label ?? task.status
+}
+
+function priorityMeta(priority: Task['priority']) {
+  return priorities.find(p => p.value === priority)
+}
+
+function formatDueDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+function initials(name: string) {
+  return name.split(' ').map(n => n[0]).slice(0, 2).join('')
+}
 
 async function onStatusChange(value: AcceptableValue) {
   if (!props.project || value === null)
@@ -134,7 +212,7 @@ async function onDelete() {
 
 <template>
   <Sheet v-model:open="open">
-    <SheetContent side="right" class="w-full sm:max-w-lg p-0">
+    <SheetContent side="right" class="w-full sm:max-w-2xl p-0">
       <template v-if="project">
         <SheetHeader class="p-6 pb-0">
           <SheetDescription class="font-mono text-xs">
@@ -159,6 +237,14 @@ async function onDelete() {
             <NuxtLink v-if="project.clientName" :to="`/clients?open=${project.clientId}`" class="text-xs text-muted-foreground hover:underline">
               {{ project.clientName }}
             </NuxtLink>
+          </div>
+          <div class="flex flex-col gap-1 pt-2">
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div class="h-full rounded-full transition-all" :class="progressBarClass" :style="{ width: `${progressPercent}%` }" />
+            </div>
+            <p class="text-xs text-muted-foreground">
+              {{ progressPercent }}% · {{ status?.label }}
+            </p>
           </div>
         </SheetHeader>
 
@@ -191,6 +277,64 @@ async function onDelete() {
                   Save Details
                 </Button>
               </div>
+            </div>
+
+            <Separator />
+
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm font-medium">
+                  Tasks
+                </h4>
+                <Button size="sm" variant="outline" class="gap-1.5" @click="openNewTask">
+                  <Icon name="i-lucide-plus" class="h-3.5 w-3.5" />
+                  Add Task
+                </Button>
+              </div>
+
+              <p v-if="isLoadingTasks" class="text-sm text-muted-foreground">
+                Loading…
+              </p>
+              <p v-else-if="!projectTasks.length" class="text-sm text-muted-foreground">
+                No tasks linked to this project yet.
+              </p>
+              <button
+                v-for="task in projectTasks" :key="task.id" type="button"
+                class="flex flex-col gap-1.5 rounded-md border p-2.5 text-left hover:bg-accent/50"
+                @click="openEditTask(task)"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <span class="truncate text-sm font-medium">{{ task.title }}</span>
+                  <Badge variant="outline" class="shrink-0 text-[10px]">
+                    {{ taskStatusLabel(task) }}
+                  </Badge>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <Badge v-if="priorityMeta(task.priority)" variant="outline" class="gap-1 text-[10px]" :class="priorityMeta(task.priority)?.badgeClass">
+                    {{ priorityMeta(task.priority)?.label }}
+                  </Badge>
+                  <span v-if="task.dueDate" class="flex items-center gap-1 text-xs" :class="DUE_BADGE_CLASS[getTaskDueStatus(task) ?? 'on-track']">
+                    <Icon name="i-lucide-calendar" class="size-3" />
+                    {{ formatDueDate(task.dueDate) }}
+                  </span>
+                  <div v-if="task.assignees.length" class="ml-auto flex items-center -space-x-2">
+                    <Tooltip v-for="assignee in task.assignees.slice(0, 3)" :key="assignee.id">
+                      <TooltipTrigger as-child>
+                        <Avatar class="size-6 border-2 border-card">
+                          <AvatarFallback class="text-[10px]">
+                            {{ initials(assignee.name) }}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>{{ assignee.name }}</TooltipContent>
+                    </Tooltip>
+                    <div v-if="task.assignees.length > 3" class="flex size-6 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium">
+                      +{{ task.assignees.length - 3 }}
+                    </div>
+                  </div>
+                  <span v-else class="ml-auto text-xs text-muted-foreground">Unassigned</span>
+                </div>
+              </button>
             </div>
 
             <Separator />
@@ -285,4 +429,10 @@ async function onDelete() {
       </template>
     </SheetContent>
   </Sheet>
+
+  <TaskFormSheet
+    v-model:open="isTaskFormOpen"
+    :task="editingTask"
+    :project-id="project?.id"
+  />
 </template>

@@ -27,7 +27,7 @@ const suggestions = computed(() => {
     items.push('Clients by stage', 'Contracts expiring soon')
   if (isAdmin.value)
     items.push('Staff headcount')
-  items.push('Give me a report')
+  items.push('Give me a report', 'How do I create an invoice?')
   return items
 })
 
@@ -48,19 +48,20 @@ async function send(text?: string) {
   await scrollToBottom()
 
   try {
-    const { sections } = await $fetch<{ sections: AssistantSection[] }>('/api/assistant/query', {
+    // Send the whole conversation so far — this is a real back-and-forth chat now, not
+    // independent single-shot questions, so the assistant needs the prior turns for context.
+    const history = messages.value.map(m => ({ role: m.role, text: m.text }))
+    const { text: reply, sections } = await $fetch<{ text: string, sections: AssistantSection[] }>('/api/assistant/query', {
       method: 'POST',
-      body: { message },
+      body: { messages: history },
     })
-    let intro = ''
-    if (sections[0]?.heading)
-      intro = `Here's what I found:`
-    else if (!sections.length)
-      intro = 'I couldn\'t find anything for that.'
-    messages.value.push({ role: 'assistant', text: intro, sections })
+    messages.value.push({ role: 'assistant', text: reply, sections })
   }
-  catch {
-    messages.value.push({ role: 'assistant', text: 'Something went wrong answering that. Please try again.' })
+  catch (error: any) {
+    messages.value.push({
+      role: 'assistant',
+      text: error?.data?.statusMessage ?? 'Something went wrong answering that. Please try again.',
+    })
   }
   finally {
     isSending.value = false
@@ -89,7 +90,7 @@ watch(open, (isOpen) => {
           Ask AI
         </SheetTitle>
         <SheetDescription>
-          Ask about tickets, clients, and AMC contracts — answers are generated from live data.
+          Ask about your data or how to use any part of the app — data questions are answered from live records.
         </SheetDescription>
       </SheetHeader>
 

@@ -143,6 +143,7 @@ export default defineNuxtConfig({
     integrationsEncryptionKey: '',
     slackClientId: '',
     slackClientSecret: '',
+    anthropicApiKey: '',
     public: {
       vapidPublicKey: '',
       portalCorsOrigins: '',

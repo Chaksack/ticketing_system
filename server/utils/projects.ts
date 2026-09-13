@@ -30,5 +30,7 @@ export async function loadFullProject(id: string): Promise<Project> {
     contracts.push(mapContractRow(contractRow, lineItems))
   }
 
-  return mapProjectRow(row, contracts)
+  const taskCountRow = await db.prepare('SELECT COUNT(*) AS count FROM tasks WHERE project_id = ?').get(id) as { count: string | number }
+
+  return mapProjectRow(row, contracts, Number(taskCountRow.count))
 }

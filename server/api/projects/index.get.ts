@@ -26,7 +26,16 @@ export default defineEventHandler(async (event) => {
     contractsByProject.set(contractRow.project_id!, list)
   }
 
+  const taskCountRows = await db.prepare(`
+    SELECT project_id, COUNT(*) AS count FROM tasks WHERE project_id IS NOT NULL GROUP BY project_id
+  `).all() as { project_id: string, count: string | number }[]
+  const taskCountByProject = new Map(taskCountRows.map(r => [r.project_id, Number(r.count)]))
+
   return {
-    projects: rows.map(row => mapProjectRow(row, (contractsByProject.get(row.id) ?? []).map(contractRow => mapContractRow(contractRow)))),
+    projects: rows.map(row => mapProjectRow(
+      row,
+      (contractsByProject.get(row.id) ?? []).map(contractRow => mapContractRow(contractRow)),
+      taskCountByProject.get(row.id) ?? 0,
+    )),
   }
 })

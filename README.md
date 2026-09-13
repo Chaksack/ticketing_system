@@ -85,6 +85,7 @@ On first boot, `server/plugins/db.ts` runs the schema migration and seeds:
 | `NUXT_CRON_SECRET` | For Vercel | Authenticates Vercel Cron's calls to `/api/cron/*` — see "Background jobs on Vercel" |
 | `NUXT_INTEGRATIONS_ENCRYPTION_KEY` | For Integrations | Encrypts connected third-party account tokens at rest — see "Integrations" |
 | `NUXT_SLACK_CLIENT_ID` / `NUXT_SLACK_CLIENT_SECRET` | For Slack | Per-user Slack connect in Settings → Integrations — see "Integrations" |
+| `NUXT_ANTHROPIC_API_KEY` | For "Ask AI" | Powers the in-app assistant's open-ended answers — see "Ask AI Assistant" |
 
 See `.env.example` for the full template.
 
@@ -176,6 +177,26 @@ the underlying notification). One-time setup, at https://api.slack.com/apps:
 2. Under **Scopes → Bot Token Scopes**, add `chat:write` and `im:write`.
 3. Set `NUXT_SLACK_CLIENT_ID`/`NUXT_SLACK_CLIENT_SECRET` from **Basic Information** in `.env`
    (and your Vercel project for production).
+
+## Ask AI Assistant
+
+Every staff member can open "Ask AI" (the sparkles button in the header, or `Cmd+J`/`Ctrl+J`
+anywhere in the app) to ask questions in plain language — either about live data ("any SLA
+breaches?", "clients by stage") or about how to use the app ("how do I create an invoice?").
+
+It's a real conversation backed by Claude (`server/utils/aiAssistant.ts`), not a search box: the
+model decides when a question needs real data and calls one of a fixed set of tools to fetch
+it (`server/utils/assistant.ts`'s existing report functions — ticket/client/contract/staff
+breakdowns), each still gated by the same role checks as before (an Agent asking about clients
+gets a plain "you don't have access to that," not fabricated numbers or another agent's data).
+For questions about how a feature works, it answers from a short description of the app's
+modules in its system prompt instead of calling a tool.
+
+Set `NUXT_ANTHROPIC_API_KEY` (from console.anthropic.com) to enable this. Without it, "Ask AI"
+still works but silently falls back to answering only the fixed set of questions it always
+supported (open tickets, my clients, staff headcount, etc.) — nothing breaks, it just can't
+handle anything outside that list. Requests are rate-limited per staff member
+(`server/api/assistant/query.post.ts`, 40/hour) since each one now costs a small amount to run.
 
 ## App Settings
 

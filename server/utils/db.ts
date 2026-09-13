@@ -682,6 +682,7 @@ async function migrate() {
   `)
 
   await db.exec('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sprint_id TEXT')
+  await db.exec('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id TEXT')
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS bd_automation_rules (

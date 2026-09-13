@@ -18,7 +18,7 @@ watch(() => props.invoice?.id, async (id) => {
 
 <template>
   <Sheet v-model:open="open">
-    <SheetContent side="right" class="w-full sm:max-w-md p-6">
+    <SheetContent side="right" class="w-full sm:max-w-xl p-6">
       <template v-if="invoice">
         <SheetHeader class="p-0">
           <SheetDescription class="font-mono text-xs">

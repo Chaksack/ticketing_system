@@ -97,7 +97,7 @@ async function onDelete(id: string, name: string) {
             New Rule
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
+        <SheetContent side="right" class="w-full sm:max-w-xl overflow-y-auto p-6">
           <SheetHeader class="p-0">
             <SheetTitle>New Automation Rule</SheetTitle>
             <SheetDescription>

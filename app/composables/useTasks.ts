@@ -11,6 +11,7 @@ export interface NewTask {
   epicId?: string
   parentTaskId?: string
   sprintId?: string
+  projectId?: string
   startDate?: string
   dueDate?: string
   remindAt?: string
@@ -26,6 +27,7 @@ export interface TaskPatch {
   epicId?: string | null
   parentTaskId?: string | null
   sprintId?: string | null
+  projectId?: string | null
   startDate?: string | null
   dueDate?: string | null
   remindAt?: string | null
@@ -64,11 +66,17 @@ export function useTasks() {
     tasks.value = tasks.value.filter(t => t.id !== id && t.parentTaskId !== id)
   }
 
+  /** Tasks scoped to one project — not merged into the global `tasks` list, since it's a separate concern from the Tasks/Sprints board. */
+  async function fetchTasksForProject(projectId: string) {
+    const { tasks: rows } = await $fetch<{ tasks: Task[] }>(`/api/projects/${projectId}/tasks`)
+    return rows
+  }
+
   const epics = computed(() => tasks.value.filter(t => t.type === 'epic'))
 
   function subtasksOf(taskId: string) {
     return tasks.value.filter(t => t.type === 'subtask' && t.parentTaskId === taskId)
   }
 
-  return { tasks, epics, fetchTasks, addTask, updateTask, removeTask, subtasksOf }
+  return { tasks, epics, fetchTasks, fetchTasksForProject, addTask, updateTask, removeTask, subtasksOf }
 }

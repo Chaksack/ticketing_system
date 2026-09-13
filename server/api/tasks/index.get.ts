@@ -2,10 +2,12 @@ import type { TaskRow } from '../../utils/mappers'
 
 const TASK_LIST_SELECT = `
   SELECT tasks.*, epics.title AS epic_title, epics.color AS epic_color,
-    sprints.name AS sprint_name, sprints.status AS sprint_status
+    sprints.name AS sprint_name, sprints.status AS sprint_status,
+    projects.name AS project_name
   FROM tasks
   LEFT JOIN tasks epics ON epics.id = tasks.epic_id
   LEFT JOIN sprints ON sprints.id = tasks.sprint_id
+  LEFT JOIN projects ON projects.id = tasks.project_id
 `
 
 export default defineEventHandler(async (event) => {

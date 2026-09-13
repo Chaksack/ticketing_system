@@ -341,7 +341,7 @@ function isCurrentMonth(date: Date) {
     />
 
     <Sheet v-model:open="isFormOpen">
-      <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
+      <SheetContent side="right" class="w-full sm:max-w-xl overflow-y-auto p-6">
         <SheetHeader class="p-0">
           <SheetTitle>{{ isEditing ? 'Edit Activity' : 'New Activity' }}</SheetTitle>
         </SheetHeader>

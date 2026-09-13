@@ -323,7 +323,7 @@ export interface ProjectRow {
   updated_at: string
 }
 
-export function mapProjectRow(row: ProjectRow, contracts: AmcContract[] = []): Project {
+export function mapProjectRow(row: ProjectRow, contracts: AmcContract[] = [], taskCount = 0): Project {
   return {
     id: row.id,
     clientId: row.client_id,
@@ -338,6 +338,7 @@ export function mapProjectRow(row: ProjectRow, contracts: AmcContract[] = []): P
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     contracts,
+    taskCount,
   }
 }
 
@@ -730,6 +731,8 @@ export interface TaskRow {
   sprint_id: string | null
   sprint_name?: string | null
   sprint_status?: string | null
+  project_id: string | null
+  project_name?: string | null
   start_date: string | null
   due_date: string | null
   remind_at: string | null
@@ -756,6 +759,8 @@ export function mapTaskRow(row: TaskRow, assignees: Assignee[] = []): Task {
     sprintId: row.sprint_id ?? undefined,
     sprintName: row.sprint_name ?? undefined,
     sprintStatus: (row.sprint_status as Task['sprintStatus']) ?? undefined,
+    projectId: row.project_id ?? undefined,
+    projectName: row.project_name ?? undefined,
     startDate: row.start_date ?? undefined,
     dueDate: row.due_date ?? undefined,
     remindAt: row.remind_at ?? undefined,
