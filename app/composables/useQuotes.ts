@@ -1,5 +1,5 @@
 import type { RegardingType } from '~/types/interaction'
-import type { Quote, QuoteStatus } from '~/types/quote'
+import type { Quote } from '~/types/quote'
 
 export interface NewQuoteLineItem {
   productId?: string
@@ -31,18 +31,10 @@ export function useQuotes() {
     return quote
   }
 
-  async function updateQuoteStatus(id: string, status: QuoteStatus) {
-    const { quote } = await $fetch<{ quote: Quote }>(`/api/quotes/${id}`, { method: 'PATCH', body: { status } })
-    const index = quotes.value.findIndex(q => q.id === id)
-    if (index !== -1)
-      quotes.value[index] = quote
-    return quote
-  }
-
   async function removeQuote(id: string) {
     await $fetch(`/api/quotes/${id}`, { method: 'DELETE' })
     quotes.value = quotes.value.filter(q => q.id !== id)
   }
 
-  return { quotes, fetchQuotes, addQuote, updateQuoteStatus, removeQuote }
+  return { quotes, fetchQuotes, addQuote, removeQuote }
 }

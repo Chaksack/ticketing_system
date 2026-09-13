@@ -1002,6 +1002,52 @@ async function migrate() {
       updated_at TEXT NOT NULL
     )
   `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS sales_orders (
+      id TEXT PRIMARY KEY,
+      quote_id TEXT NOT NULL,
+      regarding_type TEXT NOT NULL,
+      regarding_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'confirmed',
+      currency TEXT NOT NULL,
+      total NUMERIC NOT NULL,
+      notes TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS sales_order_line_items (
+      id TEXT PRIMARY KEY,
+      order_id TEXT NOT NULL,
+      product_id TEXT,
+      product_name TEXT NOT NULL,
+      unit_price NUMERIC NOT NULL,
+      currency TEXT NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS approval_requests (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      subject_label TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      requested_by TEXT,
+      requested_at TEXT NOT NULL,
+      decided_by TEXT,
+      decided_at TEXT,
+      decision_notes TEXT,
+      result_id TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
 }
 
 export async function nextSequence(name: string): Promise<number> {
@@ -1157,6 +1203,21 @@ export async function nextVendorPaymentId() {
 export async function nextTimesheetId() {
   const n = await nextSequence('timesheet')
   return `TS-${n}`
+}
+
+export async function nextSalesOrderId() {
+  const n = await nextSequence('sales_order')
+  return `SO-${n}`
+}
+
+export async function nextSalesOrderLineItemId() {
+  const n = await nextSequence('sales_order_line_item')
+  return `SOLI-${n}`
+}
+
+export async function nextApprovalRequestId() {
+  const n = await nextSequence('approval_request')
+  return `APR-${n}`
 }
 
 export async function nextClientId() {

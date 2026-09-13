@@ -1,4 +1,30 @@
+import type { Client } from '../../app/types/client'
 import type { Invoice, InvoiceActivity, InvoiceActivityType, InvoiceLineItem, Receipt } from '../../app/types/invoice'
+
+// A heuristic, not a precise measure — same "rough, documented" spirit as PROJECT_STATUS_PROGRESS
+// and WEEKLY_CAPACITY_HOURS elsewhere in this app. A discount above this share of the invoice's
+// subtotal is large enough to need a second pair of eyes before it goes out.
+export const DISCOUNT_APPROVAL_THRESHOLD_PCT = 15
+
+export interface NewInvoiceLineItemInput {
+  description?: string
+  quantity?: number
+  unitPrice?: number
+}
+
+export interface NewInvoiceInput {
+  projectId?: string
+  currency?: string
+  taxRate?: number
+  discount?: number
+  dueAt?: string
+  notes?: string
+  lineItems?: NewInvoiceLineItemInput[]
+}
+
+export function computeInvoiceSubtotal(lineItems: NewInvoiceLineItemInput[]): number {
+  return lineItems.reduce((sum, item) => sum + (item.unitPrice ?? 0) * (item.quantity && item.quantity > 0 ? item.quantity : 1), 0)
+}
 
 export interface InvoiceLineItemRow {
   id: string
@@ -230,6 +256,70 @@ export async function getAllInvoices(): Promise<Invoice[]> {
   `).all() as InvoiceRow[]
 
   return rows.map(row => mapInvoiceRow(row))
+}
+
+/**
+ * Creates an invoice for a client — the one implementation shared by the ad-hoc "New Invoice"
+ * form (server/api/clients/[id]/invoices/index.post.ts) and Sales-Order-generated invoices
+ * (server/api/sales-orders/[id]/generate-invoice.post.ts), including when either arrives via an
+ * approved discount-approval request. Callers are responsible for the discount-threshold check —
+ * this function always creates immediately.
+ */
+export async function createInvoiceForClient(clientId: string, payload: NewInvoiceInput, actor: { id: string, name: string }): Promise<{ client: Client, invoice: Invoice }> {
+  const lineItems = payload.lineItems ?? []
+  if (!lineItems.length) {
+    throw createError({ statusCode: 400, statusMessage: 'At least one line item is required' })
+  }
+  for (const item of lineItems) {
+    if (!item.description?.trim() || item.unitPrice === undefined || item.unitPrice < 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Each line item needs a description and a non-negative unitPrice' })
+    }
+  }
+
+  const db = useDatabase()
+
+  const client = await db.prepare('SELECT id FROM clients WHERE id = ?').get(clientId)
+  if (!client) {
+    throw createError({ statusCode: 404, statusMessage: 'Client not found' })
+  }
+
+  const taxRate = payload.taxRate ?? 0
+  const discount = payload.discount ?? 0
+  const subtotal = computeInvoiceSubtotal(lineItems)
+  const taxAmount = subtotal * (taxRate / 100)
+  const total = Math.max(subtotal + taxAmount - discount, 0)
+  const currency = payload.currency?.trim() || 'GHS'
+
+  const id = await nextInvoiceId()
+  const now = new Date().toISOString()
+
+  await db.prepare(`
+    INSERT INTO invoices (id, client_id, project_id, status, issue_date, due_date, notes, currency, subtotal, tax_rate, tax_amount, discount, total, amount_paid, balance, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
+  `).run(id, clientId, payload.projectId ?? null, now, payload.dueAt ?? null, payload.notes?.trim() || null, currency, subtotal, taxRate, taxAmount, discount, total, total, actor.id, now, now)
+
+  for (const item of lineItems) {
+    const itemId = await nextInvoiceItemId()
+    const quantity = item.quantity && item.quantity > 0 ? item.quantity : 1
+    const lineTotal = item.unitPrice! * quantity
+    await db.prepare(`
+      INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_price, line_total, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(itemId, id, item.description!.trim(), quantity, item.unitPrice, lineTotal, now)
+  }
+
+  await logInvoiceActivity({
+    invoiceId: id,
+    type: 'created',
+    actorId: actor.id,
+    actorName: actor.name,
+    toValue: `${total.toLocaleString()} ${currency}`,
+    message: `Invoice created for ${total.toLocaleString()} ${currency}`,
+  })
+
+  const [updatedClient, invoice] = await Promise.all([loadFullClient(clientId), loadFullInvoice(id)])
+
+  return { client: updatedClient, invoice }
 }
 
 export function computeBalanceByCurrency(invoices: Invoice[]): { currency: string, balance: number }[] {

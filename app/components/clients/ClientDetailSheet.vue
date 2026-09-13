@@ -285,7 +285,7 @@ async function onCreateInvoice() {
     return
 
   try {
-    await addInvoice(props.client.id, {
+    const result = await addInvoice(props.client.id, {
       lineItems: newInvoiceLineItems.value,
       currency: newInvoiceCurrency.value.trim() || 'GHS',
       taxRate: Number(newInvoiceTaxRate.value || 0),
@@ -299,7 +299,14 @@ async function onCreateInvoice() {
     newInvoiceDueAt.value = ''
     newInvoiceProjectId.value = ''
     isInvoiceFormOpen.value = false
-    toast('Invoice created')
+    if ('pending' in result) {
+      toast('Sent for approval', {
+        description: 'This discount needs sign-off before the invoice is created.',
+      })
+    }
+    else {
+      toast('Invoice created')
+    }
   }
   catch (error: any) {
     toast.error('Could not create invoice', {

@@ -62,12 +62,17 @@ export function useInvoices() {
     return invoice
   }
 
+  // A discount above the approval threshold comes back as { pending: true, approval } instead of
+  // { client, invoice } — see server/api/clients/[id]/invoices/index.post.ts. Callers branch on
+  // 'pending' in the result rather than assuming an invoice always gets created immediately.
   async function addInvoice(clientId: string, payload: NewInvoice) {
-    const { client, invoice } = await $fetch<{ client: Client, invoice: Invoice }>(`/api/clients/${clientId}/invoices`, { method: 'POST', body: payload })
-    replaceClient(client)
-    replaceInvoice(invoice)
-    recomputeBalanceByCurrency()
-    return client
+    const result = await $fetch<{ client: Client, invoice: Invoice } | { pending: true, approval: unknown }>(`/api/clients/${clientId}/invoices`, { method: 'POST', body: payload })
+    if ('client' in result) {
+      replaceClient(result.client)
+      replaceInvoice(result.invoice)
+      recomputeBalanceByCurrency()
+    }
+    return result
   }
 
   async function removeInvoice(clientId: string, invoiceId: string) {

@@ -167,6 +167,12 @@ export const navMenu: NavMenu[] = [
         link: '/project-profitability',
         roles: ['finance'],
       },
+      {
+        title: 'Approvals',
+        icon: 'i-lucide-check-check',
+        link: '/approvals',
+        roles: ['finance'],
+      },
     ],
   },
   {
