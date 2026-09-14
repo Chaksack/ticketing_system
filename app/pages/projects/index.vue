@@ -23,6 +23,7 @@ definePageMeta({
 const { projects, fetchProjects, fetchProject, addProject } = useProjects()
 const { clients, fetchClients } = useClients()
 const route = useRoute()
+const isDesktop = useMediaQuery('(min-width: 768px)')
 
 onMounted(async () => {
   await Promise.all([fetchProjects(), fetchClients()])
@@ -59,6 +60,13 @@ const selectedProjectId = ref<string | null>(null)
 const selectedProject = computed(() => projects.value.find(p => p.id === selectedProjectId.value) ?? null)
 
 async function openProject(project: Project) {
+  // Mobile opens the full page instead of a sheet — the sheet's 80vw width doesn't fit a phone
+  // screen usefully, so it becomes a real route there.
+  if (!isDesktop.value) {
+    await navigateTo(`/projects/${project.id}`)
+    return
+  }
+
   selectedProjectId.value = project.id
   isDetailOpen.value = true
   await fetchProject(project.id)

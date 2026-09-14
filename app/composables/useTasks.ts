@@ -12,6 +12,7 @@ export interface NewTask {
   parentTaskId?: string
   sprintId?: string
   projectId?: string
+  tenderId?: string
   startDate?: string
   dueDate?: string
   remindAt?: string
@@ -28,6 +29,7 @@ export interface TaskPatch {
   parentTaskId?: string | null
   sprintId?: string | null
   projectId?: string | null
+  tenderId?: string | null
   startDate?: string | null
   dueDate?: string | null
   remindAt?: string | null
@@ -72,11 +74,17 @@ export function useTasks() {
     return rows
   }
 
+  /** Tasks scoped to one tender — same convention as fetchTasksForProject. */
+  async function fetchTasksForTender(tenderId: string) {
+    const { tasks: rows } = await $fetch<{ tasks: Task[] }>(`/api/tenders/${tenderId}/tasks`)
+    return rows
+  }
+
   const epics = computed(() => tasks.value.filter(t => t.type === 'epic'))
 
   function subtasksOf(taskId: string) {
     return tasks.value.filter(t => t.type === 'subtask' && t.parentTaskId === taskId)
   }
 
-  return { tasks, epics, fetchTasks, fetchTasksForProject, addTask, updateTask, removeTask, subtasksOf }
+  return { tasks, epics, fetchTasks, fetchTasksForProject, fetchTasksForTender, addTask, updateTask, removeTask, subtasksOf }
 }

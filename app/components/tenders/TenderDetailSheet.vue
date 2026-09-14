@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import type { AcceptableValue } from 'reka-ui'
+import type { Task } from '~/types/task'
 import type { Tender, TenderActivity, TenderStage } from '~/types/tender'
 import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
 import { toast } from 'vue-sonner'
+import { priorities } from '~/components/tasks/data'
+import { getTaskDueStatus } from '~/lib/tasks'
+import TaskFormSheet from '../tasks/TaskFormSheet.vue'
 import { tenderStages } from './data'
 
 const props = defineProps<{
@@ -18,10 +22,14 @@ const open = defineModel<boolean>('open', { default: false })
 const router = useRouter()
 const { updateTender, convertTender, removeTender, uploadDocument, removeDocument } = useTenders()
 const { staff, fetchStaff } = useStaff()
+const { fetchTasksForTender } = useTasks()
+const { statuses: taskStatuses, fetchStatuses: fetchTaskStatuses } = useTaskStatuses()
 
 onMounted(() => {
   if (!staff.value.length)
     fetchStaff()
+  if (!taskStatuses.value.length)
+    fetchTaskStatuses()
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
@@ -214,6 +222,65 @@ async function onConvert() {
   finally {
     isConverting.value = false
   }
+}
+
+const tenderTasks = ref<Task[]>([])
+const isLoadingTasks = ref(false)
+
+async function loadTenderTasks() {
+  if (!props.tender)
+    return
+  isLoadingTasks.value = true
+  try {
+    tenderTasks.value = await fetchTasksForTender(props.tender.id)
+  }
+  finally {
+    isLoadingTasks.value = false
+  }
+}
+
+watch(() => props.tender?.id, loadTenderTasks, { immediate: true })
+
+const isTaskFormOpen = ref(false)
+const editingTask = ref<Task | null>(null)
+
+function openNewTask() {
+  editingTask.value = null
+  isTaskFormOpen.value = true
+}
+
+function openEditTask(task: Task) {
+  editingTask.value = task
+  isTaskFormOpen.value = true
+}
+
+// The task form writes through the global tasks composable, not this sheet's own local list —
+// refetch whenever it closes so a create/edit/status-change is reflected here too.
+watch(isTaskFormOpen, (isOpen) => {
+  if (!isOpen)
+    loadTenderTasks()
+})
+
+const DUE_BADGE_CLASS: Record<string, string> = {
+  'on-track': 'text-muted-foreground',
+  'due-soon': 'text-amber-600 dark:text-amber-400',
+  'overdue': 'text-destructive',
+}
+
+function taskStatusLabel(task: Task) {
+  return taskStatuses.value.find(s => s.id === task.status)?.label ?? task.status
+}
+
+function priorityMeta(priority: Task['priority']) {
+  return priorities.find(p => p.value === priority)
+}
+
+function formatDueDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+function initials(name: string) {
+  return name.split(' ').map(n => n[0]).slice(0, 2).join('')
 }
 
 function activityLabel(activity: TenderActivity) {
@@ -418,6 +485,64 @@ function formatDateTime(value: string) {
 
             <Separator />
 
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm font-medium">
+                  Tasks
+                </h4>
+                <Button size="sm" variant="outline" class="gap-1.5" @click="openNewTask">
+                  <Icon name="i-lucide-plus" class="h-3.5 w-3.5" />
+                  Add Task
+                </Button>
+              </div>
+
+              <p v-if="isLoadingTasks" class="text-sm text-muted-foreground">
+                Loading…
+              </p>
+              <p v-else-if="!tenderTasks.length" class="text-sm text-muted-foreground">
+                No tasks linked to this tender yet.
+              </p>
+              <button
+                v-for="task in tenderTasks" :key="task.id" type="button"
+                class="flex flex-col gap-1.5 rounded-md border p-2.5 text-left hover:bg-accent/50"
+                @click="openEditTask(task)"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <span class="truncate text-sm font-medium">{{ task.title }}</span>
+                  <Badge variant="outline" class="shrink-0 text-[10px]">
+                    {{ taskStatusLabel(task) }}
+                  </Badge>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <Badge v-if="priorityMeta(task.priority)" variant="outline" class="gap-1 text-[10px]" :class="priorityMeta(task.priority)?.badgeClass">
+                    {{ priorityMeta(task.priority)?.label }}
+                  </Badge>
+                  <span v-if="task.dueDate" class="flex items-center gap-1 text-xs" :class="DUE_BADGE_CLASS[getTaskDueStatus(task) ?? 'on-track']">
+                    <Icon name="i-lucide-calendar" class="size-3" />
+                    {{ formatDueDate(task.dueDate) }}
+                  </span>
+                  <div v-if="task.assignees.length" class="ml-auto flex items-center -space-x-2">
+                    <Tooltip v-for="assignee in task.assignees.slice(0, 3)" :key="assignee.id">
+                      <TooltipTrigger as-child>
+                        <Avatar class="size-6 border-2 border-card">
+                          <AvatarFallback class="text-[10px]">
+                            {{ initials(assignee.name) }}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>{{ assignee.name }}</TooltipContent>
+                    </Tooltip>
+                    <div v-if="task.assignees.length > 3" class="flex size-6 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium">
+                      +{{ task.assignees.length - 3 }}
+                    </div>
+                  </div>
+                  <span v-else class="ml-auto text-xs text-muted-foreground">Unassigned</span>
+                </div>
+              </button>
+            </div>
+
+            <Separator />
+
             <div v-if="isWon && !isConverted" class="rounded-md border p-3 flex items-center justify-between gap-2">
               <div class="flex flex-col">
                 <span class="text-sm font-medium">Won the tender?</span>
@@ -510,4 +635,10 @@ function formatDateTime(value: string) {
       </template>
     </SheetContent>
   </Sheet>
+
+  <TaskFormSheet
+    v-model:open="isTaskFormOpen"
+    :task="editingTask"
+    :tender-id="tender?.id"
+  />
 </template>

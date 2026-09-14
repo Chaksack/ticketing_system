@@ -12,6 +12,7 @@ interface UpdateTaskBody {
   parentTaskId?: string | null
   sprintId?: string | null
   projectId?: string | null
+  tenderId?: string | null
   startDate?: string | null
   dueDate?: string | null
   remindAt?: string | null
@@ -44,6 +45,7 @@ export default defineEventHandler(async (event) => {
   const parentTaskId = body.parentTaskId !== undefined ? body.parentTaskId : existing.parent_task_id
   const sprintId = body.sprintId !== undefined ? body.sprintId : existing.sprint_id
   const projectId = body.projectId !== undefined ? body.projectId : existing.project_id
+  const tenderId = body.tenderId !== undefined ? body.tenderId : existing.tender_id
   const startDate = body.startDate !== undefined ? body.startDate : existing.start_date
   const dueDate = body.dueDate !== undefined ? body.dueDate : existing.due_date
   const remindAt = body.remindAt !== undefined ? body.remindAt : existing.remind_at
@@ -54,9 +56,9 @@ export default defineEventHandler(async (event) => {
   await db.prepare(`
     UPDATE tasks
     SET title = ?, description = ?, status = ?, priority = ?, color = ?, epic_id = ?,
-        parent_task_id = ?, sprint_id = ?, project_id = ?, start_date = ?, due_date = ?, remind_at = ?, reminder_sent = ?, updated_at = ?
+        parent_task_id = ?, sprint_id = ?, project_id = ?, tender_id = ?, start_date = ?, due_date = ?, remind_at = ?, reminder_sent = ?, updated_at = ?
     WHERE id = ?
-  `).run(title, description, status, priority, color, epicId, parentTaskId, sprintId, projectId, startDate, dueDate, remindAt, reminderSent, now, id)
+  `).run(title, description, status, priority, color, epicId, parentTaskId, sprintId, projectId, tenderId, startDate, dueDate, remindAt, reminderSent, now, id)
 
   if (body.assigneeIds !== undefined) {
     const before = await getTaskAssignees(id)
@@ -81,11 +83,12 @@ export default defineEventHandler(async (event) => {
   const row = await db.prepare(`
     SELECT tasks.*, epics.title AS epic_title, epics.color AS epic_color,
       sprints.name AS sprint_name, sprints.status AS sprint_status,
-      projects.name AS project_name
+      projects.name AS project_name, tenders.title AS tender_name
     FROM tasks
     LEFT JOIN tasks epics ON epics.id = tasks.epic_id
     LEFT JOIN sprints ON sprints.id = tasks.sprint_id
     LEFT JOIN projects ON projects.id = tasks.project_id
+    LEFT JOIN tenders ON tenders.id = tasks.tender_id
     WHERE tasks.id = ?
   `).get(id) as TaskRow
 

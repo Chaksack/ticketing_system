@@ -10,6 +10,8 @@ const props = defineProps<{
   parentTaskId?: string
   /** Pre-selects (and is only meaningful for) a new task created from within a Project's own view. */
   projectId?: string
+  /** Pre-selects (and is only meaningful for) a new task created from within a Tender's own view. */
+  tenderId?: string
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -19,6 +21,7 @@ const { staff, fetchStaff } = useStaff()
 const { statuses, fetchStatuses } = useTaskStatuses()
 const { sprints, fetchSprints } = useSprints()
 const { projects, fetchProjects } = useProjects()
+const { tenders, fetchTenders } = useTenders()
 
 onMounted(() => {
   if (!staff.value.length)
@@ -29,6 +32,8 @@ onMounted(() => {
     fetchSprints()
   if (!projects.value.length)
     fetchProjects()
+  if (!tenders.value.length)
+    fetchTenders()
 })
 
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
@@ -59,6 +64,7 @@ const assigneeIds = ref<string[]>([])
 const epicId = ref('none')
 const sprintId = ref('none')
 const projectId = ref('none')
+const tenderId = ref('none')
 const color = ref<string>(epicColors[0]!)
 
 function resetForm() {
@@ -70,6 +76,7 @@ function resetForm() {
   epicId.value = 'none'
   sprintId.value = 'none'
   projectId.value = props.projectId ?? 'none'
+  tenderId.value = props.tenderId ?? 'none'
   color.value = epicColors[0]!
   startField.reset()
   dueField.reset()
@@ -89,6 +96,7 @@ watch(open, (isOpen) => {
     epicId.value = props.task.epicId ?? 'none'
     sprintId.value = props.task.sprintId ?? 'none'
     projectId.value = props.task.projectId ?? 'none'
+    tenderId.value = props.task.tenderId ?? 'none'
     color.value = props.task.color ?? epicColors[0]!
     startField.setFromIso(props.task.startDate)
     dueField.setFromIso(props.task.dueDate)
@@ -113,6 +121,7 @@ async function onSubmit() {
     epicId: effectiveType.value === 'task' && epicId.value !== 'none' ? epicId.value : undefined,
     sprintId: effectiveType.value !== 'epic' && sprintId.value !== 'none' ? sprintId.value : undefined,
     projectId: projectId.value !== 'none' ? projectId.value : undefined,
+    tenderId: tenderId.value !== 'none' ? tenderId.value : undefined,
     startDate: startField.toIso(),
     dueDate: dueField.toIso(),
     remindAt: remindField.toIso(),
@@ -255,6 +264,23 @@ async function onSubmit() {
               </SelectItem>
               <SelectItem v-for="project in projects" :key="project.id" :value="project.id">
                 {{ project.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <Label>Tender (optional)</Label>
+          <Select v-model="tenderId">
+            <SelectTrigger class="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">
+                No tender
+              </SelectItem>
+              <SelectItem v-for="tender in tenders" :key="tender.id" :value="tender.id">
+                {{ tender.title }}
               </SelectItem>
             </SelectContent>
           </Select>

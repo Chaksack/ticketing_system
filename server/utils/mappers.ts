@@ -735,6 +735,8 @@ export interface TaskRow {
   sprint_status?: string | null
   project_id: string | null
   project_name?: string | null
+  tender_id: string | null
+  tender_name?: string | null
   start_date: string | null
   due_date: string | null
   remind_at: string | null
@@ -763,6 +765,8 @@ export function mapTaskRow(row: TaskRow, assignees: Assignee[] = []): Task {
     sprintStatus: (row.sprint_status as Task['sprintStatus']) ?? undefined,
     projectId: row.project_id ?? undefined,
     projectName: row.project_name ?? undefined,
+    tenderId: row.tender_id ?? undefined,
+    tenderName: row.tender_name ?? undefined,
     startDate: row.start_date ?? undefined,
     dueDate: row.due_date ?? undefined,
     remindAt: row.remind_at ?? undefined,

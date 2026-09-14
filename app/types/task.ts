@@ -24,6 +24,8 @@ export interface Task {
   sprintStatus?: SprintStatus
   projectId?: string
   projectName?: string
+  tenderId?: string
+  tenderName?: string
   startDate?: string
   dueDate?: string
   remindAt?: string

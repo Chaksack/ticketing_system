@@ -7,6 +7,11 @@ import { priorities } from './data'
 import SprintFormSheet from './SprintFormSheet.vue'
 import TaskFormSheet from './TaskFormSheet.vue'
 
+const props = defineProps<{
+  /** Scopes the board to one project's cards — sprints and status columns stay shared/global. */
+  projectId?: string
+}>()
+
 const { tasks, updateTask, removeTask, subtasksOf } = useTasks()
 const { statuses, addStatus, renameStatus, removeStatus, reorderStatuses } = useTaskStatuses()
 const { sprints, updateSprint, removeSprint } = useSprints()
@@ -99,6 +104,8 @@ function matchesFilters(task: Task) {
 }
 
 function matchesView(task: Task) {
+  if (props.projectId && task.projectId !== props.projectId)
+    return false
   return selectedView.value === BACKLOG ? !task.sprintId : task.sprintId === selectedView.value
 }
 
@@ -726,6 +733,7 @@ async function onColumnsReordered() {
       :task="formTask"
       :type="formType"
       :parent-task-id="formParentTaskId"
+      :project-id="projectId"
     />
 
     <SprintFormSheet
