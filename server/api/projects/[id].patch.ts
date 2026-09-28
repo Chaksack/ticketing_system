@@ -1,5 +1,6 @@
 import type { ProjectStatus } from '../../../app/types/project'
 import type { ProjectRow } from '../../utils/mappers'
+import { isProjectCurrency, PROJECT_CURRENCIES } from '../../../app/types/project'
 
 interface UpdateProjectBody {
   name?: string
@@ -38,6 +39,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'contractValue must be a non-negative number' })
   }
   const contractValue = body.contractValue !== undefined ? (body.contractValue === null ? null : Number(body.contractValue)) : existing.contract_value ?? null
+  if (body.currency !== undefined && !isProjectCurrency(body.currency?.trim().toUpperCase())) {
+    throw createError({ statusCode: 400, statusMessage: `currency must be one of ${PROJECT_CURRENCIES.map(c => c.code).join(', ')}` })
+  }
   const currency = body.currency?.trim().toUpperCase() || existing.currency || 'GHS'
   const now = new Date().toISOString()
 

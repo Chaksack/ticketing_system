@@ -6,7 +6,8 @@ import { toast } from 'vue-sonner'
 import * as z from 'zod'
 import { projectStatuses } from '~/components/projects/data'
 import ProjectDetailSheet from '~/components/projects/ProjectDetailSheet.vue'
-import { PROJECT_STATUS_PROGRESS } from '~/types/project'
+import { optionalAmount } from '~/lib/formNumbers'
+import { DEFAULT_PROJECT_CURRENCY, formatProjectMoney, PROJECT_CURRENCIES, PROJECT_STATUS_PROGRESS } from '~/types/project'
 
 const PROGRESS_BAR_CLASS: Record<string, string> = {
   planned: 'bg-muted-foreground/50',
@@ -60,7 +61,7 @@ const selectedProjectId = ref<string | null>(null)
 const selectedProject = computed(() => projects.value.find(p => p.id === selectedProjectId.value) ?? null)
 
 function money(project: Project, value?: number) {
-  return value === undefined ? '—' : `${project.currency} ${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+  return value === undefined ? '—' : formatProjectMoney(project.currency, value, 0)
 }
 
 async function openProject(project: Project) {
@@ -90,11 +91,13 @@ const projectFormSchema = toTypedSchema(z.object({
   status: z.enum(['planned', 'active', 'on_hold', 'completed', 'cancelled']),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  currency: z.enum(['GHS', 'USD']),
+  contractValue: optionalAmount(),
 }))
 
 const { handleSubmit, resetForm } = useForm({
   validationSchema: projectFormSchema,
-  initialValues: { clientId: '', name: '', description: '', status: 'planned', startDate: '', endDate: '' },
+  initialValues: { clientId: '', name: '', description: '', status: 'planned', startDate: '', endDate: '', currency: DEFAULT_PROJECT_CURRENCY, contractValue: undefined },
 })
 
 const onSubmit = handleSubmit(async (values) => {
@@ -220,6 +223,37 @@ function formatDate(value?: string) {
                   <FormLabel>End Date</FormLabel>
                   <FormControl>
                     <Input type="date" v-bind="componentField" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <FormField v-slot="{ componentField }" name="currency">
+                <FormItem>
+                  <FormLabel>Currency</FormLabel>
+                  <Select v-bind="componentField">
+                    <FormControl>
+                      <SelectTrigger class="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem v-for="option in PROJECT_CURRENCIES" :key="option.code" :value="option.code">
+                        {{ option.symbol }} {{ option.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
+
+              <FormField v-slot="{ componentField }" name="contractValue">
+                <FormItem>
+                  <FormLabel>Project Value (optional)</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="0" step="0.01" placeholder="What the client pays" v-bind="componentField" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { Project, ProjectFinancialEntry, ProjectFinancialEntryKind } from '~/types/project'
+import type { Project, ProjectCurrency, ProjectFinancialEntry, ProjectFinancialEntryKind } from '~/types/project'
 import { toast } from 'vue-sonner'
 import { parseAmountInput } from '~/lib/formNumbers'
+import { DEFAULT_PROJECT_CURRENCY, formatProjectMoney, isProjectCurrency, PROJECT_CURRENCIES } from '~/types/project'
 
 const props = defineProps<{
   project: Project
@@ -12,7 +13,7 @@ const { updateProject, addFinancialEntry, removeFinancialEntry } = useProjects()
 function money(value: number | undefined) {
   if (value === undefined)
     return '—'
-  return `${props.project.currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return formatProjectMoney(props.project.currency, value)
 }
 
 const paidPct = computed(() => {
@@ -26,12 +27,17 @@ const payments = computed(() => props.project.financialEntries.filter(entry => e
 // Project value + currency
 const isEditingValue = ref(false)
 const valueDraft = ref('')
-const currencyDraft = ref('')
+const currencyDraft = ref<ProjectCurrency>(DEFAULT_PROJECT_CURRENCY)
+const currencySymbol = computed(() => PROJECT_CURRENCIES.find(c => c.code === props.project.currency)?.symbol ?? props.project.currency)
+// Amounts are stored as entered — switching currency later relabels them, it doesn't convert them.
+const currencyChangeWarning = computed(() => isEditingValue.value
+  && currencyDraft.value !== props.project.currency
+  && props.project.financialEntries.length > 0)
 const isSavingValue = ref(false)
 
 function startEditValue() {
   valueDraft.value = props.project.contractValue?.toString() ?? ''
-  currencyDraft.value = props.project.currency
+  currencyDraft.value = isProjectCurrency(props.project.currency) ? props.project.currency : DEFAULT_PROJECT_CURRENCY
   isEditingValue.value = true
 }
 
@@ -43,7 +49,7 @@ async function onSaveValue() {
   }
   isSavingValue.value = true
   try {
-    await updateProject(props.project.id, { contractValue: value, currency: currencyDraft.value.trim() || 'GHS' })
+    await updateProject(props.project.id, { contractValue: value, currency: currencyDraft.value })
     isEditingValue.value = false
     toast('Project value saved')
   }
@@ -129,11 +135,27 @@ function formatDate(value: string) {
     </h4>
 
     <div v-if="isEditingValue" class="flex flex-col gap-2 rounded-md border p-2">
-      <Label class="text-xs text-muted-foreground">Project value (what the client pays)</Label>
-      <div class="grid grid-cols-[5rem_1fr] gap-2">
-        <Input v-model="currencyDraft" placeholder="GHS" class="h-8 text-xs uppercase" />
+      <Label class="text-xs text-muted-foreground">Currency and project value (what the client pays)</Label>
+      <div class="grid grid-cols-[11rem_1fr] gap-2">
+        <Select v-model="currencyDraft">
+          <SelectTrigger class="h-8 w-full text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="option in PROJECT_CURRENCIES" :key="option.code" :value="option.code">
+              {{ option.symbol }} {{ option.label }} ({{ option.code }})
+            </SelectItem>
+          </SelectContent>
+        </Select>
         <Input v-model="valueDraft" type="number" min="0" step="0.01" placeholder="e.g. 250000" class="h-8 text-xs" />
       </div>
+      <p v-if="currencyChangeWarning" class="text-xs text-amber-600 dark:text-amber-400">
+        This project already has {{ project.financialEntries.length }} recorded cost/payment{{ project.financialEntries.length === 1 ? '' : 's' }}.
+        Changing the currency relabels those amounts. It does not convert them.
+      </p>
+      <p class="text-xs text-muted-foreground">
+        Costs and payments for this project are recorded in the same currency.
+      </p>
       <div class="flex justify-end gap-2">
         <Button size="sm" variant="ghost" @click="isEditingValue = false">
           Cancel
@@ -198,7 +220,7 @@ function formatDate(value: string) {
       <div v-if="openForm === 'cost'" class="flex flex-col gap-2 rounded-md bg-muted/30 p-2">
         <Input v-model="entryDescription" placeholder="What was it for? e.g. Cabling materials" class="h-8 text-xs" />
         <div class="grid grid-cols-3 gap-2">
-          <Input v-model="entryAmount" type="number" min="0" step="0.01" :placeholder="`Amount (${project.currency})`" class="h-8 text-xs" />
+          <Input v-model="entryAmount" type="number" min="0" step="0.01" :placeholder="`Amount (${currencySymbol})`" class="h-8 text-xs" />
           <Input v-model="entryDate" type="date" class="h-8 text-xs" />
           <Input v-model="entryReference" placeholder="Supplier / ref (optional)" class="h-8 text-xs" />
         </div>
@@ -234,7 +256,7 @@ function formatDate(value: string) {
       </div>
       <div v-if="openForm === 'payment'" class="flex flex-col gap-2 rounded-md bg-muted/30 p-2">
         <div class="grid grid-cols-3 gap-2">
-          <Input v-model="entryAmount" type="number" min="0" step="0.01" :placeholder="`Amount (${project.currency})`" class="h-8 text-xs" />
+          <Input v-model="entryAmount" type="number" min="0" step="0.01" :placeholder="`Amount (${currencySymbol})`" class="h-8 text-xs" />
           <Input v-model="entryDate" type="date" class="h-8 text-xs" />
           <Input v-model="entryReference" placeholder="Receipt / cheque no." class="h-8 text-xs" />
         </div>

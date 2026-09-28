@@ -11,6 +11,26 @@ export const PROJECT_STATUS_PROGRESS: Record<ProjectStatus, number> = {
   cancelled: 0,
 }
 
+/** Currencies a project's value, costs and payments can be recorded in. */
+export const PROJECT_CURRENCIES = [
+  { code: 'GHS', label: 'Ghana Cedi', symbol: 'GH₵' },
+  { code: 'USD', label: 'US Dollar', symbol: '$' },
+] as const
+
+export type ProjectCurrency = typeof PROJECT_CURRENCIES[number]['code']
+
+export const DEFAULT_PROJECT_CURRENCY: ProjectCurrency = 'GHS'
+
+export function isProjectCurrency(value: unknown): value is ProjectCurrency {
+  return PROJECT_CURRENCIES.some(c => c.code === value)
+}
+
+/** "GH₵ 25,000.00" / "$ 25,000.00" — falls back to the raw code for anything unexpected. */
+export function formatProjectMoney(currency: string, value: number, fractionDigits = 2) {
+  const symbol = PROJECT_CURRENCIES.find(c => c.code === currency)?.symbol ?? currency
+  return `${symbol} ${value.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits })}`
+}
+
 export type ProjectFinancialEntryKind = 'cost' | 'payment'
 
 /** A cost incurred on the project, or a payment received from the client. */

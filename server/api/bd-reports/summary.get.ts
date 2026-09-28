@@ -110,6 +110,9 @@ export default defineEventHandler(async (event) => {
   const completedTasksRow = await db.prepare('SELECT COUNT(*) as count FROM tasks WHERE status = \'done\' AND updated_at BETWEEN ? AND ?').get(from, to) as CountRow
 
   const newProjectsRow = await db.prepare('SELECT COUNT(*) as count FROM projects WHERE created_at BETWEEN ? AND ?').get(from, to) as CountRow
+  const projectsByStatus = await db.prepare('SELECT status as key, COUNT(*) as count FROM projects GROUP BY status').all() as GroupCountRow[]
+
+  const extras = await getBdReportExtras(from, to)
 
   const newLeads = Number(newLeadsRow.count)
   const convertedLeads = Number(convertedLeadsRow.count)
@@ -178,7 +181,9 @@ export default defineEventHandler(async (event) => {
     },
     projects: {
       newCount: Number(newProjectsRow.count),
+      byStatus: projectsByStatus.map(row => ({ status: row.key, count: Number(row.count) })),
     },
     trend,
+    ...extras,
   }
 })

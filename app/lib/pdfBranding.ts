@@ -61,9 +61,20 @@ export function addBrandHeader(doc: jsPDF, options: { title: string, subtitle: s
   return 38
 }
 
+/** Starts a new page when fewer than `needed` mm are left above the footer; returns the y to draw at. */
+export function ensureSpace(doc: jsPDF, y: number, needed: number): number {
+  const pageHeight = doc.internal.pageSize.getHeight()
+  if (y + needed <= pageHeight - 16)
+    return y
+  doc.addPage()
+  return 20
+}
+
 /** Draws a section title with an underline and returns the y position to continue from. */
 export function sectionTitle(doc: jsPDF, y: number, title: string): number {
   const pageWidth = doc.internal.pageSize.getWidth()
+  // Keep a title together with at least a stat row / a few table rows beneath it.
+  y = ensureSpace(doc, y, 36)
 
   doc.setTextColor(...PDF_COLORS.brandGreen)
   doc.setFont('helvetica', 'bold')
@@ -80,6 +91,7 @@ export function sectionTitle(doc: jsPDF, y: number, title: string): number {
 /** Draws a row of big-number stats and returns the y position to continue from. */
 export function statLine(doc: jsPDF, y: number, stats: { label: string, value: string }[]): number {
   const pageWidth = doc.internal.pageSize.getWidth()
+  y = ensureSpace(doc, y, 16)
 
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'normal')
@@ -102,6 +114,7 @@ export function statLine(doc: jsPDF, y: number, stats: { label: string, value: s
 /** Draws a table (or a "no data" line when empty) and returns the y position to continue from. */
 export function table(doc: jsPDF, y: number, head: string[], body: (string | number)[][]): number {
   if (!body.length) {
+    y = ensureSpace(doc, y, 8)
     doc.setTextColor(...PDF_COLORS.muted)
     doc.setFont('helvetica', 'italic')
     doc.setFontSize(9)
@@ -110,7 +123,7 @@ export function table(doc: jsPDF, y: number, head: string[], body: (string | num
   }
 
   autoTable(doc, {
-    startY: y,
+    startY: ensureSpace(doc, y, 20),
     head: [head],
     body,
     margin: { left: 12, right: 12 },

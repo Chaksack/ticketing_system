@@ -1,4 +1,5 @@
 import type { ProjectStatus } from '../../../app/types/project'
+import { DEFAULT_PROJECT_CURRENCY, isProjectCurrency, PROJECT_CURRENCIES } from '../../../app/types/project'
 
 interface NewProjectBody {
   clientId?: string
@@ -32,6 +33,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Client not found' })
   }
 
+  const currency = body.currency?.trim().toUpperCase() || DEFAULT_PROJECT_CURRENCY
+  if (!isProjectCurrency(currency)) {
+    throw createError({ statusCode: 400, statusMessage: `currency must be one of ${PROJECT_CURRENCIES.map(c => c.code).join(', ')}` })
+  }
+
   const id = await nextProjectId()
   const now = new Date().toISOString()
 
@@ -47,7 +53,7 @@ export default defineEventHandler(async (event) => {
     body.startDate ?? null,
     body.endDate ?? null,
     body.contractValue !== undefined && body.contractValue !== null && Number(body.contractValue) >= 0 ? Number(body.contractValue) : null,
-    body.currency?.trim().toUpperCase() || 'GHS',
+    currency,
     user.id,
     now,
     now,
