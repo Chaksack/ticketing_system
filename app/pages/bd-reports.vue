@@ -44,10 +44,16 @@ async function refresh() {
   await fetchSummary({ from: from.value, to: to.value })
 }
 
+const quotaScope = ref<'month' | 'year'>('month')
+
 function currentPeriod() {
   const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  return quotaScope.value === 'year'
+    ? String(now.getFullYear())
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
+
+watch(quotaScope, () => fetchProgress(currentPeriod()))
 
 onMounted(() => {
   const today = new Date()
@@ -386,11 +392,23 @@ const amcByStatusData = computed(() => summary.value?.amc.byStatus.map(row => ({
       </div>
 
       <div class="flex flex-col gap-2">
-        <h3 class="text-sm font-medium text-muted-foreground">
-          Quota Progress
-        </h3>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-medium text-muted-foreground">
+            Quota Progress
+          </h3>
+          <Tabs v-model="quotaScope">
+            <TabsList class="h-8">
+              <TabsTrigger value="month" class="text-xs">
+                This Month
+              </TabsTrigger>
+              <TabsTrigger value="year" class="text-xs">
+                This Year
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         <p class="text-xs text-muted-foreground -mt-1">
-          Weighted value won this calendar month against each rep's target — independent of the date range above.
+          Value won this calendar {{ quotaScope }} against each rep's {{ quotaScope === 'year' ? 'yearly' : 'monthly' }} target, independent of the date range above.
         </p>
         <div v-if="!quotaProgress.length" class="text-sm text-muted-foreground">
           No active BD/SM staff.

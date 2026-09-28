@@ -1,9 +1,7 @@
 import type { ExecutiveSummary } from '../../app/types/executive-summary'
 import { LEAD_STAGE_PROBABILITY } from '../../app/types/lead'
 import { TENDER_STAGE_PROBABILITY } from '../../app/types/tender'
-import { getAccountBalances } from './accounts'
-import { buildIncomeStatement } from './financialStatements'
-import { getProjectProfitability, getResourceUtilization } from './timesheets'
+import { getResourceUtilization } from './timesheets'
 
 interface ValueRow {
   stage: string
@@ -71,22 +69,8 @@ export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
     WHERE quotes.status != 'invoiced'
   `).get() as { total: number | string | null }
 
-  // Finance
-  const balances = await getAccountBalances()
-  const cash = balances.get('1010') ?? 0
-
-  const arRow = await db.prepare('SELECT SUM(balance) AS total FROM invoices WHERE balance > 0').get() as { total: number | string | null }
-  const apRow = await db.prepare('SELECT SUM(balance) AS total FROM vendor_bills WHERE balance > 0').get() as { total: number | string | null }
-
-  const now = new Date()
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
-  const incomeStatement = await buildIncomeStatement(monthStart, now.toISOString())
-
   // Projects
   const activeProjectsRow = await db.prepare(`SELECT COUNT(*) AS count FROM projects WHERE status = 'active'`).get() as { count: number }
-  const profitabilityRows = await getProjectProfitability()
-  const totalRevenue = profitabilityRows.reduce((sum, row) => sum + row.revenue, 0)
-  const totalCost = profitabilityRows.reduce((sum, row) => sum + row.cost, 0)
 
   const monday = mondayOfCurrentWeek()
   const sunday = new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000)
@@ -104,17 +88,8 @@ export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
       winRate: winRate(combinedDecided),
       openQuotesValue: Number(openQuotesRow.total ?? 0),
     },
-    finance: {
-      cash,
-      accountsReceivable: Number(arRow.total ?? 0),
-      accountsPayable: Number(apRow.total ?? 0),
-      netIncome: incomeStatement.netIncome,
-    },
     projects: {
       activeProjects: Number(activeProjectsRow.count),
-      totalRevenue,
-      totalCost,
-      totalMargin: totalRevenue - totalCost,
       staffOverCapacity,
     },
   }

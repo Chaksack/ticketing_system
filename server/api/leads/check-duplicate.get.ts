@@ -7,6 +7,7 @@ export default defineEventHandler(async (event) => {
     name: typeof query.name === 'string' ? query.name : undefined,
     email: typeof query.email === 'string' ? query.email : undefined,
     phone: typeof query.phone === 'string' ? query.phone : undefined,
+    excludeId: typeof query.excludeId === 'string' ? query.excludeId : undefined,
   })
 
   return { matches }

@@ -26,6 +26,8 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
   const db = useDatabase()
 
+  await assertNoDuplicateName('leads', body.name)
+
   const id = await nextLeadId()
   const now = new Date().toISOString()
 

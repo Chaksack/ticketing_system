@@ -7,6 +7,8 @@ interface NewProjectBody {
   status?: ProjectStatus
   startDate?: string
   endDate?: string
+  contractValue?: number
+  currency?: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -34,8 +36,8 @@ export default defineEventHandler(async (event) => {
   const now = new Date().toISOString()
 
   await db.prepare(`
-    INSERT INTO projects (id, client_id, name, description, status, start_date, end_date, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO projects (id, client_id, name, description, status, start_date, end_date, contract_value, currency, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     body.clientId,
@@ -44,6 +46,8 @@ export default defineEventHandler(async (event) => {
     body.status ?? 'planned',
     body.startDate ?? null,
     body.endDate ?? null,
+    body.contractValue !== undefined && body.contractValue !== null && Number(body.contractValue) >= 0 ? Number(body.contractValue) : null,
+    body.currency?.trim().toUpperCase() || 'GHS',
     user.id,
     now,
     now,

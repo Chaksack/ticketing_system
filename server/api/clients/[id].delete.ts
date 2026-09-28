@@ -9,13 +9,12 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
   const db = useDatabase()
 
-  await db.prepare('DELETE FROM client_activity WHERE client_id = ?').run(id)
-  await db.prepare('DELETE FROM client_amc_contracts WHERE client_id = ?').run(id)
-  await db.prepare('DELETE FROM projects WHERE client_id = ?').run(id)
-  await db.prepare('DELETE FROM client_assignees WHERE client_id = ?').run(id)
-  await db.prepare('DELETE FROM client_contact_emails WHERE client_id = ?').run(id)
-  await db.prepare('DELETE FROM client_contact_phones WHERE client_id = ?').run(id)
-  await db.prepare('DELETE FROM clients WHERE id = ?').run(id)
+  const existing = await db.prepare('SELECT id FROM clients WHERE id = ?').get(id)
+  if (!existing) {
+    throw createError({ statusCode: 404, statusMessage: 'Client not found' })
+  }
+
+  await deleteClientCascade(id)
 
   return { success: true }
 })

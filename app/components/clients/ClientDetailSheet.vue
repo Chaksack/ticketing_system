@@ -3,9 +3,9 @@ import type { AcceptableValue } from 'reka-ui'
 import type { Client, ClientActivity, ClientStage } from '~/types/client'
 import type { Project, ProjectStatus } from '~/types/project'
 import { toast } from 'vue-sonner'
-import InvoiceCard from '~/components/invoices/InvoiceCard.vue'
 import AmcContractCard from '~/components/projects/AmcContractCard.vue'
 import { projectStatuses } from '~/components/projects/data'
+import { parseAmountInput } from '~/lib/formNumbers'
 import { stages } from './data'
 
 const props = defineProps<{
@@ -15,10 +15,9 @@ const props = defineProps<{
 const open = defineModel<boolean>('open', { default: false })
 const router = useRouter()
 
-const { updateClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone, addContact, removeContact, uploadDocument, removeDocument } = useClients()
+const { updateClient, removeClient, addContactEmail, removeContactEmail, addContactPhone, removeContactPhone, addContact, removeContact, uploadDocument, removeDocument } = useClients()
 const { staff, fetchStaff } = useStaff()
 const { projectsForClient, fetchProjects, addProject } = useProjects()
-const { addInvoice } = useInvoices()
 
 onMounted(() => {
   if (!staff.value.length)
@@ -105,14 +104,70 @@ async function saveDetails() {
   if (!props.client || !nameDraft.value.trim())
     return
 
-  await updateClient(props.client.id, {
-    name: nameDraft.value.trim(),
-    contactName: contactNameDraft.value.trim(),
-    contactEmail: contactEmailDraft.value.trim(),
-    contactPhone: contactPhoneDraft.value.trim(),
-    estimatedValue: estimatedValueDraft.value.trim() ? Number(estimatedValueDraft.value.trim()) : null,
-  })
-  toast('Details saved')
+  try {
+    await updateClient(props.client.id, {
+      name: nameDraft.value.trim(),
+      contactName: contactNameDraft.value.trim(),
+      contactEmail: contactEmailDraft.value.trim(),
+      contactPhone: contactPhoneDraft.value.trim(),
+      estimatedValue: parseAmountInput(estimatedValueDraft.value) ?? null,
+    })
+    toast('Details saved')
+  }
+  catch (error: any) {
+    toast.error('Could not save details', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+}
+
+const isDeleteOpen = ref(false)
+const deleteConfirmName = ref('')
+const isDeleting = ref(false)
+
+// What goes with the client — shown in the confirmation so nobody deletes project money by accident.
+const deleteSummary = computed(() => {
+  if (!props.client)
+    return []
+  const projectsWithMoney = props.client.projects.filter(p => p.totalCost > 0 || p.amountPaid > 0).length
+  const lines = [
+    [props.client.projects.length, 'project', projectsWithMoney ? ` (${projectsWithMoney} with recorded costs/payments)` : ''],
+    [props.client.projects.reduce((sum, p) => sum + p.contracts.length, 0) + props.client.contracts.length, 'AMC contract', ''],
+    [props.client.contacts.length, 'contact', ''],
+    [props.client.documents.length, 'document', ''],
+    [props.client.interactions.length, 'logged interaction', ''],
+  ] as const
+  return lines.filter(([count]) => count > 0).map(([count, noun, extra]) => `${count} ${noun}${count === 1 ? '' : 's'}${extra}`)
+})
+
+// Typing the name is only asked for when there's real work attached (projects), not for an empty client.
+const needsTypedConfirm = computed(() => !!props.client?.projects.length)
+const canConfirmDelete = computed(() => !needsTypedConfirm.value
+  || deleteConfirmName.value.trim().toLowerCase() === props.client?.name.trim().toLowerCase())
+
+watch(isDeleteOpen, () => {
+  deleteConfirmName.value = ''
+})
+
+async function onDeleteClient() {
+  if (!props.client || !canConfirmDelete.value)
+    return
+  const { name } = props.client
+  isDeleting.value = true
+  try {
+    await removeClient(props.client.id)
+    isDeleteOpen.value = false
+    open.value = false
+    toast('Client deleted', { description: `${name} was permanently removed.` })
+  }
+  catch (error: any) {
+    toast.error('Could not delete client', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    isDeleting.value = false
+  }
 }
 
 const newEmail = ref('')
@@ -243,75 +298,6 @@ function activityLabel(activity: ClientActivity) {
       return `${actor} removed contact ${activity.fromValue}`
     default:
       return activity.message ?? `${actor} updated this client`
-  }
-}
-
-const isInvoiceFormOpen = ref(false)
-const newInvoiceLineItems = ref<{ description: string, quantity: number, unitPrice: number }[]>([])
-const newLineDescription = ref('')
-const newLineQuantity = ref('1')
-const newLineUnitPrice = ref('')
-const newInvoiceCurrency = ref('GHS')
-const newInvoiceTaxRate = ref('0')
-const newInvoiceDiscount = ref('0')
-const newInvoiceDueAt = ref('')
-const newInvoiceProjectId = ref<string>('')
-
-const newInvoiceSubtotal = computed(() => newInvoiceLineItems.value.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0))
-const newInvoiceTotal = computed(() => {
-  const taxAmount = newInvoiceSubtotal.value * (Number(newInvoiceTaxRate.value || 0) / 100)
-  return Math.max(newInvoiceSubtotal.value + taxAmount - Number(newInvoiceDiscount.value || 0), 0)
-})
-
-function onAddInvoiceLine() {
-  if (!newLineDescription.value.trim() || !newLineUnitPrice.value.trim())
-    return
-  newInvoiceLineItems.value = [...newInvoiceLineItems.value, {
-    description: newLineDescription.value.trim(),
-    quantity: Number(newLineQuantity.value) > 0 ? Number(newLineQuantity.value) : 1,
-    unitPrice: Number(newLineUnitPrice.value),
-  }]
-  newLineDescription.value = ''
-  newLineQuantity.value = '1'
-  newLineUnitPrice.value = ''
-}
-
-function onRemoveInvoiceLine(index: number) {
-  newInvoiceLineItems.value = newInvoiceLineItems.value.filter((_, i) => i !== index)
-}
-
-async function onCreateInvoice() {
-  if (!props.client || !newInvoiceLineItems.value.length)
-    return
-
-  try {
-    const result = await addInvoice(props.client.id, {
-      lineItems: newInvoiceLineItems.value,
-      currency: newInvoiceCurrency.value.trim() || 'GHS',
-      taxRate: Number(newInvoiceTaxRate.value || 0),
-      discount: Number(newInvoiceDiscount.value || 0),
-      dueAt: newInvoiceDueAt.value || undefined,
-      projectId: newInvoiceProjectId.value || undefined,
-    })
-    newInvoiceLineItems.value = []
-    newInvoiceTaxRate.value = '0'
-    newInvoiceDiscount.value = '0'
-    newInvoiceDueAt.value = ''
-    newInvoiceProjectId.value = ''
-    isInvoiceFormOpen.value = false
-    if ('pending' in result) {
-      toast('Sent for approval', {
-        description: 'This discount needs sign-off before the invoice is created.',
-      })
-    }
-    else {
-      toast('Invoice created')
-    }
-  }
-  catch (error: any) {
-    toast.error('Could not create invoice', {
-      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
-    })
   }
 }
 
@@ -630,79 +616,6 @@ function formatDateTime(value: string) {
 
             <Separator />
 
-            <div class="flex flex-col gap-3">
-              <h4 class="text-sm font-medium flex items-center justify-between">
-                <span>Billing</span>
-                <Button size="sm" variant="outline" @click="isInvoiceFormOpen = !isInvoiceFormOpen">
-                  <Icon name="i-lucide-plus" class="mr-1.5 h-3.5 w-3.5" />
-                  New Invoice
-                </Button>
-              </h4>
-
-              <div v-if="client.balanceByCurrency.length" class="flex flex-wrap gap-2">
-                <Badge v-for="row in client.balanceByCurrency" :key="row.currency" variant="outline" class="bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30">
-                  Owes {{ row.balance.toLocaleString() }} {{ row.currency }}
-                </Badge>
-              </div>
-              <p v-else class="text-xs text-muted-foreground">
-                No outstanding balance.
-              </p>
-
-              <div v-if="isInvoiceFormOpen" class="flex flex-col gap-2 rounded-md border p-2">
-                <div v-for="(line, index) in newInvoiceLineItems" :key="index" class="flex items-center gap-2 rounded-md border p-1.5 text-xs">
-                  <span class="flex-1 truncate">{{ line.description }}</span>
-                  <span class="shrink-0 text-muted-foreground">{{ line.quantity }} × {{ line.unitPrice.toLocaleString() }}</span>
-                  <span class="shrink-0 font-medium tabular-nums">{{ (line.quantity * line.unitPrice).toLocaleString() }}</span>
-                  <Button size="icon-sm" variant="ghost" class="size-5 shrink-0" @click="onRemoveInvoiceLine(index)">
-                    <Icon name="i-lucide-x" class="size-3" />
-                  </Button>
-                </div>
-
-                <div class="grid grid-cols-3 gap-2">
-                  <Input v-model="newLineDescription" placeholder="Line description" class="h-8 text-xs" />
-                  <Input v-model="newLineQuantity" type="number" min="1" placeholder="Qty" class="h-8 text-xs" />
-                  <Input v-model="newLineUnitPrice" type="number" min="0" step="0.01" placeholder="Unit price" class="h-8 text-xs" />
-                </div>
-                <div class="flex justify-end">
-                  <Button size="sm" variant="outline" @click="onAddInvoiceLine">
-                    <Icon name="i-lucide-plus" class="mr-1 size-3.5" />
-                    Add Line
-                  </Button>
-                </div>
-
-                <div class="grid grid-cols-4 gap-2">
-                  <Input v-model="newInvoiceCurrency" placeholder="Currency" class="h-8 text-xs" />
-                  <Input v-model="newInvoiceTaxRate" type="number" min="0" step="0.1" placeholder="Tax %" class="h-8 text-xs" />
-                  <Input v-model="newInvoiceDiscount" type="number" min="0" step="0.01" placeholder="Discount" class="h-8 text-xs" />
-                  <Input v-model="newInvoiceDueAt" type="date" class="h-8 text-xs" />
-                </div>
-                <Select v-model="newInvoiceProjectId">
-                  <SelectTrigger class="h-8 text-xs">
-                    <SelectValue placeholder="Link a project (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem v-for="project in client.projects" :key="project.id" :value="project.id">
-                      {{ project.name }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <div class="flex items-center justify-between pt-1">
-                  <span class="text-xs text-muted-foreground">Total: {{ newInvoiceTotal.toLocaleString() }} {{ newInvoiceCurrency }}</span>
-                  <Button size="sm" :disabled="!newInvoiceLineItems.length" @click="onCreateInvoice">
-                    Create Invoice
-                  </Button>
-                </div>
-              </div>
-
-              <p v-if="!client.invoices.length" class="text-sm text-muted-foreground">
-                No invoices yet.
-              </p>
-              <InvoiceCard v-for="invoice in client.invoices" :key="invoice.id" :invoice="invoice" :client-id="client.id" />
-            </div>
-
-            <Separator />
-
             <div class="flex flex-col gap-3 pb-6">
               <h4 class="text-sm font-medium">
                 Activity
@@ -716,6 +629,44 @@ function formatDateTime(value: string) {
                 <span>{{ formatDateTime(activity.createdAt) }}</span>
               </div>
             </div>
+
+            <Separator />
+
+            <AlertDialog v-model:open="isDeleteOpen">
+              <AlertDialogTrigger as-child>
+                <Button variant="destructive" class="self-start">
+                  <Icon name="i-lucide-trash-2" class="mr-2 h-4 w-4" />
+                  Delete Client
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {{ client.name }}?</AlertDialogTitle>
+                  <AlertDialogDescription as="div" class="flex flex-col gap-2">
+                    <p>This permanently deletes the client and everything that belongs to it:</p>
+                    <ul v-if="deleteSummary.length" class="list-disc pl-5">
+                      <li v-for="line in deleteSummary" :key="line">
+                        {{ line }}
+                      </li>
+                    </ul>
+                    <p>
+                      Tasks, calendar events and the lead/tender it was converted from are kept, just unlinked.
+                      This can't be undone.
+                    </p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div v-if="needsTypedConfirm" class="flex flex-col gap-1.5">
+                  <Label class="text-xs">Type <span class="font-semibold">{{ client.name }}</span> to confirm</Label>
+                  <Input v-model="deleteConfirmName" :placeholder="client.name" />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <Button variant="destructive" :disabled="!canConfirmDelete || isDeleting" @click="onDeleteClient">
+                    {{ isDeleting ? 'Deleting…' : 'Delete Client' }}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </ScrollArea>
       </template>

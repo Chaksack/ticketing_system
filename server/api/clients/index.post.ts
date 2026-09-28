@@ -23,6 +23,8 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
   const db = useDatabase()
 
+  await assertNoDuplicateName('clients', body.name)
+
   const id = await nextClientId()
   const now = new Date().toISOString()
 

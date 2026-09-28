@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Product } from '~/types/product'
+import { parseAmountInput } from '~/lib/formNumbers'
 
 export interface DraftLineItem {
   productId?: string
@@ -51,7 +52,7 @@ function addRow() {
     })
   }
   else {
-    if (!customName.value.trim() || !customPrice.value.trim())
+    if (!customName.value.trim() || parseAmountInput(customPrice.value) === undefined)
       return
     emit('add', {
       productName: customName.value.trim(),

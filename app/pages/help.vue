@@ -49,14 +49,6 @@ const faqs = [
     a: 'The win-probability model needs at least 20 of your own decided (won or lost) leads and tenders before it trains — below that, showing a number would just be noise. Until then the card still shows the simpler "going cold" signal based on days since last contact, which doesn\'t need any training data, plus how many more decided deals are needed before the score turns on.',
   },
   {
-    q: 'How is an invoice\'s balance calculated?',
-    a: 'You never set it directly — it\'s recalculated automatically every time a receipt (payment) is recorded or removed: balance = total minus the sum of receipts. The status (Unpaid/Partial/Paid) follows the same recalculation, and every payment posts a matching entry to the general ledger behind the scenes.',
-  },
-  {
-    q: 'Does marking a Quote as "Invoiced" create a real invoice?',
-    a: 'No — Quotes and Invoices are separate, unconnected records. "Invoiced" is just a status label on the quote for your own tracking; create the actual Invoice separately from the client\'s Finance section once the deal is billable.',
-  },
-  {
     q: 'Can I connect Slack or Gmail on someone else\'s behalf?',
     a: 'No — Settings → Integrations and the Mail page\'s Gmail connection are both per-person. Each staff member connects their own account and only ever sees notifications or mail addressed to them.',
   },
@@ -81,9 +73,6 @@ const faqs = [
         </TabsTrigger>
         <TabsTrigger value="bdsm">
           BD &amp; SM
-        </TabsTrigger>
-        <TabsTrigger value="finance">
-          Finance
         </TabsTrigger>
         <TabsTrigger value="calchat">
           Calendar &amp; Chat
@@ -110,7 +99,7 @@ const faqs = [
           <CardHeader>
             <CardTitle>What is this?</CardTitle>
             <CardDescription>
-              One system covering support tickets, BD/sales pipeline, finance, and team
+              One system covering support tickets, BD/sales pipeline, and team
               tools — tracking everything automatically instead of relying on someone to
               chase it by hand.
             </CardDescription>
@@ -122,8 +111,8 @@ const faqs = [
               support agent, given an SLA deadline based on its priority, and on-call staff
               are paged. From there, agents work the ticket until it's resolved and
               eventually closed. Alongside that, BD/SM staff run the sales pipeline (Leads,
-              Tenders, Clients, Projects, Quotes), Finance tracks invoices and the general
-              ledger, and everyone shares Calendar, Chat, and Tasks/Sprints.
+              Tenders, Clients, Projects, Quotes), and everyone shares Calendar, Chat, and
+              Tasks/Sprints.
             </p>
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="rounded-md border p-3">
@@ -174,7 +163,7 @@ const faqs = [
                   <NuxtLink to="/calendar" class="underline">
                     Calendar
                   </NuxtLink>
-                  are shared by everyone. Admin- and Finance-only tools live under their own
+                  are shared by everyone. Admin-only tools live under their own
                   sidebar sections.
                 </p>
               </div>
@@ -295,9 +284,7 @@ const faqs = [
               Open a Lead or Tender and look for its Quotes section — build line items from
               the shared Products catalog (Admin → Products), track the quote's status
               through Quoted → Ordered → Invoiced, and download a branded PDF to send to the
-              prospect. Marking a quote "Invoiced" is just a label for your own tracking — it
-              doesn't create a real Invoice; do that from the client's Finance section once
-              the deal is billable.
+              prospect. Marking a quote "Invoiced" is just a label for your own tracking.
             </CardContent>
           </Card>
 
@@ -309,51 +296,6 @@ const faqs = [
               Every list (Leads, Tenders, Clients, Projects, Tasks) has a search box, sortable
               columns, and dropdown filters — click a column header to sort, or the filter
               chips above the table to narrow by stage/status/assignee.
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="finance" class="mt-4">
-        <div class="flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoices &amp; Receipts</CardTitle>
-              <CardDescription>
-                Bill a client and track what they still owe.
-              </CardDescription>
-            </CardHeader>
-            <CardContent class="text-sm text-muted-foreground">
-              An invoice belongs to a project, with its own line items, an optional tax rate
-              and discount, and a currency. Recording a receipt (a payment) against an
-              invoice automatically recalculates its amount paid, balance, and status
-              (Unpaid → Partial → Paid) — you never set those by hand.
-              <NuxtLink to="/invoices" class="underline">
-                Invoices
-              </NuxtLink>
-              (Finance section) lists every invoice across every client with an
-              outstanding-balance summary by currency; open a client's own detail view to
-              see just theirs.
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>General Ledger</CardTitle>
-              <CardDescription>
-                A real double-entry ledger behind the numbers. Finance role only.
-              </CardDescription>
-            </CardHeader>
-            <CardContent class="text-sm text-muted-foreground">
-              Every invoice payment automatically posts a balanced journal entry (Debit Cash
-              / Credit Accounts Receivable) — nothing here needs manual bookkeeping unless
-              you're recording something outside of client receipts. Finance staff maintain
-              the <strong>Chart of Accounts</strong> (asset/liability/equity/revenue/expense
-              accounts, each with a live balance computed from the ledger, never stored),
-              post manual <strong>Journal Entries</strong> (total debits must equal total
-              credits, or it's rejected), and open/close monthly
-              <strong>Fiscal Periods</strong> to lock the books once a month is finalized —
-              you can't post into a closed period.
             </CardContent>
           </Card>
 

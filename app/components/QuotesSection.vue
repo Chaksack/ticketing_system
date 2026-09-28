@@ -16,7 +16,7 @@ const props = defineProps<{
 
 const { quotes, fetchQuotes, addQuote, removeQuote } = useQuotes()
 const { products, fetchProducts } = useProducts()
-const { orders, fetchOrders, confirmOrder, generateInvoice } = useSalesOrders()
+const { orders, fetchOrders, confirmOrder } = useSalesOrders()
 
 const isLoading = ref(false)
 
@@ -71,47 +71,6 @@ async function onConfirmOrder(quoteId: string) {
   }
   finally {
     isConfirming.value = null
-  }
-}
-
-const invoiceFormOrderId = ref<string | null>(null)
-const invoiceDiscount = ref('0')
-const invoiceTaxRate = ref('0')
-const invoiceDueAt = ref('')
-const isGeneratingInvoice = ref(false)
-
-function toggleInvoiceForm(orderId: string) {
-  invoiceFormOrderId.value = invoiceFormOrderId.value === orderId ? null : orderId
-  invoiceDiscount.value = '0'
-  invoiceTaxRate.value = '0'
-  invoiceDueAt.value = ''
-}
-
-async function onGenerateInvoice(orderId: string) {
-  isGeneratingInvoice.value = true
-  try {
-    const result = await generateInvoice(orderId, {
-      taxRate: Number(invoiceTaxRate.value || 0),
-      discount: Number(invoiceDiscount.value || 0),
-      dueAt: invoiceDueAt.value || undefined,
-    })
-    invoiceFormOrderId.value = null
-    if ('pending' in result) {
-      toast('Sent for approval', {
-        description: 'This discount needs sign-off before the invoice is created.',
-      })
-    }
-    else {
-      toast('Invoice generated')
-    }
-  }
-  catch (error: any) {
-    toast.error('Could not generate invoice', {
-      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
-    })
-  }
-  finally {
-    isGeneratingInvoice.value = false
   }
 }
 
@@ -241,27 +200,6 @@ function formatDate(value: string) {
               {{ orderForQuote(quote.id)!.status }}
             </Badge>
           </div>
-
-          <template v-if="orderForQuote(quote.id)!.status === 'confirmed'">
-            <div class="flex justify-end">
-              <Button size="sm" variant="outline" @click="toggleInvoiceForm(orderForQuote(quote.id)!.id)">
-                <Icon name="i-lucide-receipt" class="mr-1.5 size-3.5" />
-                Generate Invoice
-              </Button>
-            </div>
-            <div v-if="invoiceFormOrderId === orderForQuote(quote.id)!.id" class="flex flex-col gap-2 rounded-md border p-2">
-              <div class="grid grid-cols-3 gap-2">
-                <Input v-model="invoiceTaxRate" type="number" min="0" step="0.1" placeholder="Tax %" class="h-8 text-xs" />
-                <Input v-model="invoiceDiscount" type="number" min="0" step="0.01" placeholder="Discount" class="h-8 text-xs" />
-                <Input v-model="invoiceDueAt" type="date" class="h-8 text-xs" />
-              </div>
-              <div class="flex justify-end">
-                <Button size="sm" :disabled="isGeneratingInvoice" @click="onGenerateInvoice(orderForQuote(quote.id)!.id)">
-                  Create Invoice
-                </Button>
-              </div>
-            </div>
-          </template>
         </div>
       </template>
     </div>

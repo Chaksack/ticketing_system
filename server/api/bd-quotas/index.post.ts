@@ -1,4 +1,5 @@
 import type { BdQuotaRow } from '../../utils/quotas'
+import { QUOTA_PERIOD_PATTERN } from '../../../app/types/quota'
 
 interface UpsertQuotaBody {
   staffId?: string
@@ -13,6 +14,9 @@ export default defineEventHandler(async (event) => {
 
   if (!body?.staffId || !body?.period || body.targetValue === undefined || body.targetValue < 0) {
     throw createError({ statusCode: 400, statusMessage: 'staffId, period and a non-negative targetValue are required' })
+  }
+  if (!QUOTA_PERIOD_PATTERN.test(body.period)) {
+    throw createError({ statusCode: 400, statusMessage: 'period must be YYYY-MM (monthly quota) or YYYY (yearly quota)' })
   }
 
   await ensureDb()

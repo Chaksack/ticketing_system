@@ -84,7 +84,7 @@ const isDetailOpen = ref(false)
 const selectedEventId = ref<string | null>(null)
 // Looked up live from `events` (rather than snapshotting the object at open-time) so the sheet
 // reflects any edit made elsewhere without needing to reopen it — matches every other detail
-// sheet in the app (tickets, leads, clients, tenders, projects, invoices, admin).
+// sheet in the app (tickets, leads, clients, tenders, projects, admin).
 const selectedEvent = computed(() => events.value.find(e => e.id === selectedEventId.value) ?? null)
 
 const isDayViewOpen = ref(false)

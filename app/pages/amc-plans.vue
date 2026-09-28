@@ -5,6 +5,7 @@ import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
 import { currencies } from '~/components/projects/data'
+import { optionalAmount } from '~/lib/formNumbers'
 
 definePageMeta({
   middleware: 'bd',
@@ -30,7 +31,7 @@ const planFormSchema = toTypedSchema(z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   description: z.string().optional(),
   defaultDurationMonths: z.coerce.number().min(1, { message: 'Must be at least 1 month.' }),
-  price: z.coerce.number().min(0).optional(),
+  price: optionalAmount(),
   currency: z.string().min(1),
 }))
 

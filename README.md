@@ -123,10 +123,8 @@ can be handed straight to whoever is setting up the other side.
    | Scope | Endpoint |
    | --- | --- |
    | `clients` | `/api/integrations/export/clients` |
-   | `invoices` | `/api/integrations/export/invoices` |
    | `projects` | `/api/integrations/export/projects` |
    | `products` | `/api/integrations/export/products` |
-   | `vendor_bills` | `/api/integrations/export/vendor-bills` |
    | `tenders` | `/api/integrations/export/tenders` |
 
    Grant only what the external system needs.
@@ -137,10 +135,8 @@ can be handed straight to whoever is setting up the other side.
    resource:
    ```bash
    curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/clients
-   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/invoices
    curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/projects
    curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/products
-   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/vendor-bills
    curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/tenders
    ```
    Each returns `{ "resource": "clients", "count": 42, "items": [...] }`. To find out which
@@ -169,12 +165,35 @@ can be handed straight to whoever is setting up the other side.
 
 **Administration → Integrations → ERP Connections** is the other direction: configure a base
 URL + auth (none/bearer token/API-key header/basic auth) for an external ERP, "Test" it, then
-"Fetch" any path on its API. Since every external ERP has a different schema, this phase stores
-each fetch as-is (viewable per-connection) rather than guessing at field mappings into this
-app's own tables — mapping a specific external ERP's fields into Clients/Products/etc. is a
-follow-up once that ERP's actual response shape is known. Credentials are encrypted at rest the
-same way personal Slack/Gmail tokens already are (`server/utils/crypto.ts`,
+"Fetch" any path on its API. A manual fetch is stored as-is (viewable per-connection), which is
+the easiest way to see the ERP's field names. Credentials are encrypted at rest the same way
+personal Slack/Gmail tokens already are (`server/utils/crypto.ts`,
 `NUXT_INTEGRATIONS_ENCRYPTION_KEY`).
+
+### Scheduled sync (customers → Clients, projects → Projects)
+
+Open a connection and use **Scheduled Sync** to turn on customers and/or projects. For each one,
+set the ERP path, where the list is in the response (blank auto-detects a bare array or
+`results`/`data`/`items`), the ERP's id field, and which ERP field fills each app field. Nested
+fields use dot notation (`contact.email`). Then **Save Sync Settings** and **Sync Now** to check
+the result.
+
+- **Hourly** via `.github/workflows/erp-sync.yml` → `GET /api/cron/erp-sync` (same
+  `CRON_SECRET`/`SITE_URL` repo secrets as the other cron workflows). Locally or on a persistent
+  server, `server/plugins/sla-sweep.ts` runs it on an hourly interval instead.
+- **Matching:** each record stores the ERP's id (`clients.erp_client_id`,
+  `projects.erp_project_id`, plus `erp_connection_id`), so reruns update instead of duplicating.
+  On the first sync, an unlinked client (or a project under the same client) with the same name
+  is linked rather than duplicated.
+- **What gets overwritten:** only the mapped fields, and only when the ERP has a value. Stage,
+  notes, assignees, contracts and anything else edited in this app are left alone. New ERP
+  customers are created with stage `active`.
+- **Projects** attach to the client synced from their ERP customer, so customers must sync too.
+  A project whose customer hasn't been synced is skipped and listed under "Last sync". Status is
+  applied only when the ERP value is one of `planned`/`active`/`on_hold`/`completed`/`cancelled`.
+- DRF-style pagination (`next` links) is followed, up to 100 pages per resource.
+- Implementation: `server/utils/erpSync.ts`. The connection's status shows `ok`, `partial` (some
+  records skipped) or `error` (a request to the ERP failed).
 
 ## Email (Gmail API)
 
@@ -252,7 +271,7 @@ the underlying notification). One-time setup, at https://api.slack.com/apps:
 
 Every staff member can open "Ask AI" (the sparkles button in the header, or `Cmd+J`/`Ctrl+J`
 anywhere in the app) to ask questions in plain language — either about live data ("any SLA
-breaches?", "clients by stage") or about how to use the app ("how do I create an invoice?").
+breaches?", "clients by stage") or about how to use the app ("how do I create a quote?").
 
 It's a real conversation backed by Claude (`server/utils/aiAssistant.ts`), not a search box: the
 model decides when a question needs real data and calls one of a fixed set of tools to fetch

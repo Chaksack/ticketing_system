@@ -1,5 +1,6 @@
-import type { ErpConnection } from '../../app/types/erp-connection'
+import type { ErpConnection, ErpSyncConfig } from '../../app/types/erp-connection'
 import { Buffer } from 'node:buffer'
+import { DEFAULT_ERP_SYNC_CONFIG } from '../../app/types/erp-connection'
 
 export interface ErpConnectionRow {
   id: string
@@ -14,6 +15,25 @@ export interface ErpConnectionRow {
   updated_at: string
   last_synced_at: string | null
   last_sync_status: string | null
+  sync_config: string | null
+  last_sync_summary: string | null
+}
+
+/** Stored config merged over the defaults, so a connection saved before sync existed (or a partial config) still has every field. */
+export function parseSyncConfig(raw: string | null): ErpSyncConfig {
+  const stored = raw ? JSON.parse(raw) as Partial<ErpSyncConfig> : {}
+  return {
+    customers: {
+      ...DEFAULT_ERP_SYNC_CONFIG.customers,
+      ...stored.customers,
+      fields: { ...DEFAULT_ERP_SYNC_CONFIG.customers.fields, ...stored.customers?.fields },
+    },
+    projects: {
+      ...DEFAULT_ERP_SYNC_CONFIG.projects,
+      ...stored.projects,
+      fields: { ...DEFAULT_ERP_SYNC_CONFIG.projects.fields, ...stored.projects?.fields },
+    },
+  }
 }
 
 export function mapErpConnectionRow(row: ErpConnectionRow): ErpConnection {
@@ -30,6 +50,8 @@ export function mapErpConnectionRow(row: ErpConnectionRow): ErpConnection {
     updatedAt: row.updated_at,
     lastSyncedAt: row.last_synced_at ?? undefined,
     lastSyncStatus: row.last_sync_status ?? undefined,
+    syncConfig: parseSyncConfig(row.sync_config),
+    lastSyncSummary: row.last_sync_summary ? JSON.parse(row.last_sync_summary) : undefined,
   }
 }
 
@@ -52,6 +74,22 @@ function buildAuthHeaders(row: ErpConnectionRow): Record<string, string> {
   }
 
   return {}
+}
+
+/** GETs a URL (relative to the connection's base URL, or absolute — e.g. a paginated `next` link) and parses it as JSON. Throws with the ERP's status on failure. */
+export async function fetchErpJson(row: ErpConnectionRow, pathOrUrl: string): Promise<unknown> {
+  const url = new URL(pathOrUrl, row.base_url).toString()
+  const response = await fetch(url, { headers: { Accept: 'application/json', ...buildAuthHeaders(row) } })
+  const text = await response.text()
+  if (!response.ok) {
+    throw new Error(`GET ${url} returned HTTP ${response.status}: ${text.slice(0, 200)}`)
+  }
+  try {
+    return JSON.parse(text)
+  }
+  catch {
+    throw new Error(`GET ${url} did not return JSON`)
+  }
 }
 
 export async function testConnection(row: ErpConnectionRow): Promise<{ ok: boolean, status: number }> {

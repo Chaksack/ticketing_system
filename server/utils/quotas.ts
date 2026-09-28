@@ -24,16 +24,23 @@ export function mapBdQuotaRow(row: BdQuotaRow): BdQuota {
   }
 }
 
-function monthRange(period: string): { start: string, end: string } {
+/** "2026-09" → that calendar month; "2026" → the whole calendar year. */
+function periodRange(period: string): { start: string, end: string } {
   const [year, month] = period.split('-').map(Number)
-  const start = new Date(Date.UTC(year!, month! - 1, 1))
-  const end = new Date(Date.UTC(year!, month!, 1))
+  if (month === undefined) {
+    return {
+      start: new Date(Date.UTC(year!, 0, 1)).toISOString(),
+      end: new Date(Date.UTC(year! + 1, 0, 1)).toISOString(),
+    }
+  }
+  const start = new Date(Date.UTC(year!, month - 1, 1))
+  const end = new Date(Date.UTC(year!, month, 1))
   return { start: start.toISOString(), end: end.toISOString() }
 }
 
 async function getWonValueByStaff(period: string): Promise<Map<string, number>> {
   const db = useDatabase()
-  const { start, end } = monthRange(period)
+  const { start, end } = periodRange(period)
 
   const leadRows = await db.prepare(`
     SELECT lead_assignees.staff_id AS staff_id, SUM(leads.estimated_value) AS total

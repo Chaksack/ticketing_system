@@ -1,4 +1,5 @@
 import type { ContractRow, ProjectRow } from '../../utils/mappers'
+import { PROJECT_TOTALS_COLUMNS } from '../../utils/projects'
 
 export default defineEventHandler(async (event) => {
   await requireBd(event)
@@ -6,7 +7,7 @@ export default defineEventHandler(async (event) => {
 
   const db = useDatabase()
   const rows = await db.prepare(`
-    SELECT projects.*, clients.name AS client_name
+    SELECT projects.*, clients.name AS client_name, ${PROJECT_TOTALS_COLUMNS}
     FROM projects
     LEFT JOIN clients ON clients.id = projects.client_id
     ORDER BY projects.created_at DESC

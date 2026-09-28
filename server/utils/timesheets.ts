@@ -1,4 +1,3 @@
-import type { ProjectProfitabilityRow } from '../../app/types/project-profitability'
 import type { ResourceUtilizationRow, UtilizationStatus } from '../../app/types/resource-utilization'
 import type { TimesheetEntry } from '../../app/types/timesheet'
 
@@ -46,7 +45,7 @@ export interface TimesheetFilter {
   to?: string
 }
 
-/** One flexible filtered query, same optional-filter-builder shape as getAccountBalances in server/utils/accounts.ts. */
+/** One flexible filtered query, with an optional-filter builder. */
 export async function getTimesheets(filter: TimesheetFilter = {}): Promise<TimesheetEntry[]> {
   const db = useDatabase()
 
@@ -144,45 +143,6 @@ export async function getResourceUtilization(from: string, to: string): Promise<
       capacityHours,
       utilizationPct,
       status: utilizationStatus(utilizationPct),
-    }
-  })
-}
-
-export async function getProjectProfitability(projectId?: string): Promise<ProjectProfitabilityRow[]> {
-  const db = useDatabase()
-
-  const projectRows = projectId
-    ? await db.prepare('SELECT id, name FROM projects WHERE id = ?').all(projectId) as { id: string, name: string }[]
-    : await db.prepare('SELECT id, name FROM projects ORDER BY name ASC').all() as { id: string, name: string }[]
-
-  const revenueRows = await db.prepare(`
-    SELECT project_id, SUM(total) AS total_revenue
-    FROM invoices
-    WHERE project_id IS NOT NULL
-    GROUP BY project_id
-  `).all() as { project_id: string, total_revenue: number | string }[]
-  const revenueByProject = new Map(revenueRows.map(row => [row.project_id, Number(row.total_revenue)]))
-
-  const costRows = await db.prepare(`
-    SELECT tasks.project_id AS project_id, SUM(timesheets.hours * timesheets.hourly_rate) AS total_cost
-    FROM timesheets
-    JOIN tasks ON tasks.id = timesheets.task_id
-    WHERE tasks.project_id IS NOT NULL
-    GROUP BY tasks.project_id
-  `).all() as { project_id: string, total_cost: number | string }[]
-  const costByProject = new Map(costRows.map(row => [row.project_id, Number(row.total_cost)]))
-
-  return projectRows.map((project) => {
-    const revenue = revenueByProject.get(project.id) ?? 0
-    const cost = costByProject.get(project.id) ?? 0
-    const margin = revenue - cost
-    return {
-      projectId: project.id,
-      projectName: project.name,
-      revenue,
-      cost,
-      margin,
-      marginPct: revenue > 0 ? (margin / revenue) * 100 : null,
     }
   })
 }

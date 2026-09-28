@@ -1090,6 +1090,35 @@ async function migrate() {
       fetched_at TEXT NOT NULL
     )
   `)
+
+  // Scheduled ERP sync (server/utils/erpSync.ts): per-connection field mapping + last run's
+  // counts, and the external ids that let a rerun update a record instead of duplicating it.
+  await db.exec('ALTER TABLE erp_connections ADD COLUMN IF NOT EXISTS sync_config TEXT')
+  await db.exec('ALTER TABLE erp_connections ADD COLUMN IF NOT EXISTS last_sync_summary TEXT')
+  await db.exec('ALTER TABLE clients ADD COLUMN IF NOT EXISTS erp_connection_id TEXT')
+  await db.exec('ALTER TABLE clients ADD COLUMN IF NOT EXISTS erp_client_id TEXT')
+  await db.exec('ALTER TABLE projects ADD COLUMN IF NOT EXISTS erp_connection_id TEXT')
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_clients_erp ON clients (erp_connection_id, erp_client_id)')
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_projects_erp ON projects (erp_connection_id, erp_project_id)')
+
+  // Project money: the agreed value on the project itself, plus a running list of costs incurred
+  // and payments received. Totals, margin and amount due are always computed, never stored.
+  await db.exec('ALTER TABLE projects ADD COLUMN IF NOT EXISTS contract_value NUMERIC')
+  await db.exec(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'GHS'`)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS project_financial_entries (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      description TEXT,
+      amount NUMERIC NOT NULL,
+      entry_date TEXT NOT NULL,
+      reference TEXT,
+      recorded_by TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_project_financial_entries_project ON project_financial_entries (project_id)')
 }
 
 export async function nextSequence(name: string): Promise<number> {
@@ -1355,6 +1384,11 @@ export async function nextSprintId() {
 export async function nextProjectId() {
   const n = await nextSequence('project')
   return `PROJECT-${n}`
+}
+
+export async function nextProjectFinancialEntryId() {
+  const n = await nextSequence('project_financial_entry')
+  return `PFE-${n}`
 }
 
 export async function nextClientContactEmailId() {

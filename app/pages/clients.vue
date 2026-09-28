@@ -59,7 +59,7 @@ const { handleSubmit, resetForm, values } = useForm({
   initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', stage: 'lead', assigneeIds: [] },
 })
 
-const { matches: duplicateMatches, check: checkDuplicate, reset: resetDuplicateCheck } = useDuplicateCheck('clients')
+const { matches: duplicateMatches, blockingMatch: blockingDuplicate, check: checkDuplicate, reset: resetDuplicateCheck } = useDuplicateCheck('clients')
 
 watch([() => values.name, () => values.contactEmail, () => values.contactPhone], () => {
   checkDuplicate({ name: values.name, email: values.contactEmail, phone: values.contactPhone })
@@ -184,19 +184,10 @@ const onSubmit = handleSubmit(async (values) => {
               </FormItem>
             </FormField>
 
-            <Alert v-if="duplicateMatches.length">
-              <Icon name="i-lucide-triangle-alert" class="h-4 w-4" />
-              <AlertTitle>Possible duplicate</AlertTitle>
-              <AlertDescription>
-                <span v-for="(match, index) in duplicateMatches" :key="match.id">
-                  {{ match.label }} ({{ match.stage }})<span v-if="index < duplicateMatches.length - 1">, </span>
-                </span>
-                already exists. You can still add this client.
-              </AlertDescription>
-            </Alert>
+            <DuplicateWarning entity="clients" :matches="duplicateMatches" />
 
             <SheetFooter class="p-0">
-              <Button type="submit">
+              <Button type="submit" :disabled="!!blockingDuplicate">
                 Add Client
               </Button>
             </SheetFooter>

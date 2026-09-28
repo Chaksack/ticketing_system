@@ -1,4 +1,5 @@
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000
+const ERP_SYNC_INTERVAL_MS = 60 * 60 * 1000
 
 /**
  * Background sweep for local dev / any persistent (non-serverless) deployment, where a
@@ -35,4 +36,9 @@ export default defineNitroPlugin(async () => {
         console.error('Gmail inbox check failed', error)
     })
   }, SWEEP_INTERVAL_MS)
+
+  // Hourly, matching .github/workflows/erp-sync.yml (/api/cron/erp-sync) in production.
+  setInterval(() => {
+    runAllErpSyncs().catch(error => console.error('ERP sync failed', error))
+  }, ERP_SYNC_INTERVAL_MS)
 })

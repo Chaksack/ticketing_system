@@ -59,6 +59,10 @@ const isDetailOpen = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const selectedProject = computed(() => projects.value.find(p => p.id === selectedProjectId.value) ?? null)
 
+function money(project: Project, value?: number) {
+  return value === undefined ? '—' : `${project.currency} ${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+}
+
 async function openProject(project: Project) {
   // Mobile opens the full page instead of a sheet — the sheet's 80vw width doesn't fit a phone
   // screen usefully, so it becomes a real route there.
@@ -277,6 +281,15 @@ function formatDate(value?: string) {
             <TableHead>End</TableHead>
             <TableHead>Tasks</TableHead>
             <TableHead>AMC Contracts</TableHead>
+            <TableHead class="text-right">
+              Value
+            </TableHead>
+            <TableHead class="text-right">
+              Margin
+            </TableHead>
+            <TableHead class="text-right">
+              Due
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -322,10 +335,25 @@ function formatDate(value?: string) {
               <TableCell class="text-muted-foreground">
                 {{ project.contracts.length }}
               </TableCell>
+              <TableCell class="text-right tabular-nums">
+                {{ money(project, project.contractValue) }}
+              </TableCell>
+              <TableCell
+                class="text-right tabular-nums"
+                :class="project.margin !== undefined && project.margin < 0 ? 'text-destructive' : ''"
+              >
+                {{ money(project, project.margin) }}
+              </TableCell>
+              <TableCell
+                class="text-right tabular-nums"
+                :class="project.amountDue !== undefined && project.amountDue > 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-muted-foreground'"
+              >
+                {{ money(project, project.amountDue) }}
+              </TableCell>
             </TableRow>
           </template>
           <TableRow v-else>
-            <TableCell :colspan="8" class="h-24 text-center">
+            <TableCell :colspan="11" class="h-24 text-center">
               No projects match your filters.
             </TableCell>
           </TableRow>

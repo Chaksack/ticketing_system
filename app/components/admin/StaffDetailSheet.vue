@@ -2,6 +2,7 @@
 import type { AcceptableValue } from 'reka-ui'
 import type { StaffMember, StaffRole, StaffStatus } from '~/types/staff'
 import { toast } from 'vue-sonner'
+import { parseAmountInput } from '~/lib/formNumbers'
 import { roleBadgeClass } from './data'
 
 const props = defineProps<{
@@ -101,7 +102,7 @@ async function onSaveHourlyRate() {
   if (!props.staff)
     return
 
-  await updateHourlyRate(props.staff.id, hourlyRateDraft.value.trim() ? Number(hourlyRateDraft.value) : null)
+  await updateHourlyRate(props.staff.id, parseAmountInput(hourlyRateDraft.value) ?? null)
   toast('Hourly rate updated')
 }
 
@@ -220,7 +221,7 @@ function formatDate(value: string) {
               <div class="flex flex-col gap-0.5">
                 <Label for="hourly-rate">Hourly Rate</Label>
                 <span class="text-xs text-muted-foreground">
-                  Cost rate used when this person logs time — feeds project profitability reporting.
+                  Cost rate recorded with the time this person logs.
                 </span>
               </div>
               <div class="flex items-center gap-2">

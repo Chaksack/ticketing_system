@@ -9,6 +9,7 @@ import { columns } from '~/components/leads/components/columns'
 import DataTableToolbar from '~/components/leads/components/DataTableToolbar.vue'
 import { leadStages } from '~/components/leads/data'
 import LeadDetailSheet from '~/components/leads/LeadDetailSheet.vue'
+import { optionalAmount } from '~/lib/formNumbers'
 
 definePageMeta({
   middleware: 'bd',
@@ -52,16 +53,16 @@ const leadFormSchema = toTypedSchema(z.object({
   contactPhone: z.string().optional(),
   source: z.string().optional(),
   stage: z.enum(['new', 'contacted', 'qualified', 'proposal', 'won', 'lost']),
-  estimatedValue: z.string().optional(),
+  estimatedValue: optionalAmount(),
   assigneeIds: z.array(z.string()).optional(),
 }))
 
 const { handleSubmit, resetForm, values } = useForm({
   validationSchema: leadFormSchema,
-  initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'new', estimatedValue: '', assigneeIds: [] },
+  initialValues: { name: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'new', estimatedValue: undefined, assigneeIds: [] },
 })
 
-const { matches: duplicateMatches, check: checkDuplicate, reset: resetDuplicateCheck } = useDuplicateCheck('leads')
+const { matches: duplicateMatches, blockingMatch: blockingDuplicate, check: checkDuplicate, reset: resetDuplicateCheck } = useDuplicateCheck('leads')
 
 watch([() => values.name, () => values.contactEmail, () => values.contactPhone], () => {
   checkDuplicate({ name: values.name, email: values.contactEmail, phone: values.contactPhone })
@@ -71,7 +72,7 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     const lead = await addLead({
       ...values,
-      estimatedValue: values.estimatedValue ? Number(values.estimatedValue) : undefined,
+      estimatedValue: values.estimatedValue,
     })
     resetForm()
     resetDuplicateCheck()
@@ -209,19 +210,10 @@ const onSubmit = handleSubmit(async (values) => {
               </FormItem>
             </FormField>
 
-            <Alert v-if="duplicateMatches.length">
-              <Icon name="i-lucide-triangle-alert" class="h-4 w-4" />
-              <AlertTitle>Possible duplicate</AlertTitle>
-              <AlertDescription>
-                <span v-for="(match, index) in duplicateMatches" :key="match.id">
-                  {{ match.label }} ({{ match.stage }})<span v-if="index < duplicateMatches.length - 1">, </span>
-                </span>
-                already exists. You can still add this lead.
-              </AlertDescription>
-            </Alert>
+            <DuplicateWarning entity="leads" :matches="duplicateMatches" />
 
             <SheetFooter class="p-0">
-              <Button type="submit">
+              <Button type="submit" :disabled="!!blockingDuplicate">
                 Add Lead
               </Button>
             </SheetFooter>

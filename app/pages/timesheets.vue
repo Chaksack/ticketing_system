@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner'
+import { parseAmountInput } from '~/lib/formNumbers'
 
 const { currentUser, isAdmin, isFinance, isEngineeringLead, isEngineeringCoordinator } = useAuth()
 const { entries, fetchTimesheets, addTimesheet, removeTimesheet } = useTimesheets()
@@ -36,7 +37,7 @@ const notes = ref('')
 const isSaving = ref(false)
 
 async function onLogTime() {
-  if (!taskId.value || !hours.value.trim())
+  if (!taskId.value || parseAmountInput(hours.value) === undefined)
     return
 
   isSaving.value = true
@@ -139,7 +140,7 @@ function formatDate(value: string) {
           <Checkbox :model-value="billable" @update:model-value="(v) => billable = !!v" />
           Billable
         </label>
-        <Button size="sm" :disabled="!taskId || !hours.trim() || isSaving" @click="onLogTime">
+        <Button size="sm" :disabled="!taskId || parseAmountInput(hours) === undefined || isSaving" @click="onLogTime">
           Log Time
         </Button>
       </div>

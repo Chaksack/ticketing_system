@@ -1,4 +1,4 @@
-import type { ErpAuthType, ErpConnection, ErpImportRecord } from '~/types/erp-connection'
+import type { ErpAuthType, ErpConnection, ErpImportRecord, ErpSyncConfig, ErpSyncSummary } from '~/types/erp-connection'
 
 export interface NewErpConnection {
   name: string
@@ -7,6 +7,7 @@ export interface NewErpConnection {
   authHeader?: string
   username?: string
   credential?: string
+  syncConfig?: ErpSyncConfig
 }
 
 export function useErpConnections() {
@@ -53,10 +54,16 @@ export function useErpConnections() {
     return result.data
   }
 
+  async function syncConnection(id: string) {
+    const { connection, summary } = await $fetch<{ connection: ErpConnection, summary: ErpSyncSummary }>(`/api/erp-connections/${id}/sync`, { method: 'POST' })
+    replaceConnection(connection)
+    return summary
+  }
+
   async function fetchRecords(id: string) {
     const { records: rows } = await $fetch<{ records: ErpImportRecord[] }>(`/api/erp-connections/${id}/records`)
     records.value = rows
   }
 
-  return { connections, records, fetchConnections, addConnection, updateConnection, removeConnection, testConnection, fetchFromConnection, fetchRecords }
+  return { connections, records, fetchConnections, addConnection, updateConnection, removeConnection, testConnection, fetchFromConnection, syncConnection, fetchRecords }
 }

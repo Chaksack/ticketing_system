@@ -1,5 +1,5 @@
 import type { AmcContractStatus } from '~/types/amc'
-import type { Project, ProjectStatus } from '~/types/project'
+import type { Project, ProjectFinancialEntryKind, ProjectStatus } from '~/types/project'
 
 export interface NewProject {
   clientId: string
@@ -8,6 +8,8 @@ export interface NewProject {
   status?: ProjectStatus
   startDate?: string
   endDate?: string
+  contractValue?: number
+  currency?: string
 }
 
 export interface ProjectPatch {
@@ -16,6 +18,16 @@ export interface ProjectPatch {
   status?: ProjectStatus
   startDate?: string | null
   endDate?: string | null
+  contractValue?: number | null
+  currency?: string
+}
+
+export interface NewProjectFinancialEntry {
+  kind: ProjectFinancialEntryKind
+  amount: number
+  entryDate?: string
+  description?: string
+  reference?: string
 }
 
 export function useProjects() {
@@ -63,9 +75,21 @@ export function useProjects() {
     return project
   }
 
+  async function addFinancialEntry(projectId: string, payload: NewProjectFinancialEntry) {
+    const { project } = await $fetch<{ project: Project }>(`/api/projects/${projectId}/financial-entries`, { method: 'POST', body: payload })
+    replaceProject(project)
+    return project
+  }
+
+  async function removeFinancialEntry(projectId: string, entryId: string) {
+    const { project } = await $fetch<{ project: Project }>(`/api/projects/${projectId}/financial-entries/${entryId}`, { method: 'DELETE' })
+    replaceProject(project)
+    return project
+  }
+
   function projectsForClient(clientId: string) {
     return projects.value.filter(p => p.clientId === clientId)
   }
 
-  return { projects, fetchProjects, fetchProject, addProject, updateProject, removeProject, assignAmc, projectsForClient }
+  return { projects, fetchProjects, fetchProject, addProject, updateProject, removeProject, assignAmc, addFinancialEntry, removeFinancialEntry, projectsForClient }
 }

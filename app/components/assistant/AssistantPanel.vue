@@ -27,7 +27,7 @@ const suggestions = computed(() => {
     items.push('Clients by stage', 'Contracts expiring soon')
   if (isAdmin.value)
     items.push('Staff headcount')
-  items.push('Give me a report', 'How do I create an invoice?')
+  items.push('Give me a report', 'How do I create a quote?')
   return items
 })
 

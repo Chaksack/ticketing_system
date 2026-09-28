@@ -75,6 +75,12 @@ function openConnection(connection: ErpConnection) {
   isDetailOpen.value = true
 }
 
+const STATUS_CLASSES: Record<string, string> = {
+  ok: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30',
+  partial: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
+  error: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
+}
+
 function formatDateTime(value?: string) {
   return value ? new Date(value).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Never'
 }
@@ -88,7 +94,7 @@ function formatDateTime(value?: string) {
           ERP Connections
         </h2>
         <p class="text-muted-foreground">
-          Connect to other ERPs and pull their data in — each fetch is stored as a raw import record.
+          Connect to other ERPs and pull their data in — customers and projects can sync into Clients and Projects every hour.
         </p>
       </div>
 
@@ -186,7 +192,7 @@ function formatDateTime(value?: string) {
               <TableCell>
                 <Badge
                   v-if="connection.lastSyncStatus" variant="outline"
-                  :class="connection.lastSyncStatus === 'ok' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30' : 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30'"
+                  :class="STATUS_CLASSES[connection.lastSyncStatus] ?? STATUS_CLASSES.error"
                 >
                   {{ connection.lastSyncStatus }}
                 </Badge>

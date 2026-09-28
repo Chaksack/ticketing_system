@@ -1,0 +1,14 @@
+name: ERP sync
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync customers & projects from ERP connections
+        run: >-
+          curl -fsS --max-time 300 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/erp-sync"

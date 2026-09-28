@@ -3,10 +3,9 @@ import type { Assignee } from '../../app/types/assignee'
 import type { Macro } from '../../app/types/automation'
 import type { Client, ClientActivity, ClientContact, ClientContactEmail, ClientContactPhone, ClientDocument } from '../../app/types/client'
 import type { Interaction } from '../../app/types/interaction'
-import type { Invoice } from '../../app/types/invoice'
 import type { Lead, LeadActivity, LeadContactEmail, LeadContactPhone, LeadDocument } from '../../app/types/lead'
 import type { LineItem } from '../../app/types/product'
-import type { Project } from '../../app/types/project'
+import type { Project, ProjectFinancialEntry } from '../../app/types/project'
 import type { Sprint } from '../../app/types/sprint'
 import type { StaffMember, StaffRole } from '../../app/types/staff'
 import type { Task } from '../../app/types/task'
@@ -233,8 +232,6 @@ export function mapClientRow(
   contacts: ClientContact[] = [],
   documents: ClientDocument[] = [],
   interactions: Interaction[] = [],
-  invoices: Invoice[] = [],
-  balanceByCurrency: { currency: string, balance: number }[] = [],
 ): Client {
   return {
     id: row.id,
@@ -254,8 +251,6 @@ export function mapClientRow(
     updatedAt: row.updated_at,
     activity,
     interactions,
-    invoices,
-    balanceByCurrency,
     projects,
     contracts,
   }
@@ -320,12 +315,50 @@ export interface ProjectRow {
   start_date: string | null
   end_date: string | null
   erp_project_id: string | null
+  contract_value?: number | string | null
+  currency?: string | null
+  /** Aggregates from PROJECT_TOTALS_COLUMNS (server/utils/projects.ts). */
+  cost_total?: number | string | null
+  paid_total?: number | string | null
   created_by: string | null
   created_at: string
   updated_at: string
 }
 
-export function mapProjectRow(row: ProjectRow, contracts: AmcContract[] = [], taskCount = 0): Project {
+export interface ProjectFinancialEntryRow {
+  id: string
+  project_id: string
+  kind: string
+  description: string | null
+  amount: number | string
+  entry_date: string
+  reference: string | null
+  recorded_by: string | null
+  recorded_by_name?: string | null
+  created_at: string
+}
+
+export function mapProjectFinancialEntryRow(row: ProjectFinancialEntryRow): ProjectFinancialEntry {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    kind: row.kind as ProjectFinancialEntry['kind'],
+    description: row.description ?? undefined,
+    amount: Number(row.amount),
+    entryDate: row.entry_date,
+    reference: row.reference ?? undefined,
+    recordedBy: row.recorded_by ?? undefined,
+    recordedByName: row.recorded_by_name ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+export function mapProjectRow(row: ProjectRow, contracts: AmcContract[] = [], taskCount = 0, financialEntries: ProjectFinancialEntry[] = []): Project {
+  const contractValue = row.contract_value === null || row.contract_value === undefined ? undefined : Number(row.contract_value)
+  const totalCost = Number(row.cost_total ?? 0)
+  const amountPaid = Number(row.paid_total ?? 0)
+  const margin = contractValue === undefined ? undefined : contractValue - totalCost
+
   return {
     id: row.id,
     clientId: row.client_id,
@@ -341,6 +374,14 @@ export function mapProjectRow(row: ProjectRow, contracts: AmcContract[] = [], ta
     updatedAt: row.updated_at,
     contracts,
     taskCount,
+    currency: row.currency ?? 'GHS',
+    contractValue,
+    totalCost,
+    amountPaid,
+    margin,
+    marginPct: margin !== undefined && contractValue ? (margin / contractValue) * 100 : undefined,
+    amountDue: contractValue === undefined ? undefined : contractValue - amountPaid,
+    financialEntries,
   }
 }
 

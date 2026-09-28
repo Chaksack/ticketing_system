@@ -14,10 +14,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Project not found' })
   }
 
-  // Keep the AMC contract history — just detach it from the project being removed, mirroring
-  // how deleting a task epic nulls epic_id on its tasks rather than deleting them.
-  await db.prepare('UPDATE client_amc_contracts SET project_id = NULL WHERE project_id = ?').run(id)
-  await db.prepare('DELETE FROM projects WHERE id = ?').run(id)
+  await deleteProjectCascade(id)
 
   return { success: true }
 })

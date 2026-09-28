@@ -11,6 +11,22 @@ export const PROJECT_STATUS_PROGRESS: Record<ProjectStatus, number> = {
   cancelled: 0,
 }
 
+export type ProjectFinancialEntryKind = 'cost' | 'payment'
+
+/** A cost incurred on the project, or a payment received from the client. */
+export interface ProjectFinancialEntry {
+  id: string
+  projectId: string
+  kind: ProjectFinancialEntryKind
+  description?: string
+  amount: number
+  entryDate: string
+  reference?: string
+  recordedBy?: string
+  recordedByName?: string
+  createdAt: string
+}
+
 export interface Project {
   id: string
   clientId: string
@@ -26,4 +42,17 @@ export interface Project {
   updatedAt: string
   contracts: AmcContract[]
   taskCount: number
+  currency: string
+  /** What the client pays for the project. Margin and amount due need this set. */
+  contractValue?: number
+  totalCost: number
+  amountPaid: number
+  /** contractValue − totalCost */
+  margin?: number
+  /** margin as a % of contractValue */
+  marginPct?: number
+  /** contractValue − amountPaid (negative = overpaid) */
+  amountDue?: number
+  /** Only populated when loading a single project. */
+  financialEntries: ProjectFinancialEntry[]
 }

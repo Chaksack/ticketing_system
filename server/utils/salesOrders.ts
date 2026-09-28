@@ -73,8 +73,3 @@ export async function getSalesOrdersForRecord(regardingType: RegardingType, rega
 
   return orders
 }
-
-export async function markSalesOrderInvoiced(orderId: string) {
-  const db = useDatabase()
-  await db.prepare(`UPDATE sales_orders SET status = 'invoiced', updated_at = ? WHERE id = ?`).run(new Date().toISOString(), orderId)
-}

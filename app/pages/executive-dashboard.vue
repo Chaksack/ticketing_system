@@ -23,7 +23,7 @@ function currency(amount: number) {
         Executive Dashboard
       </h2>
       <p class="text-muted-foreground">
-        Support, Sales, Finance, and Projects — one view across everything.
+        Support, Sales, and Projects — one view across everything.
       </p>
     </div>
 
@@ -94,46 +94,6 @@ function currency(amount: number) {
 
       <section class="flex flex-col gap-3">
         <h3 class="text-sm font-medium text-muted-foreground">
-          Finance
-        </h3>
-        <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-          <Card class="@container/card">
-            <CardHeader>
-              <CardDescription>Cash</CardDescription>
-              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                {{ currency(summary?.finance.cash ?? 0) }}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card class="@container/card">
-            <CardHeader>
-              <CardDescription>Accounts Receivable</CardDescription>
-              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                {{ currency(summary?.finance.accountsReceivable ?? 0) }}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card class="@container/card">
-            <CardHeader>
-              <CardDescription>Accounts Payable</CardDescription>
-              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                {{ currency(summary?.finance.accountsPayable ?? 0) }}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card class="@container/card">
-            <CardHeader>
-              <CardDescription>Net Income (MTD)</CardDescription>
-              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" :class="(summary?.finance.netIncome ?? 0) < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'">
-                {{ currency(summary?.finance.netIncome ?? 0) }}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-      </section>
-
-      <section class="flex flex-col gap-3">
-        <h3 class="text-sm font-medium text-muted-foreground">
           Projects
         </h3>
         <div class="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
@@ -144,17 +104,6 @@ function currency(amount: number) {
                 <NumberFlow :value="summary?.projects.activeProjects ?? 0" />
               </CardTitle>
             </CardHeader>
-          </Card>
-          <Card class="@container/card">
-            <CardHeader>
-              <CardDescription>Total Margin</CardDescription>
-              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" :class="(summary?.projects.totalMargin ?? 0) < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'">
-                {{ currency(summary?.projects.totalMargin ?? 0) }}
-              </CardTitle>
-            </CardHeader>
-            <CardFooter class="text-sm text-muted-foreground">
-              Revenue {{ currency(summary?.projects.totalRevenue ?? 0) }} · Cost {{ currency(summary?.projects.totalCost ?? 0) }}
-            </CardFooter>
           </Card>
           <Card class="@container/card" :class="summary && summary.projects.staffOverCapacity > 0 ? 'border-amber-500/30' : ''">
             <CardHeader>

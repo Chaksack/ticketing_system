@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import type { BdQuotaPeriodType } from '~/types/quota'
 import { toast } from 'vue-sonner'
+import { parseAmountInput } from '~/lib/formNumbers'
 
 definePageMeta({
   middleware: 'admin',
@@ -10,12 +12,17 @@ const { quotas, fetchQuotas, upsertQuota, removeQuota } = useBdQuotas()
 
 const bdStaff = computed(() => staff.value.filter(s => s.status === 'active' && s.roles.some(r => r === 'bd' || r === 'sm')))
 
-function currentPeriod() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
+const now = new Date()
+const periodType = ref<BdQuotaPeriodType>('month')
+const month = ref(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+const year = ref(String(now.getFullYear()))
+const yearOptions = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - 1 + i))
 
-const period = ref(currentPeriod())
+// A monthly quota is stored under "2026-09", a yearly one under "2026" — a rep can have both.
+const period = computed(() => periodType.value === 'year' ? year.value : month.value)
+const periodLabel = computed(() => periodType.value === 'year'
+  ? year.value
+  : new Date(`${month.value}-01T00:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))
 
 async function reload() {
   await fetchQuotas(period.value)
@@ -28,11 +35,14 @@ onMounted(async () => {
 
 watch(period, reload)
 
-const drafts = reactive<Record<string, string>>({})
+// `<Input type="number">` hands back a number (or '' when blank), so drafts hold either.
+const drafts = reactive<Record<string, string | number>>({})
 
 watch(quotas, (list) => {
+  for (const key of Object.keys(drafts))
+    delete drafts[key]
   for (const quota of list)
-    drafts[quota.staffId] = String(quota.targetValue)
+    drafts[quota.staffId] = quota.targetValue
 }, { immediate: true })
 
 function quotaFor(staffId: string) {
@@ -40,15 +50,15 @@ function quotaFor(staffId: string) {
 }
 
 async function save(staffId: string) {
-  const value = Number(drafts[staffId])
-  if (!drafts[staffId]?.trim() || Number.isNaN(value) || value < 0) {
+  const value = parseAmountInput(drafts[staffId])
+  if (value === undefined || value < 0) {
     toast.error('Enter a valid, non-negative target')
     return
   }
 
   try {
     await upsertQuota({ staffId, period: period.value, targetValue: value })
-    toast('Quota saved')
+    toast('Quota saved', { description: `${periodType.value === 'year' ? 'Yearly' : 'Monthly'} target for ${periodLabel.value}.` })
   }
   catch (error: any) {
     toast.error('Could not save quota', {
@@ -75,19 +85,46 @@ async function clear(staffId: string) {
           BD Quotas
         </h2>
         <p class="text-muted-foreground">
-          Monthly weighted-value targets per rep, tracked against won leads and tenders.
+          Monthly or yearly won-value targets per rep, tracked against won leads and tenders.
         </p>
       </div>
 
-      <Input v-model="period" type="month" class="w-40" />
+      <div class="flex items-center gap-2">
+        <Tabs v-model="periodType">
+          <TabsList>
+            <TabsTrigger value="month">
+              Monthly
+            </TabsTrigger>
+            <TabsTrigger value="year">
+              Yearly
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Input v-if="periodType === 'month'" v-model="month" type="month" class="w-40" />
+        <Select v-else v-model="year">
+          <SelectTrigger class="w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="option in yearOptions" :key="option" :value="option">
+              {{ option }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
+
+    <p class="text-sm text-muted-foreground -mt-2">
+      Setting {{ periodType === 'year' ? 'yearly' : 'monthly' }} targets for <span class="font-medium text-foreground">{{ periodLabel }}</span>.
+      Monthly and yearly targets are separate. Setting one doesn't change the other.
+    </p>
 
     <div class="border rounded-md">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Rep</TableHead>
-            <TableHead>Target</TableHead>
+            <TableHead>{{ periodType === 'year' ? 'Yearly' : 'Monthly' }} Target</TableHead>
             <TableHead class="w-40" />
           </TableRow>
         </TableHeader>

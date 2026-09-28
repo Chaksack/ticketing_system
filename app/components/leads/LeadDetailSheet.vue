@@ -3,6 +3,7 @@ import type { AcceptableValue } from 'reka-ui'
 import type { Lead, LeadActivity, LeadStage } from '~/types/lead'
 import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
 import { toast } from 'vue-sonner'
+import { parseAmountInput } from '~/lib/formNumbers'
 import { leadStages } from './data'
 
 const props = defineProps<{
@@ -91,7 +92,7 @@ async function saveDetails() {
     contactName: contactNameDraft.value.trim(),
     contactEmail: contactEmailDraft.value.trim(),
     contactPhone: contactPhoneDraft.value.trim(),
-    estimatedValue: estimatedValueDraft.value.trim() ? Number(estimatedValueDraft.value.trim()) : null,
+    estimatedValue: parseAmountInput(estimatedValueDraft.value) ?? null,
   })
   toast('Details saved')
 }

@@ -20,34 +20,51 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Lead has already been converted' })
   }
 
-  const clientId = await nextClientId()
   const now = new Date().toISOString()
-  const leadAssignees = await getLeadAssignees(id)
+  // Converting into a client that already exists under the same name links to it instead of
+  // creating a duplicate — the existing client's details and assignees are left as they are.
+  const existingClient = await findSameNameRecord('clients', lead.name)
+  let clientId: string
 
-  await db.prepare(`
-    INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, estimated_value, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
-  `).run(
-    clientId,
-    lead.name,
-    lead.contact_name,
-    lead.contact_email,
-    lead.contact_phone,
-    lead.estimated_value,
-    lead.notes,
-    now,
-    now,
-  )
+  if (existingClient) {
+    clientId = existingClient.id
+    await logClientActivity({
+      clientId,
+      type: 'converted_from_lead',
+      actorId: user.id,
+      actorName: user.name,
+      message: `Linked from lead ${lead.id} (same name — no duplicate client created)`,
+    })
+  }
+  else {
+    clientId = await nextClientId()
+    const leadAssignees = await getLeadAssignees(id)
 
-  await setClientAssignees(clientId, leadAssignees.map(a => a.id))
+    await db.prepare(`
+      INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, estimated_value, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+    `).run(
+      clientId,
+      lead.name,
+      lead.contact_name,
+      lead.contact_email,
+      lead.contact_phone,
+      lead.estimated_value,
+      lead.notes,
+      now,
+      now,
+    )
 
-  await logClientActivity({
-    clientId,
-    type: 'converted_from_lead',
-    actorId: user.id,
-    actorName: user.name,
-    message: `Converted from lead ${lead.id}`,
-  })
+    await setClientAssignees(clientId, leadAssignees.map(a => a.id))
+
+    await logClientActivity({
+      clientId,
+      type: 'converted_from_lead',
+      actorId: user.id,
+      actorName: user.name,
+      message: `Converted from lead ${lead.id}`,
+    })
+  }
 
   await db.prepare(`
     UPDATE leads SET stage = 'won', converted_client_id = ?, updated_at = ? WHERE id = ?

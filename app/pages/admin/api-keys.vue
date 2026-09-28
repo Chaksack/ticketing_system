@@ -15,10 +15,8 @@ onMounted(() => {
 
 const SCOPE_LABELS: Record<ApiKeyScope, string> = {
   clients: 'Clients',
-  invoices: 'Invoices',
   projects: 'Projects',
   products: 'Products',
-  vendor_bills: 'Vendor Bills',
   tenders: 'Tenders',
 }
 

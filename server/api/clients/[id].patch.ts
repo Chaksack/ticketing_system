@@ -40,6 +40,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const name = body.name ?? existing.name
+  if (body.name !== undefined && normalizeName(body.name) !== normalizeName(existing.name))
+    await assertNoDuplicateName('clients', body.name, id)
   const contactName = body.contactName !== undefined ? body.contactName : existing.contact_name
   const contactEmail = body.contactEmail !== undefined ? body.contactEmail : existing.contact_email
   const contactPhone = body.contactPhone !== undefined ? body.contactPhone : existing.contact_phone

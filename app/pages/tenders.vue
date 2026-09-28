@@ -9,6 +9,7 @@ import { columns } from '~/components/tenders/components/columns'
 import DataTableToolbar from '~/components/tenders/components/DataTableToolbar.vue'
 import { tenderStages } from '~/components/tenders/data'
 import TenderDetailSheet from '~/components/tenders/TenderDetailSheet.vue'
+import { optionalAmount } from '~/lib/formNumbers'
 
 definePageMeta({
   middleware: 'bd',
@@ -54,14 +55,14 @@ const tenderFormSchema = toTypedSchema(z.object({
   contactPhone: z.string().optional(),
   source: z.string().optional(),
   stage: z.enum(['identified', 'registered', 'preparing', 'submitted', 'evaluation', 'won', 'lost']),
-  estimatedValue: z.string().optional(),
+  estimatedValue: optionalAmount(),
   submissionDeadline: z.string().optional(),
   assigneeIds: z.array(z.string()).optional(),
 }))
 
 const { handleSubmit, resetForm, values } = useForm({
   validationSchema: tenderFormSchema,
-  initialValues: { title: '', issuingAuthority: '', referenceNumber: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'identified', estimatedValue: '', submissionDeadline: '', assigneeIds: [] },
+  initialValues: { title: '', issuingAuthority: '', referenceNumber: '', contactName: '', contactEmail: '', contactPhone: '', source: '', stage: 'identified', estimatedValue: undefined, submissionDeadline: '', assigneeIds: [] },
 })
 
 const { matches: duplicateMatches, check: checkDuplicate, reset: resetDuplicateCheck } = useDuplicateCheck('tenders')
@@ -74,7 +75,7 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     const tender = await addTender({
       ...values,
-      estimatedValue: values.estimatedValue ? Number(values.estimatedValue) : undefined,
+      estimatedValue: values.estimatedValue,
       submissionDeadline: values.submissionDeadline ? new Date(values.submissionDeadline).toISOString() : undefined,
     })
     resetForm()

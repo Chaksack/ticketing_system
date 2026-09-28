@@ -5,6 +5,7 @@ import type { Tender, TenderActivity, TenderStage } from '~/types/tender'
 import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
 import { toast } from 'vue-sonner'
 import { priorities } from '~/components/tasks/data'
+import { parseAmountInput } from '~/lib/formNumbers'
 import { getTaskDueStatus } from '~/lib/tasks'
 import TaskFormSheet from '../tasks/TaskFormSheet.vue'
 import { tenderStages } from './data'
@@ -104,7 +105,7 @@ async function saveDetails() {
     contactName: contactNameDraft.value.trim(),
     contactEmail: contactEmailDraft.value.trim(),
     contactPhone: contactPhoneDraft.value.trim(),
-    estimatedValue: estimatedValueDraft.value.trim() ? Number(estimatedValueDraft.value.trim()) : null,
+    estimatedValue: parseAmountInput(estimatedValueDraft.value) ?? null,
   })
   toast('Details saved')
 }

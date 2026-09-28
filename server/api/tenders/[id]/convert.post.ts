@@ -24,34 +24,51 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Only a won tender can be converted to a client' })
   }
 
-  const clientId = await nextClientId()
   const now = new Date().toISOString()
-  const tenderAssignees = await getTenderAssignees(id)
+  // Converting into a client that already exists under the same name links to it instead of
+  // creating a duplicate — the existing client's details and assignees are left as they are.
+  const existingClient = await findSameNameRecord('clients', tender.title)
+  let clientId: string
 
-  await db.prepare(`
-    INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, estimated_value, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
-  `).run(
-    clientId,
-    tender.title,
-    tender.contact_name,
-    tender.contact_email,
-    tender.contact_phone,
-    tender.estimated_value,
-    tender.notes,
-    now,
-    now,
-  )
+  if (existingClient) {
+    clientId = existingClient.id
+    await logClientActivity({
+      clientId,
+      type: 'converted_from_lead',
+      actorId: user.id,
+      actorName: user.name,
+      message: `Linked from tender ${tender.id} (same name — no duplicate client created)`,
+    })
+  }
+  else {
+    clientId = await nextClientId()
+    const tenderAssignees = await getTenderAssignees(id)
 
-  await setClientAssignees(clientId, tenderAssignees.map(a => a.id))
+    await db.prepare(`
+      INSERT INTO clients (id, name, contact_name, contact_email, contact_phone, stage, estimated_value, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+    `).run(
+      clientId,
+      tender.title,
+      tender.contact_name,
+      tender.contact_email,
+      tender.contact_phone,
+      tender.estimated_value,
+      tender.notes,
+      now,
+      now,
+    )
 
-  await logClientActivity({
-    clientId,
-    type: 'converted_from_lead',
-    actorId: user.id,
-    actorName: user.name,
-    message: `Converted from tender ${tender.id}`,
-  })
+    await setClientAssignees(clientId, tenderAssignees.map(a => a.id))
+
+    await logClientActivity({
+      clientId,
+      type: 'converted_from_lead',
+      actorId: user.id,
+      actorName: user.name,
+      message: `Converted from tender ${tender.id}`,
+    })
+  }
 
   await db.prepare(`
     UPDATE tenders SET converted_client_id = ?, updated_at = ? WHERE id = ?

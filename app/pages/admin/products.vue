@@ -3,6 +3,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
+import { requiredAmount } from '~/lib/formNumbers'
 
 definePageMeta({
   middleware: 'admin',
@@ -27,13 +28,13 @@ const isAddOpen = ref(false)
 const productFormSchema = toTypedSchema(z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   description: z.string().optional(),
-  unitPrice: z.string().min(1, { message: 'Unit price is required.' }),
+  unitPrice: requiredAmount('Unit price is required.'),
   currency: z.string().optional(),
 }))
 
 const { handleSubmit, resetForm } = useForm({
   validationSchema: productFormSchema,
-  initialValues: { name: '', description: '', unitPrice: '', currency: 'GHS' },
+  initialValues: { name: '', description: '', unitPrice: undefined, currency: 'GHS' },
 })
 
 const onSubmit = handleSubmit(async (values) => {
@@ -41,7 +42,7 @@ const onSubmit = handleSubmit(async (values) => {
     await addProduct({
       name: values.name,
       description: values.description || undefined,
-      unitPrice: Number(values.unitPrice),
+      unitPrice: values.unitPrice,
       currency: values.currency || 'GHS',
     })
     resetForm()
