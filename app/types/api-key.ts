@@ -1,4 +1,4 @@
-export const API_KEY_SCOPES = ['clients', 'invoices', 'projects', 'products', 'vendor_bills'] as const
+export const API_KEY_SCOPES = ['clients', 'invoices', 'projects', 'products', 'vendor_bills', 'tenders'] as const
 export type ApiKeyScope = typeof API_KEY_SCOPES[number]
 
 export interface ApiKey {

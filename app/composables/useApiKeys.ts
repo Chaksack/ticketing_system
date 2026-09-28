@@ -5,6 +5,8 @@ export interface NewApiKey {
   scopes: ApiKeyScope[]
 }
 
+export type ApiKeyUpdate = Partial<NewApiKey>
+
 export function useApiKeys() {
   const keys = useState<ApiKey[]>('api-keys-list', () => [])
 
@@ -27,11 +29,22 @@ export function useApiKeys() {
     return { apiKey, key }
   }
 
+  async function updateApiKey(id: string, payload: ApiKeyUpdate) {
+    const { apiKey } = await $fetch<{ apiKey: ApiKey }>(`/api/admin/api-keys/${id}`, { method: 'PATCH', body: payload })
+    replaceKey(apiKey)
+    return apiKey
+  }
+
   async function revokeApiKey(id: string) {
     const { apiKey } = await $fetch<{ apiKey: ApiKey }>(`/api/admin/api-keys/${id}/revoke`, { method: 'POST' })
     replaceKey(apiKey)
     return apiKey
   }
 
-  return { keys, fetchApiKeys, createApiKey, revokeApiKey }
+  async function deleteApiKey(id: string) {
+    await $fetch(`/api/admin/api-keys/${id}`, { method: 'DELETE' })
+    keys.value = keys.value.filter(k => k.id !== id)
+  }
+
+  return { keys, fetchApiKeys, createApiKey, updateApiKey, revokeApiKey, deleteApiKey }
 }

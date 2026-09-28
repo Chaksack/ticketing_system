@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApiKeyScope } from '~/types/api-key'
+import type { ApiKey, ApiKeyScope } from '~/types/api-key'
 import { toast } from 'vue-sonner'
 import { API_KEY_SCOPES } from '~/types/api-key'
 
@@ -7,7 +7,7 @@ definePageMeta({
   middleware: 'admin',
 })
 
-const { keys, fetchApiKeys, createApiKey, revokeApiKey } = useApiKeys()
+const { keys, fetchApiKeys, createApiKey, updateApiKey, revokeApiKey, deleteApiKey } = useApiKeys()
 
 onMounted(() => {
   fetchApiKeys()
@@ -19,6 +19,11 @@ const SCOPE_LABELS: Record<ApiKeyScope, string> = {
   projects: 'Projects',
   products: 'Products',
   vendor_bills: 'Vendor Bills',
+  tenders: 'Tenders',
+}
+
+function scopePath(scope: ApiKeyScope) {
+  return `/api/integrations/export/${scope.replace('_', '-')}`
 }
 
 const isAddOpen = ref(false)
@@ -26,15 +31,18 @@ const label = ref('')
 const selectedScopes = ref<ApiKeyScope[]>([])
 const isSaving = ref(false)
 
-function toggleScope(scope: ApiKeyScope, checked: boolean) {
-  selectedScopes.value = checked
-    ? [...selectedScopes.value, scope]
-    : selectedScopes.value.filter(s => s !== scope)
+function toggleScope(scopes: ApiKeyScope[], scope: ApiKeyScope, checked: boolean) {
+  return checked
+    ? [...scopes, scope]
+    : scopes.filter(s => s !== scope)
 }
 
 const isRevealOpen = ref(false)
 const revealedKey = ref('')
 const copied = ref(false)
+
+// Scopes of the key just created in this visit — drives the live examples in the help card.
+const lastCreatedScopes = ref<ApiKeyScope[]>([])
 
 async function onCreate() {
   if (!label.value.trim() || !selectedScopes.value.length)
@@ -42,10 +50,11 @@ async function onCreate() {
 
   isSaving.value = true
   try {
-    const { key } = await createApiKey({ label: label.value.trim(), scopes: selectedScopes.value })
+    const { apiKey, key } = await createApiKey({ label: label.value.trim(), scopes: selectedScopes.value })
     label.value = ''
     selectedScopes.value = []
     isAddOpen.value = false
+    lastCreatedScopes.value = apiKey.scopes
     revealedKey.value = key
     copied.value = false
     isRevealOpen.value = true
@@ -71,6 +80,38 @@ async function onCopyKey() {
   }
 }
 
+const isEditOpen = ref(false)
+const editingId = ref('')
+const editLabel = ref('')
+const editScopes = ref<ApiKeyScope[]>([])
+
+function openEdit(apiKey: ApiKey) {
+  editingId.value = apiKey.id
+  editLabel.value = apiKey.label
+  editScopes.value = [...apiKey.scopes]
+  isEditOpen.value = true
+}
+
+async function onSaveEdit() {
+  if (!editLabel.value.trim() || !editScopes.value.length)
+    return
+
+  isSaving.value = true
+  try {
+    await updateApiKey(editingId.value, { label: editLabel.value.trim(), scopes: editScopes.value })
+    isEditOpen.value = false
+    toast('Key updated')
+  }
+  catch (error: any) {
+    toast.error('Could not update key', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    isSaving.value = false
+  }
+}
+
 async function onRevoke(id: string, label: string) {
   try {
     await revokeApiKey(id)
@@ -81,6 +122,35 @@ async function onRevoke(id: string, label: string) {
       description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
     })
   }
+}
+
+const pendingDelete = ref<ApiKey | null>(null)
+
+async function onConfirmDelete() {
+  const apiKey = pendingDelete.value
+  if (!apiKey)
+    return
+
+  try {
+    await deleteApiKey(apiKey.id)
+    toast('Key deleted', { description: `"${apiKey.label}" was permanently removed.` })
+  }
+  catch (error: any) {
+    toast.error('Could not delete key', {
+      description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.',
+    })
+  }
+  finally {
+    pendingDelete.value = null
+  }
+}
+
+const origin = useRequestURL().origin
+
+const exampleScopes = computed<ApiKeyScope[]>(() => lastCreatedScopes.value.length ? lastCreatedScopes.value : ['clients'])
+
+function curlFor(path: string) {
+  return `curl -H "Authorization: Bearer $API_KEY" \\\n  ${origin}${path}`
 }
 
 function formatDate(value?: string) {
@@ -96,7 +166,7 @@ function formatDate(value?: string) {
           API Keys
         </h2>
         <p class="text-muted-foreground">
-          Lets an external system (like an ERP) pull data from this app — see the ERP Export API section in the README.
+          Lets an external system (like an ERP) pull data from this app — see "Connect an External System" below.
         </p>
       </div>
 
@@ -126,7 +196,7 @@ function formatDate(value?: string) {
               <label v-for="scope in API_KEY_SCOPES" :key="scope" class="flex items-center gap-2 text-sm">
                 <Checkbox
                   :model-value="selectedScopes.includes(scope)"
-                  @update:model-value="(checked) => toggleScope(scope, !!checked)"
+                  @update:model-value="(checked) => selectedScopes = toggleScope(selectedScopes, scope, !!checked)"
                 />
                 {{ SCOPE_LABELS[scope] }}
               </label>
@@ -152,7 +222,7 @@ function formatDate(value?: string) {
             <TableHead>Created</TableHead>
             <TableHead>Last Used</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead class="w-16" />
+            <TableHead class="w-28" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -167,7 +237,7 @@ function formatDate(value?: string) {
               <TableCell>
                 <div class="flex flex-wrap gap-1">
                   <Badge v-for="scope in apiKey.scopes" :key="scope" variant="outline" class="text-[10px]">
-                    {{ SCOPE_LABELS[scope] }}
+                    {{ SCOPE_LABELS[scope] ?? scope }}
                   </Badge>
                 </div>
               </TableCell>
@@ -186,12 +256,26 @@ function formatDate(value?: string) {
                 </Badge>
               </TableCell>
               <TableCell>
-                <Button
-                  v-if="!apiKey.revokedAt" size="icon-sm" variant="ghost" class="text-destructive"
-                  @click="onRevoke(apiKey.id, apiKey.label)"
-                >
-                  <Icon name="i-lucide-ban" class="h-4 w-4" />
-                </Button>
+                <div class="flex justify-end gap-1">
+                  <Button
+                    v-if="!apiKey.revokedAt" size="icon-sm" variant="ghost" title="Edit label & scopes"
+                    @click="openEdit(apiKey)"
+                  >
+                    <Icon name="i-lucide-pencil" class="h-4 w-4" />
+                  </Button>
+                  <Button
+                    v-if="!apiKey.revokedAt" size="icon-sm" variant="ghost" class="text-destructive" title="Revoke (disable, keep for audit)"
+                    @click="onRevoke(apiKey.id, apiKey.label)"
+                  >
+                    <Icon name="i-lucide-ban" class="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon-sm" variant="ghost" class="text-destructive" title="Delete permanently"
+                    @click="pendingDelete = apiKey"
+                  >
+                    <Icon name="i-lucide-trash-2" class="h-4 w-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           </template>
@@ -203,6 +287,109 @@ function formatDate(value?: string) {
         </TableBody>
       </Table>
     </div>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Connect an External System</CardTitle>
+        <CardDescription>
+          Hand these steps to whoever is setting up the integration on the other side.
+        </CardDescription>
+      </CardHeader>
+      <CardContent class="flex flex-col gap-4 text-sm">
+        <ol class="list-decimal space-y-3 pl-5">
+          <li>
+            <span class="font-medium">Create a key</span> with <span class="font-medium">New Key</span> above, granting only the resources the system needs.
+          </li>
+          <li>
+            <span class="font-medium">Copy it immediately.</span> The full key is shown once. After that only its prefix is visible here.
+            Store it as a secret on the external system, e.g. <code class="rounded bg-muted px-1 py-0.5 text-xs">export API_KEY=erp_…</code>
+          </li>
+          <li>
+            <span class="font-medium">Call the API</span> with the key as a Bearer token.
+            <template v-if="lastCreatedScopes.length">
+              Examples for the key you just created:
+            </template>
+            <template v-else>
+              For example:
+            </template>
+            <div class="mt-2 flex flex-col gap-2">
+              <pre v-for="scope in exampleScopes" :key="scope" class="overflow-x-auto rounded-md border bg-muted/30 p-2 text-xs">{{ curlFor(scopePath(scope)) }}</pre>
+              <p class="text-muted-foreground">
+                Each returns <code class="text-xs">{ "resource", "count", "items": [...] }</code>.
+                To list the resources a key can reach, call:
+              </p>
+              <pre class="overflow-x-auto rounded-md border bg-muted/30 p-2 text-xs">{{ curlFor('/api/integrations/export') }}</pre>
+            </div>
+          </li>
+          <li>
+            <span class="font-medium">Handle errors:</span>
+            <ul class="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+              <li><code class="text-xs">401</code>: the header is missing, or the key is wrong, revoked or deleted.</li>
+              <li><code class="text-xs">403</code>: the key is valid but wasn't granted that resource. Edit its scopes here.</li>
+              <li><code class="text-xs">429</code>: over the 300 requests/hour limit for that key. Back off and retry later.</li>
+            </ul>
+          </li>
+          <li>
+            <span class="font-medium">Revoke</span> (<Icon name="i-lucide-ban" class="inline h-3.5 w-3.5 align-text-bottom" />) turns a key off immediately and keeps it listed for the audit trail.
+            <span class="font-medium">Delete</span> (<Icon name="i-lucide-trash-2" class="inline h-3.5 w-3.5 align-text-bottom" />) removes it permanently.
+            A key's secret can't be changed. To rotate it, create a new key and revoke the old one.
+          </li>
+        </ol>
+      </CardContent>
+    </Card>
+
+    <Sheet v-model:open="isEditOpen">
+      <SheetContent side="right" class="w-full sm:max-w-md overflow-y-auto p-6">
+        <SheetHeader class="p-0">
+          <SheetTitle>Edit API Key</SheetTitle>
+          <SheetDescription>
+            Change the label and which resources this key can reach. The secret itself can't be changed. To rotate it, create a new key and revoke this one.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div class="flex flex-col gap-4 py-4">
+          <div class="flex flex-col gap-1.5">
+            <Label>Label</Label>
+            <Input v-model="editLabel" />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label>Scopes</Label>
+            <label v-for="scope in API_KEY_SCOPES" :key="scope" class="flex items-center gap-2 text-sm">
+              <Checkbox
+                :model-value="editScopes.includes(scope)"
+                @update:model-value="(checked) => editScopes = toggleScope(editScopes, scope, !!checked)"
+              />
+              {{ SCOPE_LABELS[scope] }}
+            </label>
+          </div>
+        </div>
+
+        <SheetFooter class="p-0">
+          <Button :disabled="!editLabel.trim() || !editScopes.length || isSaving" @click="onSaveEdit">
+            Save Changes
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+
+    <AlertDialog :open="!!pendingDelete" @update:open="(open) => { if (!open) pendingDelete = null }">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete "{{ pendingDelete?.label }}" permanently?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Any system using this key loses access immediately, and the key disappears from this list along with its created/last-used history.
+            To disable it but keep the record, use Revoke instead.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" @click="onConfirmDelete">
+            Delete Key
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
     <Dialog v-model:open="isRevealOpen">
       <DialogContent>
@@ -219,6 +406,9 @@ function formatDate(value?: string) {
             {{ copied ? 'Copied' : 'Copy' }}
           </Button>
         </div>
+        <p class="text-sm text-muted-foreground">
+          Next, see "Connect an External System" on this page for example requests using this key's resources.
+        </p>
         <DialogFooter>
           <Button @click="isRevealOpen = false">
             Done

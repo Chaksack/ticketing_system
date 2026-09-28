@@ -111,20 +111,59 @@ including same-origin submissions from `/portal` itself.
 Lets an external system pull data out of this app over HTTP — the app never pushes into
 someone else's API (we don't know its shape), the external system calls us instead.
 
-1. As an admin, go to **Administration → Integrations → API Keys** and create a key, choosing
-   which resources it can reach (`clients`, `invoices`, `projects`, `products`, `vendor_bills`).
-   The full key is shown exactly once — copy it immediately, only its hash is stored after that.
-2. Call `GET /api/integrations/export/<resource>` with `Authorization: Bearer <key>`:
+The **Administration → Integrations → API Keys** page has a "Connect an External System" card
+with these same steps, plus ready-to-copy `curl` examples for the key you just created, so it
+can be handed straight to whoever is setting up the other side.
+
+### How to connect
+
+1. **Create a key.** As an admin, open **Administration → Integrations → API Keys**, click
+   **New Key**, give it a label (e.g. "Django ERP sync") and pick which resources it can reach:
+
+   | Scope | Endpoint |
+   | --- | --- |
+   | `clients` | `/api/integrations/export/clients` |
+   | `invoices` | `/api/integrations/export/invoices` |
+   | `projects` | `/api/integrations/export/projects` |
+   | `products` | `/api/integrations/export/products` |
+   | `vendor_bills` | `/api/integrations/export/vendor-bills` |
+   | `tenders` | `/api/integrations/export/tenders` |
+
+   Grant only what the external system needs.
+2. **Copy the key right away.** The full key (`erp_…`) is shown exactly once. After that only
+   its hash is stored, and the page shows just its prefix. Store it as a secret on the external
+   system, e.g. `export API_KEY=erp_xxxxx...`.
+3. **Call the API** with `GET` and an `Authorization: Bearer <key>` header, one request per
+   resource:
+   ```bash
+   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/clients
+   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/invoices
+   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/projects
+   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/products
+   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/vendor-bills
+   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export/tenders
    ```
-   curl -H "Authorization: Bearer erp_xxxxx..." \
-     https://<your-app-domain>/api/integrations/export/clients
+   Each returns `{ "resource": "clients", "count": 42, "items": [...] }`. To find out which
+   resources a key can reach, call `GET /api/integrations/export` with any valid key:
+   ```bash
+   curl -H "Authorization: Bearer $API_KEY" https://<your-app-domain>/api/integrations/export
+   # { "resources": [{ "scope": "clients", "path": "/api/integrations/export/clients" }, ...] }
    ```
-   Response: `{ "resource": "clients", "count": 42, "items": [...] }`. A key can only reach the
-   resources it was granted; anything else 403s. `GET /api/integrations/export` (any valid key)
-   lists which resources *that* key can reach, for self-discovery.
-3. Each key is rate-limited to 300 requests/hour (`server/api/integrations/export/*.get.ts`,
-   `server/utils/rateLimit.ts`) — same Postgres-backed limiter used elsewhere in this app.
-4. Revoke a key from the same Admin page at any time — revoked keys 401 immediately.
+4. **Handle errors:**
+   - `401 Unauthorized`: the `Authorization` header is missing, or the key is wrong, revoked
+     or deleted.
+   - `403 Forbidden`: the key is valid but wasn't granted that resource. An admin can add the
+     scope by editing the key (pencil icon). There's no need to issue a new key.
+   - `429 Too Many Requests`: the key went over 300 requests/hour. Back off and retry later.
+     (`server/api/integrations/export/*.get.ts`, `server/utils/rateLimit.ts`. This is the same
+     Postgres-backed limiter used elsewhere in this app.)
+5. **Manage or revoke the key** from the same page:
+   - **Edit** (pencil) changes the label and scopes. The secret itself can never be edited.
+     To rotate it, create a new key, switch the external system over, then revoke the old one.
+   - **Revoke** (ban icon) disables the key immediately (it returns 401 from then on) but keeps
+     it listed for the audit trail.
+   - **Delete** (trash icon) permanently removes the key row, including its history. Use it
+     for keys that were created by mistake or are no longer worth keeping on record.
 
 ## ERP Connections (pulling data *from* other ERPs)
 
