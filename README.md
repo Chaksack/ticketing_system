@@ -106,6 +106,37 @@ instances): 5 tickets per hour per IP address, and 5 per hour per requester emai
 if that's too strict or too loose for your traffic. Limits are enforced regardless of origin,
 including same-origin submissions from `/portal` itself.
 
+## ERP Export API (for external systems, e.g. a Django ERP)
+
+Lets an external system pull data out of this app over HTTP — the app never pushes into
+someone else's API (we don't know its shape), the external system calls us instead.
+
+1. As an admin, go to **Administration → Integrations → API Keys** and create a key, choosing
+   which resources it can reach (`clients`, `invoices`, `projects`, `products`, `vendor_bills`).
+   The full key is shown exactly once — copy it immediately, only its hash is stored after that.
+2. Call `GET /api/integrations/export/<resource>` with `Authorization: Bearer <key>`:
+   ```
+   curl -H "Authorization: Bearer erp_xxxxx..." \
+     https://<your-app-domain>/api/integrations/export/clients
+   ```
+   Response: `{ "resource": "clients", "count": 42, "items": [...] }`. A key can only reach the
+   resources it was granted; anything else 403s. `GET /api/integrations/export` (any valid key)
+   lists which resources *that* key can reach, for self-discovery.
+3. Each key is rate-limited to 300 requests/hour (`server/api/integrations/export/*.get.ts`,
+   `server/utils/rateLimit.ts`) — same Postgres-backed limiter used elsewhere in this app.
+4. Revoke a key from the same Admin page at any time — revoked keys 401 immediately.
+
+## ERP Connections (pulling data *from* other ERPs)
+
+**Administration → Integrations → ERP Connections** is the other direction: configure a base
+URL + auth (none/bearer token/API-key header/basic auth) for an external ERP, "Test" it, then
+"Fetch" any path on its API. Since every external ERP has a different schema, this phase stores
+each fetch as-is (viewable per-connection) rather than guessing at field mappings into this
+app's own tables — mapping a specific external ERP's fields into Clients/Products/etc. is a
+follow-up once that ERP's actual response shape is known. Credentials are encrypted at rest the
+same way personal Slack/Gmail tokens already are (`server/utils/crypto.ts`,
+`NUXT_INTEGRATIONS_ENCRYPTION_KEY`).
+
 ## Email (Gmail API)
 
 All email — staff invites, password resets, and ticket replies, in both directions — goes

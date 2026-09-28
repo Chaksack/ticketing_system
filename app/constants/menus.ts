@@ -214,6 +214,24 @@ export const navMenu: NavMenu[] = [
         adminOnly: true,
       },
       {
+        title: 'Integrations',
+        icon: 'i-lucide-plug',
+        children: [
+          {
+            title: 'API Keys',
+            icon: 'i-lucide-key-round',
+            link: '/admin/api-keys',
+            adminOnly: true,
+          },
+          {
+            title: 'ERP Connections',
+            icon: 'i-lucide-cable',
+            link: '/admin/erp-connections',
+            adminOnly: true,
+          },
+        ],
+      },
+      {
         title: 'Automation',
         icon: 'i-lucide-workflow',
         children: [

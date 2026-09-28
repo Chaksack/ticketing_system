@@ -1049,6 +1049,47 @@ async function migrate() {
       created_at TEXT NOT NULL
     )
   `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      key_prefix TEXT NOT NULL,
+      key_hash TEXT NOT NULL,
+      scopes TEXT NOT NULL,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT,
+      revoked_at TEXT
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS erp_connections (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      base_url TEXT NOT NULL,
+      auth_type TEXT NOT NULL DEFAULT 'none',
+      auth_header TEXT,
+      username TEXT,
+      credential_encrypted TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_synced_at TEXT,
+      last_sync_status TEXT
+    )
+  `)
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS erp_import_records (
+      id TEXT PRIMARY KEY,
+      connection_id TEXT NOT NULL,
+      path TEXT NOT NULL,
+      raw_json TEXT NOT NULL,
+      fetched_at TEXT NOT NULL
+    )
+  `)
 }
 
 export async function nextSequence(name: string): Promise<number> {
@@ -1219,6 +1260,21 @@ export async function nextSalesOrderLineItemId() {
 export async function nextApprovalRequestId() {
   const n = await nextSequence('approval_request')
   return `APR-${n}`
+}
+
+export async function nextApiKeyId() {
+  const n = await nextSequence('api_key')
+  return `KEY-${n}`
+}
+
+export async function nextErpConnectionId() {
+  const n = await nextSequence('erp_connection')
+  return `ERP-${n}`
+}
+
+export async function nextErpImportRecordId() {
+  const n = await nextSequence('erp_import_record')
+  return `EIR-${n}`
 }
 
 export async function nextClientId() {
