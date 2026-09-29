@@ -55,10 +55,15 @@ export function useStaff() {
       staff.value[index] = updated
   }
 
+  /** Admin only: emails the person a link to choose a new password (returned as resetUrl if the email couldn't be sent). */
+  async function sendPasswordResetLink(id: string) {
+    return await $fetch<{ emailSent: boolean, email: string, expiresAt: string, resetUrl?: string }>(`/api/staff/${id}/reset-password`, { method: 'POST' })
+  }
+
   async function removeStaff(id: string) {
     await $fetch(`/api/staff/${id}`, { method: 'DELETE' })
     staff.value = staff.value.filter(s => s.id !== id)
   }
 
-  return { staff, onCallStaff, fetchStaff, getStaff, addStaff, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, removeStaff }
+  return { staff, onCallStaff, fetchStaff, getStaff, addStaff, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, sendPasswordResetLink, removeStaff }
 }

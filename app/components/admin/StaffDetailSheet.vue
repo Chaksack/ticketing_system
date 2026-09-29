@@ -15,7 +15,8 @@ const emit = defineEmits<{
 
 const open = defineModel<boolean>('open', { default: false })
 
-const { staff: allStaff, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, removeStaff } = useStaff()
+const { staff: allStaff, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, sendPasswordResetLink, removeStaff } = useStaff()
+const { currentUser } = useAuth()
 
 const managerOptions = computed(() => allStaff.value.filter(s => s.status === 'active' && s.id !== props.staff?.id))
 
@@ -104,6 +105,49 @@ async function onSaveHourlyRate() {
 
   await updateHourlyRate(props.staff.id, parseAmountInput(hourlyRateDraft.value) ?? null)
   toast('Hourly rate updated')
+}
+
+// ── Password reset (admin) ──────────────────────────────────────────────
+// Admins only ever send a link — the staff member chooses their own new password.
+const isSelf = computed(() => props.staff?.id === currentUser.value?.id)
+const isSendingLink = ref(false)
+const fallbackResetUrl = ref('')
+
+watch(() => props.staff?.id, () => {
+  fallbackResetUrl.value = ''
+})
+
+async function copyResetLink() {
+  try {
+    await navigator.clipboard.writeText(fallbackResetUrl.value)
+    toast('Reset link copied')
+  }
+  catch {
+    toast.error('Could not copy. Select the link and copy it manually.')
+  }
+}
+
+async function onSendResetLink() {
+  if (!props.staff)
+    return
+  isSendingLink.value = true
+  fallbackResetUrl.value = ''
+  try {
+    const result = await sendPasswordResetLink(props.staff.id)
+    if (result.emailSent) {
+      toast('Reset link sent', { description: `Emailed to ${result.email}. They'll choose a new password; the link works for 24 hours.` })
+    }
+    else {
+      fallbackResetUrl.value = result.resetUrl ?? ''
+      toast.warning('Email couldn\'t be sent', { description: 'Copy the reset link below and send it to them another way.' })
+    }
+  }
+  catch (error: any) {
+    toast.error('Could not send a reset link', { description: error?.data?.statusMessage ?? 'Something went wrong. Please try again.' })
+  }
+  finally {
+    isSendingLink.value = false
+  }
 }
 
 async function onDelete() {
@@ -227,6 +271,44 @@ function formatDate(value: string) {
               <div class="flex items-center gap-2">
                 <Input id="hourly-rate" v-model="hourlyRateDraft" type="number" min="0" step="0.01" placeholder="0.00" class="h-8 w-24 text-xs" @blur="onSaveHourlyRate" />
               </div>
+            </div>
+
+            <Separator />
+
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-0.5">
+                <Label>Password</Label>
+                <span class="text-xs text-muted-foreground">
+                  Email {{ isSelf ? 'yourself' : staff.name }} a link to create a new password. {{ isSelf ? 'You' : 'They' }} choose it; you never see it.
+                  Their current password keeps working until they set a new one, and then their other devices are signed out.
+                </span>
+              </div>
+
+              <p v-if="staff.status === 'pending'" class="text-xs text-muted-foreground">
+                {{ staff.name }} hasn't accepted their invite yet, so there's no password to reset. Resend the invite instead.
+              </p>
+              <p v-else-if="staff.status === 'disabled'" class="text-xs text-muted-foreground">
+                This account is disabled. Re-enable it before sending a reset link.
+              </p>
+
+              <template v-else>
+                <Button size="sm" variant="outline" class="self-start" :disabled="isSendingLink" @click="onSendResetLink">
+                  <Icon name="i-lucide-mail" class="mr-1.5 h-3.5 w-3.5" />
+                  {{ isSendingLink ? 'Sending…' : 'Send password reset link' }}
+                </Button>
+
+                <div v-if="fallbackResetUrl" class="flex flex-col gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/5 p-2">
+                  <span class="text-xs">
+                    The email couldn't be sent. Give {{ staff.name }} this link so they can create their password (valid 24 hours, single use):
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <code class="flex-1 truncate text-xs">{{ fallbackResetUrl }}</code>
+                    <Button size="sm" variant="outline" class="h-7" title="Copy link" @click="copyResetLink">
+                      <Icon name="i-lucide-copy" class="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </template>
             </div>
 
             <Separator />

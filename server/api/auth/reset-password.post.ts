@@ -25,13 +25,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 410, statusMessage: 'This reset link has expired' })
   }
 
-  const passwordHash = hashPassword(body.password)
-
-  await db.prepare(`
-    UPDATE staff
-    SET password_hash = ?, reset_token = NULL, reset_expires_at = NULL
-    WHERE id = ?
-  `).run(passwordHash, row.id)
+  // Also signs out every other session for this person (e.g. if the account was compromised).
+  const changedAt = await setStaffPassword(row.id, body.password)
 
   const user: SessionUser = {
     id: row.id,
@@ -41,8 +36,7 @@ export default defineEventHandler(async (event) => {
     avatarUrl: row.avatar_url ?? undefined,
   }
 
-  const session = await useAuthSession(event)
-  await session.update({ user })
+  await startUserSession(event, user, changedAt)
 
   return { user }
 })

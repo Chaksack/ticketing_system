@@ -32,18 +32,24 @@ export async function sendTicketReplyEmail(params: { to: string, name: string, t
   })
 }
 
-export async function sendPasswordResetEmail(params: { to: string, name: string, token: string }) {
-  const config = useRuntimeConfig()
-  const link = `${trimTrailingSlash(config.siteUrl)}/reset-password/${params.token}`
+export function passwordResetLink(token: string) {
+  return `${trimTrailingSlash(useRuntimeConfig().siteUrl)}/reset-password/${token}`
+}
+
+export async function sendPasswordResetEmail(params: { to: string, name: string, token: string, requestedBy?: string, expiresIn?: string }) {
+  const link = passwordResetLink(params.token)
+  const intro = params.requestedBy
+    ? `${params.requestedBy}, an administrator, has sent you a link to reset your password. Click it to choose a new one:`
+    : 'We received a request to reset your password. Click the link below to choose a new one:'
 
   await sendGmailMessage({
     to: params.to,
     subject: 'Reset your IBS Ticketing System password',
     html: `
       <p>Hi ${params.name},</p>
-      <p>We received a request to reset your password. Click the link below to choose a new one:</p>
+      <p>${intro}</p>
       <p><a href="${link}">${link}</a></p>
-      <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+      <p>This link expires in ${params.expiresIn ?? '1 hour'}. If you didn't expect this, you can safely ignore this email.</p>
     `,
   })
 }

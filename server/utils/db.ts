@@ -49,6 +49,9 @@ async function migrate() {
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS last_active_at TEXT')
   // Which personal AI provider (gemini/openai/anthropic) this person's "Ask AI" uses — see server/utils/aiProviders.ts.
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS ai_provider TEXT')
+  // When the password last changed — sessions started before this are rejected (server/utils/auth.ts),
+  // so a reset signs the person out everywhere.
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS password_changed_at TEXT')
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS presence_override TEXT NOT NULL DEFAULT \'auto\'')
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS status_text TEXT')
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS status_emoji TEXT')

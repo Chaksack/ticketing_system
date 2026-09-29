@@ -29,8 +29,7 @@ export default defineEventHandler(async (event) => {
     avatarUrl: row.avatar_url ?? undefined,
   }
 
-  const session = await useAuthSession(event)
-  await session.update({ user })
+  await startUserSession(event, user)
 
   return { user }
 })

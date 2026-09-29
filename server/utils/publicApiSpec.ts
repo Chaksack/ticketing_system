@@ -11,15 +11,17 @@ import { API_KEY_SCOPES } from '../../app/types/api-key'
  * server/api/tickets/attachments.post.ts.
  */
 
-const errorResponse = (statusCode: number, description: string, statusMessage: string) => ({
-  description,
-  content: {
-    'application/json': {
-      schema: { $ref: '#/components/schemas/Error' },
-      example: { statusCode, statusMessage },
+function errorResponse(statusCode: number, description: string, statusMessage: string) {
+  return {
+    description,
+    content: {
+      'application/json': {
+        schema: { $ref: '#/components/schemas/Error' },
+        example: { statusCode, statusMessage },
+      },
     },
-  },
-})
+  }
+}
 
 const EXPORT_ERRORS = {
   401: errorResponse(401, 'Unauthorized. The Authorization header is missing, or the key is invalid, revoked or deleted.', 'Invalid or revoked API key'),

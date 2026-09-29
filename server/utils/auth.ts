@@ -12,6 +12,8 @@ export interface SessionUser {
 
 interface SessionData {
   user?: SessionUser
+  /** When this session signed in. Sessions older than staff.password_changed_at are rejected. */
+  authAt?: string
   /** CSRF nonce for the in-progress personal-Gmail OAuth connect flow, cleared once used. */
   gmailOAuthState?: string
   /** CSRF nonce + provider id for the in-progress Settings > Integrations OAuth connect flow, cleared once used. */
@@ -49,6 +51,12 @@ export async function getSessionUser(event: H3Event): Promise<SessionUser | null
     return null
   }
 
+  // Password changed (reset by an admin, or by the person on another device) since this session
+  // signed in → it's no longer valid. Sessions from before this check existed have no authAt.
+  if (row.password_changed_at && (!session.data.authAt || session.data.authAt < row.password_changed_at)) {
+    return null
+  }
+
   return {
     id: row.id,
     name: row.name,
@@ -56,6 +64,25 @@ export async function getSessionUser(event: H3Event): Promise<SessionUser | null
     roles: parseStaffRoles(row),
     avatarUrl: row.avatar_url ?? undefined,
   }
+}
+
+/** Signs `user` in on this request's session, stamped with the sign-in time (see getSessionUser). */
+export async function startUserSession(event: H3Event, user: SessionUser, authAt = new Date().toISOString()) {
+  const session = await useAuthSession(event)
+  await session.update({ user, authAt })
+}
+
+/**
+ * Stores a new password hash and records the change time, which invalidates every existing
+ * session for that person. Returns the timestamp so the caller can keep its own session valid.
+ */
+export async function setStaffPassword(staffId: string, password: string): Promise<string> {
+  const db = useDatabase()
+  const changedAt = new Date().toISOString()
+  await db.prepare(`
+    UPDATE staff SET password_hash = ?, password_changed_at = ?, reset_token = NULL, reset_expires_at = NULL WHERE id = ?
+  `).run(hashPassword(password), changedAt, staffId)
+  return changedAt
 }
 
 export async function requireSessionUser(event: H3Event): Promise<SessionUser> {

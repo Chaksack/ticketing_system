@@ -21,8 +21,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Current password is incorrect' })
   }
 
-  const newHash = hashPassword(body.newPassword)
-  await db.prepare('UPDATE staff SET password_hash = ? WHERE id = ?').run(newHash, sessionUser.id)
+  // Signs out the person's other devices; this one stays signed in.
+  const changedAt = await setStaffPassword(sessionUser.id, body.newPassword)
+  await startUserSession(event, sessionUser, changedAt)
 
   return { success: true }
 })

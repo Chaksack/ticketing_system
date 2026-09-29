@@ -25,6 +25,7 @@ export interface StaffRow {
   invite_expires_at: string | null
   reset_token: string | null
   reset_expires_at: string | null
+  password_changed_at?: string | null
   avatar_url: string | null
   manager_id?: string | null
   hourly_rate?: number | string | null
