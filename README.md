@@ -98,7 +98,8 @@ it's also safe to call directly from another site's contact form. To allow that 
    `https://www.ibsgh.com,https://ibsgh.com`.
 2. POST JSON to `https://<your-app-domain>/api/tickets` with `subject`, `description`,
    `requester`, `requesterEmail`, `category`, `priority` (`low`/`medium`/`high`/`urgent`)
-   required, and optional `referenceNumber`/`attachments` (array of filenames).
+   required, and optional `requesterPhone`, `referenceNumber` and `attachments` (array of
+   filenames). The `/portal` form itself always asks for a phone number.
 
 Every submission is rate-limited (Postgres-backed, so it holds across restarts and multiple
 instances): 5 tickets per hour per IP address, and 5 per hour per requester email

@@ -56,6 +56,7 @@ export interface TicketRow {
   description: string
   requester: string
   requester_email: string
+  requester_phone?: string | null
   category: string
   status: string
   priority: string
@@ -86,6 +87,7 @@ export function mapTicketRow(
     description: row.description,
     requester: row.requester,
     requesterEmail: row.requester_email,
+    requesterPhone: row.requester_phone ?? undefined,
     category: row.category,
     status: row.status as Ticket['status'],
     priority: row.priority as Ticket['priority'],

@@ -1,10 +1,13 @@
 import type { TicketAttachment, TicketPriority } from '../../../app/types/ticket'
+import { isValidPhone } from '../../../app/lib/phone'
 
 interface NewTicketBody {
   subject?: string
   description?: string
   requester?: string
   requesterEmail?: string
+  /** Optional here so existing embedded contact forms keep working; the /portal form requires it. */
+  requesterPhone?: string
   category?: string
   priority?: TicketPriority
   referenceNumber?: string
@@ -41,6 +44,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subject, description, requester, requesterEmail, category and priority are required' })
   }
 
+  const requesterPhone = body.requesterPhone?.trim() || null
+  if (requesterPhone && !isValidPhone(requesterPhone)) {
+    throw createError({ statusCode: 400, statusMessage: 'requesterPhone must be a valid phone number' })
+  }
+
   await ensureDb()
   const db = useDatabase()
 
@@ -62,16 +70,17 @@ export default defineEventHandler(async (event) => {
 
   await db.prepare(`
     INSERT INTO tickets (
-      id, subject, description, requester, requester_email, category, status, priority,
+      id, subject, description, requester, requester_email, requester_phone, category, status, priority,
       reference_number, attachments, created_at, updated_at, assignee_id, due_at, first_response_due_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     body.subject,
     body.description,
     body.requester,
     body.requesterEmail,
+    requesterPhone,
     body.category,
     body.priority,
     body.referenceNumber ?? null,

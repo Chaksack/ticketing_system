@@ -4,6 +4,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
+import { isValidPhone } from '~/lib/phone'
 
 definePageMeta({
   layout: 'blank',
@@ -30,6 +31,7 @@ const categoryOptions = [
 const portalFormSchema = toTypedSchema(z.object({
   name: z.string().min(2, { message: 'Please enter your name.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
+  phone: z.string().refine(isValidPhone, { message: 'Please enter a valid phone number, e.g. +233 24 123 4567.' }),
   subject: z.string().min(3, { message: 'Summary must be at least 3 characters.' }),
   priority: z.enum(['low', 'medium', 'high', 'urgent'], { required_error: 'Please select a priority.' }),
   category: z.string().min(1, { message: 'Please select a category.' }),
@@ -42,6 +44,7 @@ const { handleSubmit, resetForm } = useForm({
   initialValues: {
     name: '',
     email: '',
+    phone: '',
     subject: '',
     priority: 'medium',
     category: '',
@@ -137,6 +140,7 @@ const onSubmit = handleSubmit(async (values) => {
       description: values.description,
       requester: values.name,
       requesterEmail: values.email,
+      requesterPhone: values.phone.trim(),
       category: values.category,
       priority: values.priority,
       referenceNumber: values.referenceNumber || undefined,
@@ -223,6 +227,19 @@ function startNewRequest() {
                   </FormControl>
                   <FormDescription>
                     We'll send updates about this ticket to this address.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
+
+              <FormField v-slot="{ componentField }" name="phone">
+                <FormItem>
+                  <FormLabel>Phone Number *</FormLabel>
+                  <FormControl>
+                    <Input type="tel" inputmode="tel" autocomplete="tel" placeholder="+233 24 123 4567" v-bind="componentField" />
+                  </FormControl>
+                  <FormDescription>
+                    So our team can call you if it's quicker to sort out by phone.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -79,6 +79,7 @@ async function migrate() {
   await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS sla_escalated INTEGER NOT NULL DEFAULT 0')
   await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS updated_at TEXT')
   await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS escalation_level TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS requester_phone TEXT')
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS ticket_replies (

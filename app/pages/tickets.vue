@@ -8,6 +8,7 @@ import { columns } from '@/components/tickets/components/columns'
 import DataTable from '@/components/tickets/components/DataTable.vue'
 import { priorities } from '@/components/tickets/data/data'
 import TicketDetailSheet from '@/components/tickets/TicketDetailSheet.vue'
+import { isValidPhone } from '~/lib/phone'
 
 definePageMeta({
   middleware: 'agent',
@@ -45,6 +46,7 @@ const reportFormSchema = toTypedSchema(z.object({
   description: z.string().min(10, { message: 'Please provide more detail (at least 10 characters).' }),
   requester: z.string().min(2, { message: 'Requester name is required.' }),
   requesterEmail: z.string().email({ message: 'Please enter a valid email address.' }),
+  requesterPhone: z.string().optional().refine(value => !value?.trim() || isValidPhone(value), { message: 'Please enter a valid phone number.' }),
   category: z.string().min(2, { message: 'Category is required.' }),
   priority: z.enum(['low', 'medium', 'high', 'urgent'], { required_error: 'Please select a priority.' }),
   assigneeId: z.string().optional(),
@@ -52,12 +54,12 @@ const reportFormSchema = toTypedSchema(z.object({
 
 const { handleSubmit, resetForm } = useForm({
   validationSchema: reportFormSchema,
-  initialValues: { subject: '', description: '', requester: '', requesterEmail: '', category: '', priority: 'medium', assigneeId: undefined },
+  initialValues: { subject: '', description: '', requester: '', requesterEmail: '', requesterPhone: '', category: '', priority: 'medium', assigneeId: undefined },
 })
 
 const onReportSubmit = handleSubmit(async (values) => {
   try {
-    const ticket = await addTicket({ ...values, assigneeId: values.assigneeId || undefined })
+    const ticket = await addTicket({ ...values, requesterPhone: values.requesterPhone?.trim() || undefined, assigneeId: values.assigneeId || undefined })
     resetForm()
     isReportOpen.value = false
     toast('Ticket reported', {
@@ -135,6 +137,16 @@ const onReportSubmit = handleSubmit(async (values) => {
                 <FormLabel>Requester Email</FormLabel>
                 <FormControl>
                   <Input type="email" placeholder="requester@example.com" v-bind="componentField" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+
+            <FormField v-slot="{ componentField }" name="requesterPhone">
+              <FormItem>
+                <FormLabel>Requester Phone (optional)</FormLabel>
+                <FormControl>
+                  <Input type="tel" inputmode="tel" placeholder="+233 24 123 4567" v-bind="componentField" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

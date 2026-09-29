@@ -58,6 +58,7 @@ export interface Ticket {
   description: string
   requester: string
   requesterEmail: string
+  requesterPhone?: string
   category: string
   status: TicketStatus
   priority: TicketPriority

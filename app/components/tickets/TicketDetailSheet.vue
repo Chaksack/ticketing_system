@@ -333,6 +333,10 @@ function formatDate(value: string) {
           <p class="text-sm text-muted-foreground pt-1">
             Requested by <span class="font-medium text-foreground">{{ ticket.requester }}</span> ({{ ticket.requesterEmail }}) on {{ formatDate(ticket.createdAt) }}
           </p>
+          <p v-if="ticket.requesterPhone" class="text-sm text-muted-foreground flex items-center gap-1.5">
+            <Icon name="i-lucide-phone" class="size-3.5" />
+            <a :href="`tel:${ticket.requesterPhone.replace(/[^\d+]/g, '')}`" class="underline underline-offset-2 hover:text-foreground">{{ ticket.requesterPhone }}</a>
+          </p>
           <p v-if="ticket.referenceNumber" class="text-xs text-muted-foreground">
             Reference: {{ ticket.referenceNumber }}
           </p>

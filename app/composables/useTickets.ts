@@ -5,6 +5,7 @@ export interface NewTicket {
   description: string
   requester: string
   requesterEmail: string
+  requesterPhone?: string
   category: string
   priority: TicketPriority
   referenceNumber?: string
