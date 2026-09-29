@@ -123,14 +123,19 @@ async function onRevoke(id: string, label: string) {
 }
 
 const pendingDelete = ref<ApiKey | null>(null)
+const isDeletingKey = ref(false)
 
+// The confirm button is a plain Button, not AlertDialogAction: an Action closes the dialog on
+// click *before* this handler runs, which cleared pendingDelete and silently skipped the delete.
 async function onConfirmDelete() {
   const apiKey = pendingDelete.value
   if (!apiKey)
     return
 
+  isDeletingKey.value = true
   try {
     await deleteApiKey(apiKey.id)
+    pendingDelete.value = null
     toast('Key deleted', { description: `"${apiKey.label}" was permanently removed.` })
   }
   catch (error: any) {
@@ -139,7 +144,7 @@ async function onConfirmDelete() {
     })
   }
   finally {
-    pendingDelete.value = null
+    isDeletingKey.value = false
   }
 }
 
@@ -371,7 +376,7 @@ function formatDate(value?: string) {
       </SheetContent>
     </Sheet>
 
-    <AlertDialog :open="!!pendingDelete" @update:open="(open) => { if (!open) pendingDelete = null }">
+    <AlertDialog :open="!!pendingDelete" @update:open="(open) => { if (!open && !isDeletingKey) pendingDelete = null }">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete "{{ pendingDelete?.label }}" permanently?</AlertDialogTitle>
@@ -381,10 +386,12 @@ function formatDate(value?: string) {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" @click="onConfirmDelete">
-            Delete Key
-          </AlertDialogAction>
+          <AlertDialogCancel :disabled="isDeletingKey">
+            Cancel
+          </AlertDialogCancel>
+          <Button variant="destructive" :disabled="isDeletingKey" @click="onConfirmDelete">
+            {{ isDeletingKey ? 'Deleting…' : 'Delete Key' }}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
