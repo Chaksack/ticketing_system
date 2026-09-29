@@ -1,5 +1,21 @@
 <script setup lang="ts">
+import type { AuthUser } from '~/composables/useAuth'
+import { toast } from 'vue-sonner'
+
 const route = useRoute()
+const { isRefreshing, refreshAll, onAppRefresh } = useAppRefresh()
+const currentUser = useState<AuthUser | null>('current-user')
+
+// Roles/profile can change (e.g. an admin grants a role) — pick that up on refresh as well.
+onAppRefresh(async () => {
+  const { user } = await $fetch<{ user: AuthUser | null }>('/api/auth/me')
+  currentUser.value = user
+})
+
+async function onRefresh() {
+  await refreshAll()
+  toast('Data refreshed')
+}
 
 function setLinks() {
   if (route.fullPath === '/') {
@@ -44,6 +60,16 @@ watch(() => route.fullPath, (val) => {
       <BaseBreadcrumbCustom :links="links" />
     </div>
     <div class="ml-auto flex items-center gap-2">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" aria-label="Refresh all data" :disabled="isRefreshing" @click="onRefresh">
+              <Icon name="i-lucide-refresh-cw" class="h-4 w-4" :class="isRefreshing && 'animate-spin'" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Refresh all data</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <Search />
       <AssistantPanel />
       <LayoutHeaderChat />

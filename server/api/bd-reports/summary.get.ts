@@ -73,11 +73,10 @@ export default defineEventHandler(async (event) => {
   const leadsBySource = await db.prepare('SELECT COALESCE(NULLIF(source, \'\'), \'Unknown\') as key, COUNT(*) as count FROM leads WHERE created_at BETWEEN ? AND ? GROUP BY COALESCE(NULLIF(source, \'\'), \'Unknown\')').all(from, to) as GroupCountRow[]
   const leadValueRows = await db.prepare('SELECT stage, estimated_value FROM leads WHERE created_at BETWEEN ? AND ?').all(from, to) as ValueRow[]
   const leadDecidedRows = await db.prepare(`
-    SELECT lead_activity.to_value AS to_value, lead_activity.created_at AS decided_at, leads.created_at AS created_at, leads.estimated_value AS estimated_value
-    FROM lead_activity
-    JOIN leads ON leads.id = lead_activity.lead_id
-    WHERE lead_activity.type = 'stage_changed' AND lead_activity.to_value IN ('Won', 'Lost')
-      AND lead_activity.created_at BETWEEN ? AND ?
+    SELECT decisions.outcome AS to_value, decisions.decided_at AS decided_at, leads.created_at AS created_at, leads.estimated_value AS estimated_value
+    FROM (${dealDecisionsSql('lead')}) AS decisions
+    JOIN leads ON leads.id = decisions.deal_id
+    WHERE decisions.decided_at BETWEEN ? AND ?
   `).all(from, to) as DecidedRow[]
 
   const newTendersRow = await db.prepare('SELECT COUNT(*) as count FROM tenders WHERE created_at BETWEEN ? AND ?').get(from, to) as CountRow
@@ -86,11 +85,10 @@ export default defineEventHandler(async (event) => {
   const tendersBySource = await db.prepare('SELECT COALESCE(NULLIF(source, \'\'), \'Unknown\') as key, COUNT(*) as count FROM tenders WHERE created_at BETWEEN ? AND ? GROUP BY COALESCE(NULLIF(source, \'\'), \'Unknown\')').all(from, to) as GroupCountRow[]
   const tenderValueRows = await db.prepare('SELECT stage, estimated_value FROM tenders WHERE created_at BETWEEN ? AND ?').all(from, to) as ValueRow[]
   const tenderDecidedRows = await db.prepare(`
-    SELECT tender_activity.to_value AS to_value, tender_activity.created_at AS decided_at, tenders.created_at AS created_at, tenders.estimated_value AS estimated_value
-    FROM tender_activity
-    JOIN tenders ON tenders.id = tender_activity.tender_id
-    WHERE tender_activity.type = 'stage_changed' AND tender_activity.to_value IN ('Won', 'Lost')
-      AND tender_activity.created_at BETWEEN ? AND ?
+    SELECT decisions.outcome AS to_value, decisions.decided_at AS decided_at, tenders.created_at AS created_at, tenders.estimated_value AS estimated_value
+    FROM (${dealDecisionsSql('tender')}) AS decisions
+    JOIN tenders ON tenders.id = decisions.deal_id
+    WHERE decisions.decided_at BETWEEN ? AND ?
   `).all(from, to) as DecidedRow[]
 
   const newClientsRow = await db.prepare('SELECT COUNT(*) as count FROM clients WHERE created_at BETWEEN ? AND ?').get(from, to) as CountRow
@@ -106,8 +104,6 @@ export default defineEventHandler(async (event) => {
     WHERE client_amc_contracts.created_at BETWEEN ? AND ?
     GROUP BY amc_plans.currency
   `).all(from, to) as CurrencyTotalRow[]
-
-  const completedTasksRow = await db.prepare('SELECT COUNT(*) as count FROM tasks WHERE status = \'done\' AND updated_at BETWEEN ? AND ?').get(from, to) as CountRow
 
   const newProjectsRow = await db.prepare('SELECT COUNT(*) as count FROM projects WHERE created_at BETWEEN ? AND ?').get(from, to) as CountRow
   const projectsByStatus = await db.prepare('SELECT status as key, COUNT(*) as count FROM projects GROUP BY status').all() as GroupCountRow[]
@@ -175,9 +171,6 @@ export default defineEventHandler(async (event) => {
       newContracts: Number(newContractsRow.count),
       byStatus: contractsByStatus.map(row => ({ status: row.key, count: Number(row.count) })),
       valueByCurrency: valueByCurrency.map(row => ({ currency: row.currency, total: Number(row.total) })),
-    },
-    tasks: {
-      completedCount: Number(completedTasksRow.count),
     },
     projects: {
       newCount: Number(newProjectsRow.count),

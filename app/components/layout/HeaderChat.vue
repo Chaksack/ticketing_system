@@ -3,6 +3,8 @@ const { unreadCount, fetchUnreadCount } = useChat()
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
+useAppRefresh().onAppRefresh(fetchUnreadCount)
+
 onMounted(() => {
   fetchUnreadCount()
   pollTimer = setInterval(fetchUnreadCount, 15_000)

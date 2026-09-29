@@ -12,6 +12,8 @@ const { fetchTenders } = useTenders()
 
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
+useAppRefresh().onAppRefresh(fetchNotifications)
+
 onMounted(() => {
   fetchNotifications()
   pollTimer = setInterval(fetchNotifications, 20_000)

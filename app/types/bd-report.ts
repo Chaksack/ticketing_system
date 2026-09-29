@@ -39,7 +39,14 @@ export interface BdReportSummary {
     valueByCurrency: { currency: string, total: number }[]
   }
   tasks: {
+    createdCount: number
     completedCount: number
+    /** Open tasks past their due date, as of today. */
+    overdueCount: number
+    /** Open tasks right now, by board column. */
+    openByStatus: { status: string, label: string, count: number }[]
+    openByPriority: { priority: string, count: number }[]
+    overdue: { id: string, title: string, status: string, priority: string, dueDate: string, projectName?: string, assignees: string[] }[]
   }
   projects: {
     newCount: number
@@ -85,7 +92,28 @@ export interface BdReportSummary {
     events: BdReportCalendarItem[]
     tenderDeadlines: { id: string, title: string, stage: string, submissionDeadline: string, estimatedValue?: number }[]
   }
-  tasksOverdue: number
+  /** Every planned/active/on-hold project, plus any created in the range. */
+  projectList: BdReportProjectRow[]
+  wonDeals: { kind: 'lead' | 'tender', id: string, name: string, value?: number, decidedAt: string, reps: string[] }[]
+  newClients: { id: string, name: string, stage: string, createdAt: string }[]
+}
+
+export interface BdReportProjectRow {
+  id: string
+  name: string
+  clientName?: string
+  status: string
+  startDate?: string
+  endDate?: string
+  createdInRange: boolean
+  currency: string
+  contractValue?: number
+  totalCost: number
+  amountPaid: number
+  margin?: number
+  amountDue?: number
+  taskCount: number
+  doneTaskCount: number
 }
 
 export interface BdReportCalendarItem {

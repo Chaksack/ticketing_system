@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner'
 import { downloadBdReportPdf } from '~/lib/bdReportPdf'
+import { formatProjectMoney } from '~/types/project'
 
 definePageMeta({
   middleware: 'bd',
@@ -104,6 +105,10 @@ const tendersByStageData = computed(() => summary.value?.tenders.byStage.map(row
 const clientsByStageData = computed(() => summary.value?.clients.byStage.map(row => ({ stage: titleCase(row.stage), count: row.count })) ?? [])
 const amcByStatusData = computed(() => summary.value?.amc.byStatus.map(row => ({ status: titleCase(row.status), count: row.count })) ?? [])
 const calendarByTypeData = computed(() => summary.value?.calendar.byType.map(row => ({ type: row.type, count: row.count })) ?? [])
+
+function money(currency: string, value?: number) {
+  return value === undefined ? '—' : formatProjectMoney(currency, value, 0)
+}
 
 const REGARDING_LABEL: Record<string, string> = { lead: 'Lead', tender: 'Tender', client: 'Client', unlinked: 'Not linked' }
 
@@ -547,11 +552,11 @@ function daysUntil(value: string) {
               </CardTitle>
             </CardHeader>
           </Card>
-          <Card class="@container/card" :class="summary && summary.tasksOverdue > 0 ? 'border-amber-500/30' : ''">
+          <Card class="@container/card" :class="summary && summary.tasks.overdueCount > 0 ? 'border-amber-500/30' : ''">
             <CardHeader>
               <CardDescription>Tasks Overdue (now)</CardDescription>
-              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" :class="summary && summary.tasksOverdue > 0 ? 'text-amber-600 dark:text-amber-400' : ''">
-                <NumberFlow :value="summary?.tasksOverdue ?? 0" />
+              <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" :class="summary && summary.tasks.overdueCount > 0 ? 'text-amber-600 dark:text-amber-400' : ''">
+                <NumberFlow :value="summary?.tasks.overdueCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -570,13 +575,240 @@ function daysUntil(value: string) {
       </div>
 
       <template v-if="summary">
+        <!-- Tasks detail -->
+        <div class="flex flex-col gap-2">
+          <h3 class="text-sm font-medium text-muted-foreground">
+            Tasks
+          </h3>
+          <div class="grid grid-cols-2 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @3xl/main:grid-cols-4">
+            <Card class="@container/card">
+              <CardHeader>
+                <CardDescription>Created in Range</CardDescription>
+                <CardTitle class="text-2xl font-semibold tabular-nums">
+                  <NumberFlow :value="summary.tasks.createdCount" />
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card class="@container/card">
+              <CardHeader>
+                <CardDescription>Completed in Range</CardDescription>
+                <CardTitle class="text-2xl font-semibold tabular-nums">
+                  <NumberFlow :value="summary.tasks.completedCount" />
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card class="@container/card">
+              <CardHeader>
+                <CardDescription>Open Now</CardDescription>
+                <CardTitle class="text-2xl font-semibold tabular-nums">
+                  <NumberFlow :value="summary.tasks.openByStatus.reduce((sum, row) => sum + row.count, 0)" />
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card class="@container/card" :class="summary.tasks.overdueCount > 0 ? 'border-amber-500/30' : ''">
+              <CardHeader>
+                <CardDescription>Overdue Now</CardDescription>
+                <CardTitle class="text-2xl font-semibold tabular-nums" :class="summary.tasks.overdueCount > 0 ? 'text-amber-600 dark:text-amber-400' : ''">
+                  <NumberFlow :value="summary.tasks.overdueCount" />
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+          <div class="grid grid-cols-1 gap-4 @3xl/main:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Open Tasks by Status</CardTitle>
+              </CardHeader>
+              <CardContent class="flex flex-col gap-1.5 text-sm">
+                <p v-if="!summary.tasks.openByStatus.length" class="text-muted-foreground">
+                  No open tasks.
+                </p>
+                <div v-for="row in summary.tasks.openByStatus" :key="row.status" class="flex items-center justify-between">
+                  <span>{{ row.label }}</span>
+                  <span class="tabular-nums font-medium">{{ row.count }}</span>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Open Tasks by Priority</CardTitle>
+              </CardHeader>
+              <CardContent class="flex flex-col gap-1.5 text-sm">
+                <p v-if="!summary.tasks.openByPriority.length" class="text-muted-foreground">
+                  No open tasks.
+                </p>
+                <div v-for="row in summary.tasks.openByPriority" :key="row.priority" class="flex items-center justify-between">
+                  <span>{{ titleCase(row.priority) }}</span>
+                  <span class="tabular-nums font-medium">{{ row.count }}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <Card v-if="summary.tasks.overdue.length">
+            <CardHeader>
+              <CardTitle>Overdue Tasks</CardTitle>
+            </CardHeader>
+            <CardContent class="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Due</TableHead>
+                    <TableHead>Task</TableHead>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="task in summary.tasks.overdue" :key="task.id">
+                    <TableCell class="whitespace-nowrap text-amber-600 dark:text-amber-400">
+                      {{ formatDay(task.dueDate) }}
+                    </TableCell>
+                    <TableCell class="font-medium">
+                      {{ task.title }}
+                    </TableCell>
+                    <TableCell class="text-muted-foreground">
+                      {{ task.projectName ?? '—' }}
+                    </TableCell>
+                    <TableCell>{{ task.status }}</TableCell>
+                    <TableCell>{{ titleCase(task.priority) }}</TableCell>
+                    <TableCell class="text-muted-foreground">
+                      {{ task.assignees.join(', ') || 'Unassigned' }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- Projects list -->
+        <div class="flex flex-col gap-2">
+          <h3 class="text-sm font-medium text-muted-foreground">
+            Projects
+          </h3>
+          <p class="text-xs text-muted-foreground -mt-1">
+            Every planned, active and on-hold project, plus any created in this range.
+          </p>
+          <Card>
+            <CardContent class="overflow-x-auto pt-6">
+              <p v-if="!summary.projectList.length" class="text-sm text-muted-foreground">
+                No projects.
+              </p>
+              <Table v-else>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Dates</TableHead>
+                    <TableHead class="text-right">
+                      Tasks Done
+                    </TableHead>
+                    <TableHead class="text-right">
+                      Value
+                    </TableHead>
+                    <TableHead class="text-right">
+                      Cost
+                    </TableHead>
+                    <TableHead class="text-right">
+                      Margin
+                    </TableHead>
+                    <TableHead class="text-right">
+                      Paid
+                    </TableHead>
+                    <TableHead class="text-right">
+                      Due
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="project in summary.projectList" :key="project.id">
+                    <TableCell class="font-medium">
+                      {{ project.name }}
+                      <Badge v-if="project.createdInRange" variant="outline" class="ml-1 text-[10px]">
+                        New
+                      </Badge>
+                    </TableCell>
+                    <TableCell class="text-muted-foreground">
+                      {{ project.clientName ?? '—' }}
+                    </TableCell>
+                    <TableCell>{{ titleCase(project.status) }}</TableCell>
+                    <TableCell class="whitespace-nowrap text-xs text-muted-foreground">
+                      {{ project.startDate ? formatDay(project.startDate) : '—' }} → {{ project.endDate ? formatDay(project.endDate) : '—' }}
+                    </TableCell>
+                    <TableCell class="text-right tabular-nums">
+                      {{ project.doneTaskCount }}/{{ project.taskCount }}
+                    </TableCell>
+                    <TableCell class="text-right tabular-nums">
+                      {{ money(project.currency, project.contractValue) }}
+                    </TableCell>
+                    <TableCell class="text-right tabular-nums">
+                      {{ money(project.currency, project.totalCost) }}
+                    </TableCell>
+                    <TableCell class="text-right tabular-nums" :class="project.margin !== undefined && project.margin < 0 ? 'text-destructive' : ''">
+                      {{ money(project.currency, project.margin) }}
+                    </TableCell>
+                    <TableCell class="text-right tabular-nums">
+                      {{ money(project.currency, project.amountPaid) }}
+                    </TableCell>
+                    <TableCell class="text-right tabular-nums" :class="project.amountDue !== undefined && project.amountDue > 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''">
+                      {{ money(project.currency, project.amountDue) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- Deals won + new clients -->
+        <div class="grid grid-cols-1 gap-4 @3xl/main:grid-cols-2">
+          <div class="flex flex-col gap-2">
+            <h3 class="text-sm font-medium text-muted-foreground">
+              Deals Won in Range
+            </h3>
+            <Card>
+              <CardContent class="flex flex-col gap-2 pt-6 text-sm">
+                <p v-if="!summary.wonDeals.length" class="text-muted-foreground">
+                  No deals won in this range.
+                </p>
+                <div v-for="deal in summary.wonDeals" :key="`${deal.kind}-${deal.id}`" class="flex items-center justify-between gap-2 border-b pb-2 last:border-0 last:pb-0">
+                  <div class="flex flex-col">
+                    <span class="font-medium">{{ deal.name }}</span>
+                    <span class="text-xs text-muted-foreground">{{ titleCase(deal.kind) }} · {{ formatDay(deal.decidedAt) }}<template v-if="deal.reps.length"> · {{ deal.reps.join(', ') }}</template></span>
+                  </div>
+                  <span class="shrink-0 tabular-nums font-medium">{{ deal.value?.toLocaleString() ?? '—' }}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div class="flex flex-col gap-2">
+            <h3 class="text-sm font-medium text-muted-foreground">
+              New Clients in Range
+            </h3>
+            <Card>
+              <CardContent class="flex flex-col gap-2 pt-6 text-sm">
+                <p v-if="!summary.newClients.length" class="text-muted-foreground">
+                  No new clients in this range.
+                </p>
+                <div v-for="client in summary.newClients" :key="client.id" class="flex items-center justify-between gap-2 border-b pb-2 last:border-0 last:pb-0">
+                  <span class="font-medium">{{ client.name }}</span>
+                  <span class="shrink-0 text-xs text-muted-foreground">{{ titleCase(client.stage) }} · {{ formatDay(client.createdAt) }}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         <!-- Calendar activity -->
         <div class="flex flex-col gap-2">
           <h3 class="text-sm font-medium text-muted-foreground">
             Calendar Activity
           </h3>
           <p class="text-xs text-muted-foreground -mt-1">
-            Meetings, site visits and other calendar activities involving BD/SM staff or linked to a lead, tender or client.
+            Every meeting, site visit and other calendar activity in the range, with who took part and what it was linked to.
           </p>
           <div class="grid grid-cols-2 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @3xl/main:grid-cols-4">
             <Card class="@container/card">

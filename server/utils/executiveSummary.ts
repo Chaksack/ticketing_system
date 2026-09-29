@@ -58,8 +58,8 @@ export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
   const leadTotals = pipelineTotals(leadValueRows, LEAD_STAGE_PROBABILITY)
   const tenderTotals = pipelineTotals(tenderValueRows, TENDER_STAGE_PROBABILITY)
 
-  const leadDecidedRows = await db.prepare(`SELECT to_value FROM lead_activity WHERE type = 'stage_changed' AND to_value IN ('Won', 'Lost')`).all() as DecidedRow[]
-  const tenderDecidedRows = await db.prepare(`SELECT to_value FROM tender_activity WHERE type = 'stage_changed' AND to_value IN ('Won', 'Lost')`).all() as DecidedRow[]
+  const leadDecidedRows = await db.prepare(`SELECT outcome AS to_value FROM (${dealDecisionsSql('lead')}) AS decisions`).all() as DecidedRow[]
+  const tenderDecidedRows = await db.prepare(`SELECT outcome AS to_value FROM (${dealDecisionsSql('tender')}) AS decisions`).all() as DecidedRow[]
   const combinedDecided = [...leadDecidedRows, ...tenderDecidedRows]
 
   const openQuotesRow = await db.prepare(`

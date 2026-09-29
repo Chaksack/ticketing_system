@@ -44,21 +44,21 @@ async function getWonValueByStaff(period: string): Promise<Map<string, number>> 
 
   const leadRows = await db.prepare(`
     SELECT lead_assignees.staff_id AS staff_id, SUM(leads.estimated_value) AS total
-    FROM lead_activity
-    JOIN leads ON leads.id = lead_activity.lead_id
+    FROM (${dealDecisionsSql('lead')}) AS decisions
+    JOIN leads ON leads.id = decisions.deal_id
     JOIN lead_assignees ON lead_assignees.lead_id = leads.id
-    WHERE lead_activity.type = 'stage_changed' AND lead_activity.to_value = 'Won'
-      AND lead_activity.created_at >= ? AND lead_activity.created_at < ?
+    WHERE decisions.outcome = 'Won'
+      AND decisions.decided_at >= ? AND decisions.decided_at < ?
     GROUP BY lead_assignees.staff_id
   `).all(start, end) as { staff_id: string, total: number | string }[]
 
   const tenderRows = await db.prepare(`
     SELECT tender_assignees.staff_id AS staff_id, SUM(tenders.estimated_value) AS total
-    FROM tender_activity
-    JOIN tenders ON tenders.id = tender_activity.tender_id
+    FROM (${dealDecisionsSql('tender')}) AS decisions
+    JOIN tenders ON tenders.id = decisions.deal_id
     JOIN tender_assignees ON tender_assignees.tender_id = tenders.id
-    WHERE tender_activity.type = 'stage_changed' AND tender_activity.to_value = 'Won'
-      AND tender_activity.created_at >= ? AND tender_activity.created_at < ?
+    WHERE decisions.outcome = 'Won'
+      AND decisions.decided_at >= ? AND decisions.decided_at < ?
     GROUP BY tender_assignees.staff_id
   `).all(start, end) as { staff_id: string, total: number | string }[]
 

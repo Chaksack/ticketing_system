@@ -15,6 +15,8 @@ onMounted(() => {
     fetchChannels()
 })
 
+useAppRefresh().onAppRefresh(fetchChannels)
+
 function isActiveChannel(channelId: string) {
   return isOnChatPage.value && route.query.channel === channelId
 }

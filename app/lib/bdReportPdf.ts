@@ -73,11 +73,55 @@ export async function downloadBdReportPdf(summary: BdReportSummary, quota?: { la
   // Tasks & Projects
   y = sectionTitle(doc, y, 'Tasks & Projects')
   y = statLine(doc, y, [
+    { label: 'Tasks Created', value: String(summary.tasks.createdCount) },
     { label: 'Tasks Completed', value: String(summary.tasks.completedCount) },
-    { label: 'Tasks Overdue (now)', value: String(summary.tasksOverdue) },
+    { label: 'Open Now', value: String(summary.tasks.openByStatus.reduce((sum, row) => sum + row.count, 0)) },
+    { label: 'Overdue Now', value: String(summary.tasks.overdueCount) },
     { label: 'New Projects', value: String(summary.projects.newCount) },
   ])
+  y = table(doc, y, ['Open Tasks by Status', 'Count'], summary.tasks.openByStatus.map(row => [row.label, row.count]))
+  y = table(doc, y, ['Open Tasks by Priority', 'Count'], summary.tasks.openByPriority.map(row => [titleCase(row.priority), row.count]))
+  if (summary.tasks.overdue.length) {
+    y = table(
+      doc,
+      y,
+      ['Due', 'Overdue Task', 'Project', 'Status', 'Assigned To'],
+      summary.tasks.overdue.map(task => [formatPdfDate(task.dueDate), task.title, task.projectName ?? '—', task.status, task.assignees.join(', ') || 'Unassigned']),
+    )
+  }
   y = table(doc, y, ['Project Status (all projects, now)', 'Count'], summary.projects.byStatus.map(row => [titleCase(row.status), row.count]))
+
+  // Project list
+  y = sectionTitle(doc, y, 'Projects')
+  y = table(
+    doc,
+    y,
+    ['Project', 'Client', 'Status', 'Tasks', 'Value', 'Cost', 'Margin', 'Paid', 'Due'],
+    summary.projectList.map((project) => {
+      const amount = (value?: number) => value === undefined ? '—' : `${project.currency} ${value.toLocaleString()}`
+      return [
+        project.createdInRange ? `${project.name} (new)` : project.name,
+        project.clientName ?? '—',
+        titleCase(project.status),
+        `${project.doneTaskCount}/${project.taskCount}`,
+        amount(project.contractValue),
+        amount(project.totalCost),
+        amount(project.margin),
+        amount(project.amountPaid),
+        amount(project.amountDue),
+      ]
+    }),
+  )
+
+  // Deals won + new clients
+  y = sectionTitle(doc, y, 'Deals Won & New Clients')
+  y = table(
+    doc,
+    y,
+    ['Won', 'Deal', 'Type', 'Value', 'Reps'],
+    summary.wonDeals.map(deal => [formatPdfDate(deal.decidedAt), deal.name, titleCase(deal.kind), deal.value?.toLocaleString() ?? '—', deal.reps.join(', ') || '—']),
+  )
+  y = table(doc, y, ['New Client', 'Stage', 'Added'], summary.newClients.map(client => [client.name, titleCase(client.stage), formatPdfDate(client.createdAt)]))
 
   // Project payments
   y = sectionTitle(doc, y, 'Project Payments')
