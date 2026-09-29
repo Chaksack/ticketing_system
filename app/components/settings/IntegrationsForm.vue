@@ -113,4 +113,8 @@ async function onSendSlackTest() {
       Loading…
     </p>
   </div>
+
+  <Separator />
+
+  <SettingsAiProvidersForm />
 </template>

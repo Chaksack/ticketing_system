@@ -5,6 +5,7 @@ interface ChatMessage {
   role: 'user' | 'assistant'
   text: string
   sections?: AssistantSection[]
+  answeredBy?: string
 }
 
 const { isAgent, isBd, isSm, isAdmin } = useAuth()
@@ -51,11 +52,11 @@ async function send(text?: string) {
     // Send the whole conversation so far — this is a real back-and-forth chat now, not
     // independent single-shot questions, so the assistant needs the prior turns for context.
     const history = messages.value.map(m => ({ role: m.role, text: m.text }))
-    const { text: reply, sections } = await $fetch<{ text: string, sections: AssistantSection[] }>('/api/assistant/query', {
+    const { text: reply, sections, answeredBy } = await $fetch<{ text: string, sections: AssistantSection[], answeredBy?: string }>('/api/assistant/query', {
       method: 'POST',
       body: { messages: history },
     })
-    messages.value.push({ role: 'assistant', text: reply, sections })
+    messages.value.push({ role: 'assistant', text: reply, sections, answeredBy })
   }
   catch (error: any) {
     messages.value.push({
@@ -96,6 +97,12 @@ watch(open, (isOpen) => {
 
       <div ref="listRef" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         <div v-if="!messages.length" class="flex flex-col gap-3">
+          <p class="text-xs text-muted-foreground">
+            Want to use your own Gemini, ChatGPT or Claude?
+            <NuxtLink to="/settings/integrations" class="underline">
+              Connect it in Settings → Integrations
+            </NuxtLink>.
+          </p>
           <p class="text-sm text-muted-foreground">
             Try one of these:
           </p>
@@ -120,6 +127,9 @@ watch(open, (isOpen) => {
           >
             <p v-if="message.text">
               {{ message.text }}
+            </p>
+            <p v-if="message.answeredBy" class="mt-1 text-[10px] opacity-60">
+              via {{ message.answeredBy }}
             </p>
 
             <div v-for="(section, sectionIndex) in message.sections" :key="sectionIndex" class="mt-2 first:mt-0 flex flex-col gap-2">

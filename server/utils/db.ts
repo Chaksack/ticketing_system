@@ -47,6 +47,8 @@ async function migrate() {
   // override always wins over the auto-detected state. Custom status (emoji + text, with an
   // optional expiry) layers on top independently, same as Slack.
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS last_active_at TEXT')
+  // Which personal AI provider (gemini/openai/anthropic) this person's "Ask AI" uses — see server/utils/aiProviders.ts.
+  await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS ai_provider TEXT')
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS presence_override TEXT NOT NULL DEFAULT \'auto\'')
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS status_text TEXT')
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS status_emoji TEXT')

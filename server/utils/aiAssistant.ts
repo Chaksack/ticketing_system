@@ -20,9 +20,8 @@ import {
   ticketVolume,
 } from './assistant'
 
-// Fast + cheap — this is a high-frequency internal utility, not the product's main surface, and
-// every "tool" it can call is a trivial DB read, so a lighter model is plenty.
-const MODEL = 'claude-haiku-4-5-20251001'
+// Fast + cheap models (runtimeConfig.ai*Model) — this is a high-frequency internal utility, not the
+// product's main surface, and every "tool" it can call is a trivial DB read.
 const MAX_TOOL_ITERATIONS = 4
 
 export interface ChatTurn {
@@ -33,6 +32,8 @@ export interface ChatTurn {
 export interface AssistantChatResult {
   text: string
   sections: AssistantSection[]
+  /** Which AI answered, e.g. "Gemini", "ChatGPT", "Claude (company)" — absent for built-in answers. */
+  answeredBy?: string
 }
 
 interface ToolDef {
@@ -80,70 +81,136 @@ function buildFallbackText(sections: AssistantSection[]): string {
   return sections[0]?.heading ? 'Here\'s what I found:' : ''
 }
 
-export async function runAiAssistantChat(user: SessionUser, history: ChatTurn[]): Promise<AssistantChatResult> {
-  const config = useRuntimeConfig()
+/** Runs one tool call with the usual role check; collects what the user may see for the UI cards. */
+async function executeTool(user: SessionUser, name: string, collected: AssistantSection[]): Promise<AssistantSection[]> {
+  const tool = TOOLS[name]
+  if (!tool)
+    return [{ stats: [{ label: 'Error', value: 'Unknown tool' }] }]
+  if (!tool.allowed(user))
+    return [{ stats: [{ label: 'Access', value: 'You don\'t have access to that data.' }] }]
+  const sections = await tool.run(user)
+  collected.push(...sections)
+  return sections
+}
 
-  // Graceful degradation: if no API key is configured, fall back to the original deterministic
-  // keyword matcher rather than failing outright.
-  if (!config.anthropicApiKey) {
+const TOOL_LIST = Object.entries(TOOLS).map(([name, tool]) => ({ name, description: tool.description }))
+const TOO_MANY_STEPS = 'That took more steps than expected — try rephrasing your question.'
+
+function providerError(label: string, status: number, detail: string): never {
+  if (status === 401 || status === 403)
+    throw createError({ statusCode: 400, statusMessage: `${label} rejected your credentials. Reconnect it in Settings → Integrations.` })
+  if (status === 429)
+    throw createError({ statusCode: 429, statusMessage: `${label} says you've hit its usage or rate limit. Try again later or check your ${label} account.` })
+  console.error(`[assistant] ${label} error ${status}: ${detail.slice(0, 500)}`)
+  throw createError({ statusCode: 502, statusMessage: `${label} returned an error (HTTP ${status}). Please try again.` })
+}
+
+async function chatWithClaude(user: SessionUser, history: ChatTurn[], apiKey: string, collected: AssistantSection[]): Promise<string> {
+  const client = new Anthropic({ apiKey })
+  const tools: Anthropic.Tool[] = TOOL_LIST.map(t => ({ name: t.name, description: t.description, input_schema: { type: 'object', properties: {} } }))
+  const messages: Anthropic.MessageParam[] = history.map(turn => ({ role: turn.role, content: turn.text }))
+
+  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+    let response: Anthropic.Message
+    try {
+      response = await client.messages.create({ model: useRuntimeConfig().aiAnthropicModel, max_tokens: 1024, system: SYSTEM_PROMPT, tools, messages })
+    }
+    catch (error: any) {
+      providerError('Claude', error?.status ?? 500, String(error?.message ?? error))
+    }
+
+    const toolUseBlocks = response.content.filter(block => block.type === 'tool_use')
+    if (!toolUseBlocks.length)
+      return response.content.filter(block => block.type === 'text').map(block => block.text).join('\n').trim()
+
+    messages.push({ role: 'assistant', content: response.content })
+    const toolResults: Anthropic.ToolResultBlockParam[] = []
+    for (const block of toolUseBlocks)
+      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(await executeTool(user, block.name, collected)) })
+    messages.push({ role: 'user', content: toolResults })
+  }
+  return TOO_MANY_STEPS
+}
+
+async function chatWithOpenAi(user: SessionUser, history: ChatTurn[], apiKey: string, collected: AssistantSection[]): Promise<string> {
+  const tools = TOOL_LIST.map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: { type: 'object', properties: {} } } }))
+  const messages: any[] = [{ role: 'system', content: SYSTEM_PROMPT }, ...history.map(turn => ({ role: turn.role, content: turn.text }))]
+
+  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: useRuntimeConfig().aiOpenaiModel, messages, tools }),
+    })
+    if (!response.ok)
+      providerError('ChatGPT', response.status, await response.text())
+
+    const message = (await response.json() as any).choices?.[0]?.message
+    const toolCalls: { id: string, function: { name: string } }[] = message?.tool_calls ?? []
+    if (!toolCalls.length)
+      return String(message?.content ?? '').trim()
+
+    messages.push(message)
+    for (const call of toolCalls)
+      messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(await executeTool(user, call.function.name, collected)) })
+  }
+  return TOO_MANY_STEPS
+}
+
+async function chatWithGemini(user: SessionUser, history: ChatTurn[], accessToken: string, collected: AssistantSection[]): Promise<string> {
+  const model = useRuntimeConfig().aiGeminiModel
+  const tools = [{ functionDeclarations: TOOL_LIST.map(t => ({ name: t.name, description: t.description })) }]
+  const contents: any[] = history.map(turn => ({ role: turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: turn.text }] }))
+
+  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents, tools }),
+    })
+    if (!response.ok)
+      providerError('Gemini', response.status, await response.text())
+
+    const content = (await response.json() as any).candidates?.[0]?.content
+    const parts: any[] = content?.parts ?? []
+    const calls = parts.filter(part => part.functionCall).map(part => part.functionCall as { name: string })
+    if (!calls.length)
+      return parts.map(part => part.text ?? '').join('').trim()
+
+    contents.push(content)
+    const responses = []
+    for (const call of calls)
+      responses.push({ functionResponse: { name: call.name, response: { result: await executeTool(user, call.name, collected) } } })
+    contents.push({ role: 'user', parts: responses })
+  }
+  return TOO_MANY_STEPS
+}
+
+/**
+ * Answers with the person's own connected AI (Gemini via Google sign-in, or their ChatGPT/Claude
+ * API key — see server/utils/aiProviders.ts), else the company Claude key, else the built-in
+ * keyword matcher. Every provider gets the same tools with the same role checks.
+ */
+export async function runAiAssistantChat(user: SessionUser, history: ChatTurn[]): Promise<AssistantChatResult> {
+  const credentials = await resolveAiCredentials(user.id)
+
+  // Graceful degradation: no personal AI and no company key → the original deterministic matcher.
+  if (!credentials) {
     const lastUserMessage = [...history].reverse().find(turn => turn.role === 'user')?.text ?? ''
     const sections = await runAssistantQuery(user, lastUserMessage)
     return { text: buildFallbackText(sections), sections }
   }
 
-  const client = new Anthropic({ apiKey: config.anthropicApiKey })
+  const collected: AssistantSection[] = []
+  const text = credentials.provider === 'gemini'
+    ? await chatWithGemini(user, history, credentials.accessToken, collected)
+    : credentials.provider === 'openai'
+      ? await chatWithOpenAi(user, history, credentials.apiKey, collected)
+      : await chatWithClaude(user, history, credentials.apiKey, collected)
 
-  const anthropicTools: Anthropic.Tool[] = Object.entries(TOOLS).map(([name, tool]) => ({
-    name,
-    description: tool.description,
-    input_schema: { type: 'object', properties: {} },
-  }))
-
-  const messages: Anthropic.MessageParam[] = history.map(turn => ({ role: turn.role, content: turn.text }))
-  const collectedSections: AssistantSection[] = []
-
-  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      tools: anthropicTools,
-      messages,
-    })
-
-    const toolUseBlocks = response.content.filter(block => block.type === 'tool_use')
-
-    if (!toolUseBlocks.length) {
-      const text = response.content
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
-        .join('\n')
-        .trim()
-      return { text: text || 'I\'m not sure how to answer that.', sections: collectedSections }
-    }
-
-    messages.push({ role: 'assistant', content: response.content })
-
-    const toolResults: Anthropic.ToolResultBlockParam[] = []
-    for (const block of toolUseBlocks) {
-      const tool = TOOLS[block.name]
-      let sections: AssistantSection[]
-
-      if (!tool)
-        sections = [{ stats: [{ label: 'Error', value: 'Unknown tool' }] }]
-      else if (!tool.allowed(user))
-        sections = [{ stats: [{ label: 'Access', value: 'You don\'t have access to that data.' }] }]
-      else
-        sections = await tool.run(user)
-
-      if (tool?.allowed(user))
-        collectedSections.push(...sections)
-
-      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(sections) })
-    }
-
-    messages.push({ role: 'user', content: toolResults })
+  return {
+    text: text || 'I\'m not sure how to answer that.',
+    sections: collected,
+    answeredBy: credentials.source === 'company' ? `${credentials.label} (company)` : credentials.label,
   }
-
-  return { text: 'That took more steps than expected — try rephrasing your question.', sections: collectedSections }
 }

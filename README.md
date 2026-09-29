@@ -287,6 +287,43 @@ supported (open tickets, my clients, staff headcount, etc.) — nothing breaks, 
 handle anything outside that list. Requests are rate-limited per staff member
 (`server/api/assistant/query.post.ts`, 40/hour) since each one now costs a small amount to run.
 
+### AI Assistant: personal providers
+
+Each staff member can connect their own AI under **Settings → Integrations → AI Assistant**, and
+"Ask AI" then answers with it (with the same tools and role checks). Order of preference: the
+person's chosen provider → any provider they've connected → the company key
+(`NUXT_ANTHROPIC_API_KEY`) → built-in answers only.
+
+| Provider | How staff connect | Who pays |
+| --- | --- | --- |
+| Google Gemini | **Connect with Google** (no API key) | The Google Cloud project that owns the OAuth client |
+| OpenAI (ChatGPT) | Paste their own API key | That key's OpenAI account |
+| Anthropic (Claude) | Paste their own API key | That key's Anthropic account |
+
+ChatGPT and Claude can't use "sign in with your subscription": OpenAI offers no third-party
+sign-in, and Anthropic's terms (since Feb 2026) limit Claude subscription sign-in to Claude Code
+and Claude.ai. So those take API keys, which are checked with the provider before saving.
+Keys and Google tokens are encrypted at rest (`NUXT_INTEGRATIONS_ENCRYPTION_KEY`), in
+`staff_integrations` (`server/utils/aiProviders.ts`).
+
+**One-time setup for Gemini sign-in** (in the same Google Cloud project as the Gmail OAuth
+client, `NUXT_GMAIL_CLIENT_ID`/`NUXT_GMAIL_CLIENT_SECRET`, which it reuses):
+
+1. APIs & Services → Library → enable the **Generative Language API**, with billing set up if
+   you'll go past the free tier. Usage is billed to this project, not to each person's Gemini
+   subscription.
+2. OAuth consent screen → **Data access**: add the scope
+   `https://www.googleapis.com/auth/generative-language.retriever` (plus `openid` and `email`).
+3. Credentials → the OAuth client → **Authorized redirect URIs**: add
+   `<your-site-url>/api/ai-providers/gemini/callback` (one per environment, e.g. also
+   `http://localhost:3000/...`).
+4. While the consent screen is in **Testing**, only the Google accounts listed as **Test users**
+   can connect, and Google shows an "unverified app" warning. To open it to all staff, publish
+   the app and complete Google's verification.
+
+Models are set in `nuxt.config.ts` and can be overridden with `NUXT_AI_GEMINI_MODEL`,
+`NUXT_AI_OPENAI_MODEL` and `NUXT_AI_ANTHROPIC_MODEL`.
+
 ## App Settings
 
 You can change sidebar/theme defaults in `app/app.config.ts` and `app/composables/useAppSettings.ts`.

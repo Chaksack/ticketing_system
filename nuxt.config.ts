@@ -144,6 +144,11 @@ export default defineNuxtConfig({
     slackClientId: '',
     slackClientSecret: '',
     anthropicApiKey: '',
+    // Models used for each person's own AI provider in "Ask AI" — override with
+    // NUXT_AI_GEMINI_MODEL / NUXT_AI_OPENAI_MODEL / NUXT_AI_ANTHROPIC_MODEL as providers ship new ones.
+    aiGeminiModel: 'gemini-2.5-flash',
+    aiOpenaiModel: 'gpt-4.1-mini',
+    aiAnthropicModel: 'claude-haiku-4-5-20251001',
     public: {
       vapidPublicKey: '',
       portalCorsOrigins: '',

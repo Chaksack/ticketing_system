@@ -17,6 +17,8 @@ interface SessionData {
   /** CSRF nonce + provider id for the in-progress Settings > Integrations OAuth connect flow, cleared once used. */
   integrationOAuthState?: string
   integrationOAuthProvider?: string
+  /** CSRF nonce for the in-progress "Connect Gemini with Google" flow, cleared once used. */
+  aiGeminiOAuthState?: string
 }
 
 export function useAuthSession(event: H3Event) {
