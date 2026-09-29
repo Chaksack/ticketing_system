@@ -57,6 +57,7 @@
     "@internationalized/date": "^3.10.0",
     "@lucide/vue": "^1.45.0",
     "@number-flow/vue": "^0.4.8",
+    "@scalar/nuxt": "^0.6.74",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/vue-table": "^8.21.3",
     "@unovis/ts": "^1.6.1",
@@ -103,7 +104,7 @@
     "typescript": "^5.9.3",
     "vaul-vue": "^0.4.1",
     "vee-validate": "^4.15.1",
-    "vue": "^3.5.22",
+    "vue": "^3.5.43",
     "vue-router": "^4.5.1",
     "vue-sonner": "^2.0.9",
     "vue-tsc": "^2.2.12"

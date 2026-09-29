@@ -1,5 +1,7 @@
 import process from 'node:process'
 import tailwindcss from '@tailwindcss/vite'
+
+const isDev = process.env.NODE_ENV !== 'production'
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -62,7 +64,29 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
     '@nuxt/fonts',
+    '@scalar/nuxt',
   ],
+
+  // API reference (Scalar). /docs is the public reference for the external APIs — a hand-written
+  // spec in server/utils/publicApiSpec.ts served at /openapi.json. In development only, /docs/internal
+  // also lists every server route from Nitro's auto-generated /_openapi.json.
+  scalar: {
+    darkMode: true,
+    configurations: [
+      {
+        url: '/openapi.json',
+        pathRouting: { basePath: '/docs' },
+        metaData: { title: 'IBS Platform API Reference' },
+      },
+      ...(isDev
+        ? [{
+            url: '/_openapi.json',
+            pathRouting: { basePath: '/docs/internal' },
+            metaData: { title: 'Internal Routes (dev only)' },
+          }]
+        : []),
+    ],
+  },
 
   shadcn: {
     /**
@@ -109,6 +133,15 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       database: true,
+      // Auto-generated route list for /docs/internal — development only. It must be off (not just
+      // `openAPI.production: false`) in builds: @scalar/nuxt sets `openAPI.production ||= 'prerender'`,
+      // which overwrites `false` and would publish every internal route as /_openapi.json.
+      openAPI: isDev,
+    },
+    openAPI: {
+      production: false,
+      meta: { title: 'IBS Platform internal routes', version: 'dev' },
+      ui: { scalar: false, swagger: false },
     },
     database: {
       default: {

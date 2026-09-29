@@ -295,7 +295,9 @@ function formatDate(value?: string) {
       <CardHeader>
         <CardTitle>Connect an External System</CardTitle>
         <CardDescription>
-          Hand these steps to whoever is setting up the integration on the other side.
+          Hand these steps to whoever is setting up the integration on the other side, along with the full
+          <a :href="`${origin}/docs`" target="_blank" rel="noopener" class="underline">API reference</a>
+          (field-by-field schemas and a request console, no login needed).
         </CardDescription>
       </CardHeader>
       <CardContent class="flex flex-col gap-4 text-sm">

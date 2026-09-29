@@ -15,7 +15,8 @@ const PUBLIC_PATHS = new Set([
 ])
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (PUBLIC_PATHS.has(to.path) || to.path.startsWith('/invite/') || to.path.startsWith('/reset-password/'))
+  // /docs is the public API reference (Scalar) — external developers need it without an account.
+  if (PUBLIC_PATHS.has(to.path) || to.path.startsWith('/invite/') || to.path.startsWith('/reset-password/') || to.path === '/docs' || to.path.startsWith('/docs/'))
     return
 
   const { isLoggedIn, ensureAuth } = useAuth()
