@@ -72,12 +72,6 @@ async function onSubmit(event: Event) {
       Login
     </Button>
   </form>
-  <!-- <div class="mt-4 text-center text-sm text-muted-foreground">
-    Don't have an account?
-    <NuxtLink to="/register" class="underline">
-      Sign up
-    </NuxtLink>
-  </div> -->
 </template>
 
 <style scoped>

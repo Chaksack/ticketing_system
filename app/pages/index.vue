@@ -1,15 +1,11 @@
 <script setup lang="ts">
+import type { DemoSector } from '~/types/organization'
+import { DEMO_SECTORS } from '~/types/organization'
+
 // Public landing page. Signed-in staff go straight to their own start page instead.
 definePageMeta({
   layout: 'blank',
-  middleware: [
-    async () => {
-      const { ensureAuth, isLoggedIn, homePath } = useAuth()
-      await ensureAuth()
-      if (isLoggedIn.value)
-        return navigateTo(homePath.value)
-    },
-  ],
+  middleware: 'landing',
 })
 
 useSeoMeta({
@@ -18,6 +14,14 @@ useSeoMeta({
 })
 
 const year = new Date().getFullYear()
+const NuxtLink = resolveComponent('NuxtLink')
+
+const NAV_LINKS = [
+  { href: '#apps', label: 'Apps' },
+  { href: '#sectors', label: 'Sectors' },
+  { href: '#platform', label: 'Platform' },
+  { href: '#pricing', label: 'Pricing' },
+] as const
 
 const MODULES = [
   { title: 'Support desk', tone: 'forest', copy: 'Tickets from the portal, email and staff, with SLA timers, automatic assignment, escalation and on-call paging.' },
@@ -35,39 +39,95 @@ const TONE_CLASS: Record<(typeof MODULES)[number]['tone'], { card: string, title
   lime: { card: 'bg-brand-lime', title: 'text-brand-forest', copy: 'text-brand-forest' },
 }
 
-const AUDIENCES = [
+// Sector tabs — each one describes what the existing apps already do for that kind of business.
+const SECTORS: { name: DemoSector, copy: string, items: string[] }[] = [
   {
-    name: 'Clients',
-    copy: 'Report a fault or ask for help in a couple of minutes, without an account. You get a reference number straight away and updates by email.',
-    items: ['Submit a request from any device', 'Attach photos and documents', 'A reference number for every request', 'Email updates until it\'s resolved'],
+    name: 'Real estate',
+    copy: 'Take maintenance requests from tenants through your portal, track fit-out and facility projects, and keep service contracts renewing on time.',
+    items: ['Tenant requests through the customer portal', 'SLA timers on every maintenance ticket', 'Fit-out projects with costs and payments', 'AMC contracts with renewal reminders'],
   },
   {
-    name: 'Support engineers',
-    copy: 'Every request lands in one queue, already prioritised and assigned, with the clock visible on each one so nothing slips past its SLA.',
-    items: ['Auto-assignment and escalation', 'Replies and internal notes on one thread', 'Macros for common answers', 'On-call paging for urgent tickets'],
+    name: 'Healthcare',
+    copy: 'Keep equipment and IT support for clinics and labs on schedule, with every call, visit and contract on the client record.',
+    items: ['Urgent tickets paged to on-call engineers', 'Site visits on the shared calendar', 'Service contracts per facility', 'Response and resolution reporting'],
   },
   {
-    name: 'Sales & BD',
-    copy: 'Track every lead and tender from first contact to signed project, with the calendar, emails and calls that moved it forward.',
-    items: ['Leads, tenders and clients pipeline', 'Quotes, orders and AMC plans', 'Duplicate checks on names, emails and phones', 'Quotas, monthly or yearly'],
+    name: 'Financial services',
+    copy: 'Win and serve institutional clients: track leads and tenders, send quotes, and answer branch requests against agreed SLAs.',
+    items: ['Leads and tenders with win probability', 'Quotes and sales orders', 'Branch requests with priority-based SLAs', 'Role-based access for each team'],
   },
   {
-    name: 'Managers',
-    copy: 'See how support, sales and delivery are doing without chasing anyone for a spreadsheet.',
-    items: ['BD & SM report with calendar activity', 'Rep scorecards and quota progress', 'Project payments and amounts due', 'Executive dashboard and PDF exports'],
+    name: 'Manufacturing',
+    copy: 'Connect quotes, orders and after-sales support so sales and service work from the same customer record.',
+    items: ['Product catalogue and quotes', 'Sales orders linked to the client', 'After-sales tickets and on-site visits', 'ERP sync for clients and projects'],
+  },
+  {
+    name: 'Public sector',
+    copy: 'Respond to tenders, deliver the projects you win, and report on every service request.',
+    items: ['Tender tracking with deadline reminders', 'Project tasks, sprints and timesheets', 'Escalation from engineer to lead', 'PDF reports for reviews'],
+  },
+  {
+    name: 'Retail',
+    copy: 'Handle store and head-office requests in one queue, and keep the contracts behind each site in view.',
+    items: ['One queue for every store', 'Categories and auto-assignment rules', 'Email updates on every request', 'Service contracts per site'],
+  },
+  {
+    name: 'Education',
+    copy: 'Look after campuses and IT with one helpdesk, and run the projects that keep facilities up to date.',
+    items: ['Self-service portal for staff and students', 'Macros for common answers', 'Projects with budgets and amounts due', 'Executive dashboard'],
+  },
+  {
+    name: 'Nonprofit',
+    copy: 'Track funders and partners, deliver programmes as projects, and report without spreadsheets.',
+    items: ['Funders and partners pipeline', 'Programmes with costs and payments', 'Shared calendar and project chat', 'BD & SM and executive reports'],
   },
 ]
 
-const activeAudience = ref(0)
-const audience = computed(() => AUDIENCES[activeAudience.value]!)
+const demo = reactive({ email: '', sector: 'Real estate' as DemoSector, website: '', busy: false, sent: false, error: '' })
 
-function onAudienceKeydown(event: KeyboardEvent, index: number) {
+const activeSector = ref(0)
+const sector = computed(() => SECTORS[activeSector.value]!)
+
+function onSectorKeydown(event: KeyboardEvent, index: number) {
   if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')
     return
   event.preventDefault()
-  const next = (index + (event.key === 'ArrowRight' ? 1 : -1) + AUDIENCES.length) % AUDIENCES.length
-  activeAudience.value = next
-  nextTick(() => document.getElementById(`audience-tab-${next}`)?.focus())
+  const next = (index + (event.key === 'ArrowRight' ? 1 : -1) + SECTORS.length) % SECTORS.length
+  activeSector.value = next
+  nextTick(() => document.getElementById(`sector-tab-${next}`)?.focus())
+}
+
+/** "Book a demo for <sector>": preselect it in the form and jump there. */
+function bookForSector(name: DemoSector) {
+  demo.sector = name
+  document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })
+  nextTick(() => document.getElementById('demo-email')?.focus({ preventScroll: true }))
+}
+
+// No list prices are published yet, so each plan leads with what it's for instead of a figure.
+const PLANS = [
+  { name: 'Essentials', headline: 'Start small', copy: 'One app — Service, Sales or Projects — with the customer portal and shared client records.', cta: { label: 'Choose Essentials', to: '/signup' }, featured: false },
+  { name: 'Professional', headline: 'Every app', copy: 'Service, Sales, Projects and Insights, with automation rules, SLA policies and Ask AI.', cta: { label: 'Choose Professional', to: '/signup' }, featured: true },
+  { name: 'Enterprise', headline: 'Let\'s talk', copy: 'Staff-led onboarding with a signed service agreement and SLA, ERP sync and a named support contact.', cta: { label: 'Contact sales', to: '#demo' }, featured: false },
+] as const
+
+async function submitDemo() {
+  demo.error = ''
+  if (!/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(demo.email.trim())) {
+    demo.error = 'Enter a valid work email, like you@company.com'
+    return
+  }
+  demo.busy = true
+  try {
+    await $fetch('/api/demo-request', { method: 'POST', body: { email: demo.email, sector: demo.sector, website: demo.website } })
+    demo.sent = true
+  }
+  catch (error: any) {
+    demo.error = error?.data?.statusMessage ?? 'Something went wrong. Please try again.'
+  }
+  finally {
+    demo.busy = false
+  }
 }
 
 const PLATFORM = [
@@ -91,17 +151,15 @@ const PLATFORM = [
           <BrandLogo tone="light" :size="34" />
         </NuxtLink>
         <div class="hidden items-center gap-1 md:flex">
-          <a href="#features" class="rounded-full px-4 py-2.5 font-medium text-brand-forest hover:bg-brand-mist">Features</a>
-          <a href="#teams" class="rounded-full px-4 py-2.5 font-medium text-brand-forest hover:bg-brand-mist">For each team</a>
-          <a href="#platform" class="rounded-full px-4 py-2.5 font-medium text-brand-forest hover:bg-brand-mist">Platform</a>
+          <a v-for="link in NAV_LINKS" :key="link.href" :href="link.href" class="rounded-full px-4 py-2.5 font-medium text-brand-forest hover:bg-brand-mist">{{ link.label }}</a>
         </div>
         <div class="flex items-center gap-2">
           <NuxtLink to="/login" class="inline-flex min-h-11 items-center rounded-full border border-brand-forest px-5 font-medium text-brand-forest hover:bg-brand-mist">
             Sign in
           </NuxtLink>
-          <NuxtLink to="/signup" class="inline-flex min-h-11 items-center rounded-full bg-brand-lime px-5 font-semibold text-brand-forest hover:bg-brand-lime/85">
-            Create your workspace
-          </NuxtLink>
+          <a href="#demo" class="inline-flex min-h-11 items-center rounded-full bg-brand-lime px-5 font-semibold text-brand-forest hover:bg-brand-lime/85">
+            Book a demo
+          </a>
         </div>
       </nav>
     </header>
@@ -123,9 +181,9 @@ const PLATFORM = [
           <NuxtLink to="/signup" class="inline-flex min-h-12 items-center rounded-full bg-brand-lime px-7 text-lg font-semibold text-brand-forest hover:bg-brand-lime/85">
             Create your workspace
           </NuxtLink>
-          <NuxtLink to="/login" class="inline-flex min-h-12 items-center rounded-full border border-brand-forest px-7 text-lg font-medium text-brand-forest hover:bg-brand-mist">
-            Sign in
-          </NuxtLink>
+          <a href="#apps" class="inline-flex min-h-12 items-center rounded-full border border-brand-forest px-7 text-lg font-medium text-brand-forest hover:bg-brand-mist">
+            Explore the product
+          </a>
         </div>
 
         <!-- Product preview (illustrative) -->
@@ -196,10 +254,10 @@ const PLATFORM = [
         </div>
       </section>
 
-      <!-- Features -->
-      <section id="features" class="mx-auto flex max-w-6xl scroll-mt-6 flex-col gap-8 px-6 py-16">
+      <!-- Apps -->
+      <section id="apps" class="mx-auto flex max-w-6xl scroll-mt-6 flex-col gap-8 px-6 py-16">
         <h2 class="m-0 max-w-3xl text-[clamp(2.5rem,6vw,4rem)] font-black leading-[0.95] tracking-[-0.045em] text-brand-obsidian">
-          Everything the team needs, in one place.
+          Start with one app. Grow into the whole suite.
         </h2>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div v-for="module in MODULES" :key="module.title" class="flex flex-col gap-2.5 rounded-[28px] p-7" :class="TONE_CLASS[module.tone].card">
@@ -213,49 +271,52 @@ const PLATFORM = [
         </div>
       </section>
 
-      <!-- For each team -->
-      <section id="teams" class="scroll-mt-6 bg-brand-forest px-6 py-20">
+      <!-- Sectors -->
+      <section id="sectors" class="scroll-mt-6 bg-brand-forest px-6 py-20">
         <div class="mx-auto flex max-w-6xl flex-col gap-8">
           <h2 class="m-0 max-w-3xl text-[clamp(2.5rem,6vw,4rem)] font-black leading-[0.95] tracking-[-0.045em] text-brand-lime">
-            Built around how each team works.
+            Built for your sector on day one.
           </h2>
-          <div role="tablist" aria-label="Teams" class="flex flex-wrap gap-2">
+          <div role="tablist" aria-label="Sectors" class="flex flex-wrap gap-2">
             <button
-              v-for="(item, index) in AUDIENCES"
-              :id="`audience-tab-${index}`"
+              v-for="(item, index) in SECTORS"
+              :id="`sector-tab-${index}`"
               :key="item.name"
               type="button"
               role="tab"
-              :aria-selected="activeAudience === index"
-              aria-controls="audience-panel"
-              :tabindex="activeAudience === index ? 0 : -1"
+              :aria-selected="activeSector === index"
+              aria-controls="sector-panel"
+              :tabindex="activeSector === index ? 0 : -1"
               class="min-h-11 rounded-full border px-5 text-base font-semibold transition-colors"
-              :class="activeAudience === index ? 'border-brand-lime bg-brand-lime text-brand-forest' : 'border-brand-mist bg-transparent text-white hover:bg-white/10'"
-              @click="activeAudience = index"
-              @keydown="onAudienceKeydown($event, index)"
+              :class="activeSector === index ? 'border-brand-lime bg-brand-lime text-brand-forest' : 'border-brand-mist bg-transparent text-white hover:bg-white/10'"
+              @click="activeSector = index"
+              @keydown="onSectorKeydown($event, index)"
             >
               {{ item.name }}
             </button>
           </div>
           <div
-            id="audience-panel"
+            id="sector-panel"
             role="tabpanel"
-            :aria-labelledby="`audience-tab-${activeAudience}`"
+            :aria-labelledby="`sector-tab-${activeSector}`"
             class="grid gap-6 rounded-[28px] bg-brand-spruce p-6 md:grid-cols-2 md:p-12"
           >
             <div class="flex flex-col gap-4">
-              <h3 class="m-0 text-[40px] font-black leading-none tracking-[-0.04em] text-white">
-                {{ audience.name }}
+              <h3 class="m-0 text-[44px] font-black leading-none tracking-[-0.04em] text-white">
+                {{ sector.name }}
               </h3>
               <p class="m-0 text-lg leading-relaxed text-brand-mist md:text-xl">
-                {{ audience.copy }}
+                {{ sector.copy }}
               </p>
+              <button type="button" class="inline-flex min-h-12 items-center self-start rounded-full bg-brand-lime px-6 font-semibold text-brand-forest hover:bg-brand-lime/85" @click="bookForSector(sector.name)">
+                Book a {{ sector.name.toLowerCase() }} demo
+              </button>
             </div>
             <div class="flex flex-col gap-2.5">
               <div class="text-[13px] font-bold uppercase tracking-[0.08em] text-brand-lime">
-                Included
+                Included out of the box
               </div>
-              <div v-for="feature in audience.items" :key="feature" class="flex items-center gap-3 rounded-xl bg-brand-forest px-4 py-3.5 text-base text-white">
+              <div v-for="feature in sector.items" :key="feature" class="flex items-center gap-3 rounded-xl bg-brand-forest px-4 py-3.5 text-base text-white">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-brand-lime" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>
                 <span>{{ feature }}</span>
               </div>
@@ -268,7 +329,7 @@ const PLATFORM = [
       <section id="platform" class="mx-auto grid max-w-6xl scroll-mt-6 items-center gap-10 px-6 py-20 md:grid-cols-2">
         <div class="flex flex-col gap-5">
           <h2 class="m-0 text-[clamp(2.5rem,6vw,4rem)] font-black leading-[0.95] tracking-[-0.045em] text-brand-obsidian">
-            One record underneath it all.
+            One data platform underneath it all.
           </h2>
           <p class="m-0 text-lg leading-normal">
             Tickets, clients, projects and the calendar share the same data, so support sees the contract, sales sees the open ticket and nobody re-types a client's details.
@@ -289,21 +350,88 @@ const PLATFORM = [
         </div>
       </section>
 
-      <!-- Client support CTA -->
-      <section id="support" class="mx-auto max-w-6xl scroll-mt-6 px-6 pb-20">
-        <div class="grid items-center gap-8 rounded-[28px] bg-brand-lime p-8 md:grid-cols-2 md:p-16">
-          <h2 class="m-0 text-[clamp(2.5rem,6vw,4.5rem)] font-black leading-[0.9] tracking-[-0.05em] text-brand-forest">
-            Need a hand? Raise a request.
+      <!-- Pricing -->
+      <section id="pricing" class="scroll-mt-6 bg-brand-fog px-6 py-20">
+        <div class="mx-auto flex max-w-6xl flex-col gap-8">
+          <h2 class="m-0 text-[clamp(2.5rem,6vw,4rem)] font-black leading-[0.95] tracking-[-0.045em] text-brand-obsidian">
+            Simple plans, per user.
           </h2>
-          <div class="flex flex-col items-start gap-5">
-            <p class="m-0 text-lg leading-relaxed text-brand-forest">
-              Tell us what's happening and attach a photo if you can. You'll get a reference number right away, and our support team will follow up by email.
-            </p>
-            <NuxtLink to="/portal" class="inline-flex min-h-12 items-center rounded-full bg-brand-forest px-7 text-lg font-semibold text-brand-lime hover:bg-brand-spruce">
-              Submit a support request
-            </NuxtLink>
+          <div class="grid gap-4 md:grid-cols-3">
+            <div v-for="plan in PLANS" :key="plan.name" class="flex flex-col gap-3.5 rounded-[28px] p-8" :class="plan.featured ? 'bg-brand-forest' : 'bg-white'">
+              <div class="flex items-center justify-between gap-2">
+                <h3 class="m-0 text-xl font-bold" :class="plan.featured ? 'text-brand-lime' : 'text-brand-forest'">
+                  {{ plan.name }}
+                </h3>
+                <span v-if="plan.featured" class="rounded-full bg-brand-lime px-3 py-1.5 text-xs font-semibold text-brand-forest">Most teams</span>
+              </div>
+              <div class="text-[44px] font-black leading-none tracking-[-0.04em]" :class="plan.featured ? 'text-white' : 'text-brand-obsidian'">
+                {{ plan.headline }}
+              </div>
+              <p class="m-0 flex-1 text-[15px] leading-normal" :class="plan.featured ? 'text-brand-mist' : ''">
+                {{ plan.copy }}
+              </p>
+              <component
+                :is="plan.cta.to.startsWith('#') ? 'a' : NuxtLink"
+                v-bind="plan.cta.to.startsWith('#') ? { href: plan.cta.to } : { to: plan.cta.to }"
+                class="inline-flex min-h-11 items-center self-start rounded-full px-6"
+                :class="plan.featured ? 'bg-brand-lime font-semibold text-brand-forest hover:bg-brand-lime/85' : 'border border-brand-forest font-medium text-brand-forest hover:bg-brand-mist'"
+              >
+                {{ plan.cta.label }}
+              </component>
+            </div>
           </div>
         </div>
+      </section>
+
+      <!-- Book a demo -->
+      <section id="demo" class="mx-auto max-w-6xl scroll-mt-6 px-6 py-20">
+        <div class="grid items-center gap-8 rounded-[28px] bg-brand-lime p-8 md:grid-cols-2 md:p-16">
+          <h2 class="m-0 text-[clamp(2.5rem,6vw,4.5rem)] font-black leading-[0.9] tracking-[-0.05em] text-brand-forest">
+            See Canopy with your own data.
+          </h2>
+          <div v-if="demo.sent" role="status" class="flex flex-col gap-3 rounded-2xl bg-brand-forest p-6 text-white">
+            <span class="text-2xl font-black tracking-[-0.03em] text-brand-lime">Thanks, we've got it.</span>
+            <p class="m-0 leading-relaxed text-brand-mist">
+              Someone from our team will email {{ demo.email }} to find a time that suits you.
+            </p>
+          </div>
+          <form v-else class="flex flex-col gap-3" novalidate @submit.prevent="submitDemo">
+            <label class="flex flex-col gap-1.5 text-sm font-semibold text-brand-forest">
+              Work email
+              <input
+                id="demo-email"
+                v-model="demo.email"
+                type="email"
+                autocomplete="email"
+                required
+                placeholder="you@company.com"
+                :aria-invalid="!!demo.error"
+                aria-describedby="demo-error"
+                class="min-h-12 rounded-xl border border-brand-forest bg-white px-4 text-base font-normal text-brand-obsidian outline-none focus-visible:ring-2 focus-visible:ring-brand-forest"
+              >
+            </label>
+            <label class="flex flex-col gap-1.5 text-sm font-semibold text-brand-forest">
+              Sector
+              <select v-model="demo.sector" class="min-h-12 rounded-xl border border-brand-forest bg-white px-4 text-base font-normal text-brand-obsidian outline-none focus-visible:ring-2 focus-visible:ring-brand-forest">
+                <option v-for="name in DEMO_SECTORS" :key="name" :value="name">{{ name }}</option>
+              </select>
+            </label>
+            <!-- Honeypot: hidden from people and screen readers; bots fill it in. -->
+            <input v-model="demo.website" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute -left-[9999px] h-0 w-0 opacity-0">
+            <p id="demo-error" class="m-0 min-h-5 text-sm font-semibold text-[#8a1c1c]" aria-live="polite">
+              {{ demo.error }}
+            </p>
+            <button type="submit" :disabled="demo.busy" class="min-h-13 rounded-full bg-brand-forest px-7 text-[17px] font-semibold text-brand-lime hover:bg-brand-spruce disabled:opacity-70">
+              {{ demo.busy ? 'Sending…' : 'Book my demo' }}
+            </button>
+          </form>
+        </div>
+        <p class="m-0 mt-6 text-center text-[15px]">
+          Already a customer and need help?
+          <NuxtLink to="/portal" class="font-semibold text-brand-forest underline underline-offset-2">
+            Submit a support request
+          </NuxtLink>
+        </p>
       </section>
     </main>
 
@@ -316,14 +444,10 @@ const PLATFORM = [
           </div>
         </div>
         <nav aria-label="Footer" class="flex flex-wrap gap-6 text-[15px]">
+          <a v-for="link in NAV_LINKS" :key="link.href" :href="link.href" class="text-white hover:text-brand-lime">{{ link.label }}</a>
+          <a href="#demo" class="text-white hover:text-brand-lime">Contact</a>
           <NuxtLink to="/portal" class="text-white hover:text-brand-lime">
-            Submit a request
-          </NuxtLink>
-          <NuxtLink to="/signup" class="text-white hover:text-brand-lime">
-            Create a workspace
-          </NuxtLink>
-          <NuxtLink to="/login" class="text-white hover:text-brand-lime">
-            Sign in
+            Support
           </NuxtLink>
           <NuxtLink to="/docs" class="text-white hover:text-brand-lime">
             API reference

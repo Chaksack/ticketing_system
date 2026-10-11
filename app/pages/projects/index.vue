@@ -56,6 +56,26 @@ const filteredProjects = computed(() => {
   })
 })
 
+const statusTabs = computed(() => [
+  { value: 'all', label: 'All', count: projects.value.length },
+  ...projectStatuses.map(option => ({ value: option.value as string, label: option.label, count: projects.value.filter(project => project.status === option.value).length })),
+])
+
+function exportProjects() {
+  downloadCsv('projects.csv', ['ID', 'Name', 'Client', 'Status', 'Start', 'End', 'Currency', 'Contract value', 'Margin', 'Amount due'], filteredProjects.value.map(project => [
+    project.id,
+    project.name,
+    project.clientName,
+    statusLabel(project.status),
+    project.startDate?.slice(0, 10),
+    project.endDate?.slice(0, 10),
+    project.currency,
+    project.contractValue,
+    project.margin,
+    project.amountDue,
+  ]))
+}
+
 const isDetailOpen = ref(false)
 const selectedProjectId = ref<string | null>(null)
 const selectedProject = computed(() => projects.value.find(p => p.id === selectedProjectId.value) ?? null)
@@ -123,74 +143,117 @@ function formatDate(value?: string) {
 
 <template>
   <div class="w-full flex flex-col items-stretch gap-4">
-    <div class="flex flex-wrap items-end justify-between gap-2">
-      <div>
-        <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
-          Projects
-        </h2>
-        <p class="text-muted-foreground">
-          Track client projects and the AMC contracts tied to each one.
-        </p>
-      </div>
+    <PageActions label="Project actions">
+      <Button variant="lime" @click="isAddOpen = true">
+        <Icon name="i-lucide-plus" />
+        New project
+      </Button>
+      <Button variant="ghost" :disabled="!filteredProjects.length" @click="exportProjects">
+        <Icon name="i-lucide-download" />
+        Export
+      </Button>
+    </PageActions>
 
-      <Sheet v-model:open="isAddOpen">
-        <SheetTrigger as-child>
-          <Button>
-            <Icon name="i-lucide-plus" class="mr-2 h-4 w-4" />
-            New Project
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
-          <SheetHeader class="p-0">
-            <SheetTitle>New Project</SheetTitle>
-            <SheetDescription>
-              Create a project under a client.
-            </SheetDescription>
-          </SheetHeader>
+    <PageTitle title="Projects">
+      <template #aside>
+        <PageSegmentedTabs v-model="statusFilter" label="Status" :options="statusTabs" />
+      </template>
+    </PageTitle>
 
-          <form class="flex flex-col gap-4" @submit="onSubmit">
-            <FormField v-slot="{ componentField }" name="clientId">
-              <FormItem>
-                <FormLabel>Client</FormLabel>
-                <Select v-bind="componentField">
-                  <FormControl>
-                    <SelectTrigger class="w-full">
-                      <SelectValue placeholder="Select a client" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem v-for="c in clients" :key="c.id" :value="c.id">
-                      {{ c.name }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            </FormField>
+    <Sheet v-model:open="isAddOpen">
+      <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
+        <SheetHeader class="p-0">
+          <SheetTitle>New Project</SheetTitle>
+          <SheetDescription>
+            Create a project under a client.
+          </SheetDescription>
+        </SheetHeader>
 
-            <FormField v-slot="{ componentField }" name="name">
-              <FormItem>
-                <FormLabel>Project Name</FormLabel>
+        <form class="flex flex-col gap-4" @submit="onSubmit">
+          <FormField v-slot="{ componentField }" name="clientId">
+            <FormItem>
+              <FormLabel>Client</FormLabel>
+              <Select v-bind="componentField">
                 <FormControl>
-                  <Input type="text" placeholder="e.g. HQ Building Automation" v-bind="componentField" />
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="Select a client" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem v-for="c in clients" :key="c.id" :value="c.id">
+                    {{ c.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ componentField }" name="name">
+            <FormItem>
+              <FormLabel>Project Name</FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="e.g. HQ Building Automation" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ componentField }" name="description">
+            <FormItem>
+              <FormLabel>Description (optional)</FormLabel>
+              <FormControl>
+                <Textarea rows="3" placeholder="What's this project about..." v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ componentField }" name="status">
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select v-bind="componentField">
+                <FormControl>
+                  <SelectTrigger class="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem v-for="option in projectStatuses" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <div class="grid grid-cols-2 gap-4">
+            <FormField v-slot="{ componentField }" name="startDate">
+              <FormItem>
+                <FormLabel>Start Date</FormLabel>
+                <FormControl>
+                  <Input type="date" v-bind="componentField" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             </FormField>
 
-            <FormField v-slot="{ componentField }" name="description">
+            <FormField v-slot="{ componentField }" name="endDate">
               <FormItem>
-                <FormLabel>Description (optional)</FormLabel>
+                <FormLabel>End Date</FormLabel>
                 <FormControl>
-                  <Textarea rows="3" placeholder="What's this project about..." v-bind="componentField" />
+                  <Input type="date" v-bind="componentField" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             </FormField>
+          </div>
 
-            <FormField v-slot="{ componentField }" name="status">
+          <div class="grid grid-cols-2 gap-4">
+            <FormField v-slot="{ componentField }" name="currency">
               <FormItem>
-                <FormLabel>Status</FormLabel>
+                <FormLabel>Currency</FormLabel>
                 <Select v-bind="componentField">
                   <FormControl>
                     <SelectTrigger class="w-full">
@@ -198,8 +261,8 @@ function formatDate(value?: string) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem v-for="option in projectStatuses" :key="option.value" :value="option.value">
-                      {{ option.label }}
+                    <SelectItem v-for="option in PROJECT_CURRENCIES" :key="option.code" :value="option.code">
+                      {{ option.symbol }} {{ option.label }}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -207,87 +270,31 @@ function formatDate(value?: string) {
               </FormItem>
             </FormField>
 
-            <div class="grid grid-cols-2 gap-4">
-              <FormField v-slot="{ componentField }" name="startDate">
-                <FormItem>
-                  <FormLabel>Start Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" v-bind="componentField" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
+            <FormField v-slot="{ componentField }" name="contractValue">
+              <FormItem>
+                <FormLabel>Project Value (optional)</FormLabel>
+                <FormControl>
+                  <Input type="number" min="0" step="0.01" placeholder="What the client pays" v-bind="componentField" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+          </div>
 
-              <FormField v-slot="{ componentField }" name="endDate">
-                <FormItem>
-                  <FormLabel>End Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" v-bind="componentField" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <FormField v-slot="{ componentField }" name="currency">
-                <FormItem>
-                  <FormLabel>Currency</FormLabel>
-                  <Select v-bind="componentField">
-                    <FormControl>
-                      <SelectTrigger class="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem v-for="option in PROJECT_CURRENCIES" :key="option.code" :value="option.code">
-                        {{ option.symbol }} {{ option.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-
-              <FormField v-slot="{ componentField }" name="contractValue">
-                <FormItem>
-                  <FormLabel>Project Value (optional)</FormLabel>
-                  <FormControl>
-                    <Input type="number" min="0" step="0.01" placeholder="What the client pays" v-bind="componentField" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-            </div>
-
-            <SheetFooter class="p-0">
-              <Button type="submit">
-                Create Project
-              </Button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
-    </div>
+          <SheetFooter class="p-0">
+            <Button type="submit">
+              Create Project
+            </Button>
+          </SheetFooter>
+        </form>
+      </SheetContent>
+    </Sheet>
 
     <div class="flex flex-wrap items-center gap-2">
       <div class="relative flex-1 min-w-[200px] max-w-sm">
         <Icon name="i-lucide-search" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input v-model="searchQuery" placeholder="Search projects..." class="pl-8" />
       </div>
-      <Select v-model="statusFilter">
-        <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">
-            All statuses
-          </SelectItem>
-          <SelectItem v-for="option in projectStatuses" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
       <Select v-model="clientFilter">
         <SelectTrigger class="h-9 w-auto gap-1.5 text-xs">
           <SelectValue />
@@ -303,8 +310,8 @@ function formatDate(value?: string) {
       </Select>
     </div>
 
-    <div class="border rounded-md">
-      <Table>
+    <div class="rounded-[28px] bg-card px-3 pb-3 pt-1.5 ring-1 ring-black/10 sm:px-5 sm:pb-5 dark:ring-white/10">
+      <Table class="[&_th]:h-11 [&_th]:text-[13px] [&_th]:font-semibold">
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>

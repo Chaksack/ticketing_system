@@ -58,9 +58,9 @@ const faqs = [
 <template>
   <div class="w-full flex flex-col gap-6">
     <div>
-      <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
+      <h1 class="text-4xl font-black leading-none tracking-[-0.045em] text-foreground sm:text-[44px]">
         Help &amp; Support
-      </h2>
+      </h1>
       <p class="text-muted-foreground">
         How the Canopy works, and how to get the most out of it.
       </p>

@@ -56,16 +56,16 @@ async function save(policy: SlaPolicy) {
 <template>
   <div class="w-full flex flex-col items-stretch gap-4">
     <div>
-      <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
+      <h1 class="text-4xl font-black leading-none tracking-[-0.045em] text-foreground sm:text-[44px]">
         SLA Policies
-      </h2>
+      </h1>
       <p class="text-muted-foreground">
         First-response and resolution targets by priority. Breaches automatically page on-call staff.
       </p>
     </div>
 
-    <div class="border rounded-md">
-      <Table>
+    <div class="rounded-[28px] bg-card px-3 pb-3 pt-1.5 ring-1 ring-black/10 sm:px-5 sm:pb-5 dark:ring-white/10">
+      <Table class="[&_th]:h-11 [&_th]:text-[13px] [&_th]:font-semibold">
         <TableHeader>
           <TableRow>
             <TableHead>Priority</TableHead>

@@ -19,9 +19,9 @@ onMounted(async () => {
 <template>
   <div class="w-full flex flex-col items-stretch gap-4">
     <div>
-      <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
+      <h1 class="text-4xl font-black leading-none tracking-[-0.045em] text-foreground sm:text-[44px]">
         Tasks
-      </h2>
+      </h1>
       <p class="text-muted-foreground">
         Organize work into epics, tasks, and subtasks — with assignees, deadlines, and reminders.
       </p>

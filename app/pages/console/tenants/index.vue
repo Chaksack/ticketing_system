@@ -39,9 +39,9 @@ function formatDate(value: string) {
       <div class="text-sm text-muted-foreground">
         Canopy staff console
       </div>
-      <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
+      <h1 class="text-4xl font-black leading-none tracking-[-0.045em] text-foreground sm:text-[44px]">
         Tenants
-      </h2>
+      </h1>
       <p class="text-muted-foreground">
         Every company on Canopy. Each has its own database; counts are read live.
       </p>

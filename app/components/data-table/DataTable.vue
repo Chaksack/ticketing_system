@@ -55,8 +55,8 @@ const table = useVueTable({
 <template>
   <div class="space-y-4">
     <slot name="toolbar" :table="table" />
-    <div class="border rounded-md">
-      <Table>
+    <div class="rounded-[28px] bg-card px-3 pb-3 pt-1.5 ring-1 ring-black/10 sm:px-5 sm:pb-5 dark:ring-white/10">
+      <Table class="[&_th]:h-11 [&_th]:text-[13px] [&_th]:font-semibold">
         <TableHeader>
           <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
             <TableHead v-for="header in headerGroup.headers" :key="header.id">

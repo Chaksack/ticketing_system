@@ -27,6 +27,10 @@ export const ORG_SECTORS = [
   { name: 'Other', hint: 'Core CRM only' },
 ] as const
 
+/** Sectors offered on the website's sector tabs and "Book a demo" form. */
+export const DEMO_SECTORS = ['Real estate', 'Healthcare', 'Financial services', 'Manufacturing', 'Public sector', 'Retail', 'Education', 'Nonprofit', 'Other'] as const
+export type DemoSector = typeof DEMO_SECTORS[number]
+
 export const ORG_SIZES = ['1–10 people', '11–50 people', '51–250 people', '251–1,000 people', '1,000+ people'] as const
 
 /** Workspace addresses that can't be claimed. */

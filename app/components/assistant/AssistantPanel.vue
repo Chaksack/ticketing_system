@@ -10,7 +10,7 @@ interface ChatMessage {
 
 const { isAgent, isBd, isSm, isAdmin } = useAuth()
 
-const open = ref(false)
+const { isOpen: open, pendingQuestion } = useAssistant()
 const input = ref('')
 const isSending = ref(false)
 const messages = ref<ChatMessage[]>([])
@@ -75,6 +75,14 @@ watch(open, (isOpen) => {
     return
   scrollToBottom()
 })
+
+// A question handed over from elsewhere (e.g. the dashboard's "Ask about your pipeline").
+watch(pendingQuestion, (question) => {
+  if (!question)
+    return
+  pendingQuestion.value = null
+  send(question)
+}, { immediate: true })
 </script>
 
 <template>

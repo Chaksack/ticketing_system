@@ -26,6 +26,39 @@ onMounted(async () => {
 
 watch(viewScope, scope => fetchClients(scope === 'team' ? { scope: 'team' } : undefined))
 
+const VIEWS = [
+  { value: 'all', label: 'All clients' },
+  { value: 'team', label: 'My team\'s clients' },
+] as const
+
+type StageFilter = 'all' | 'prospect' | 'active' | 'lost'
+const stageFilter = ref<StageFilter>('all')
+const PROSPECT_STAGES = new Set(['lead', 'contacted', 'proposal', 'negotiation'])
+function matchesStage(client: Client, filter: StageFilter) {
+  return filter === 'all' || (filter === 'prospect' ? PROSPECT_STAGES.has(client.stage) : client.stage === filter)
+}
+const stageTabs = computed(() => ([
+  { value: 'all', label: 'All' },
+  { value: 'prospect', label: 'Prospects' },
+  { value: 'active', label: 'Active' },
+  { value: 'lost', label: 'Lost' },
+] as const).map(tab => ({ ...tab, count: clients.value.filter(client => matchesStage(client, tab.value)).length })))
+const visibleItems = computed(() => clients.value.filter(client => matchesStage(client, stageFilter.value)))
+
+function exportList() {
+  downloadCsv('clients.csv', ['ID', 'Name', 'Contact', 'Email', 'Phone', 'Stage', 'Estimated value', 'Assignees', 'Created'], visibleItems.value.map(client => [
+    client.id,
+    client.name,
+    client.contactName,
+    client.contactEmail,
+    client.contactPhone,
+    stages.find(stage => stage.value === client.stage)?.label ?? client.stage,
+    client.estimatedValue,
+    client.assignees.map(a => a.name).join('; '),
+    client.createdAt?.slice(0, 10),
+  ]))
+}
+
 const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'))
 
 const isDetailOpen = ref(false)
@@ -85,129 +118,118 @@ const onSubmit = handleSubmit(async (values) => {
 
 <template>
   <div class="w-full flex flex-col items-stretch gap-4">
-    <div class="flex flex-wrap items-end justify-between gap-2">
-      <div>
-        <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
-          Clients
-        </h2>
-        <p class="text-muted-foreground">
-          Manage clients and track their progress through the pipeline.
-        </p>
-      </div>
+    <PageActions label="Clients actions">
+      <Button variant="lime" @click="isAddOpen = true">
+        <Icon name="i-lucide-plus" />
+        New client
+      </Button>
+      <Button variant="ghost" :disabled="!visibleItems.length" @click="exportList">
+        <Icon name="i-lucide-download" />
+        Export
+      </Button>
+    </PageActions>
 
-      <Sheet v-model:open="isAddOpen">
-        <SheetTrigger as-child>
-          <Button>
-            <Icon name="i-lucide-plus" class="mr-2 h-4 w-4" />
-            Add Client
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
-          <SheetHeader class="p-0">
-            <SheetTitle>Add Client</SheetTitle>
-            <SheetDescription>
-              Add a new client to the pipeline.
-            </SheetDescription>
-          </SheetHeader>
+    <PageTitle v-model:view="viewScope" title="Clients" :views="VIEWS">
+      <template #aside>
+        <PageSegmentedTabs v-model="stageFilter" label="Stage" :options="stageTabs" />
+      </template>
+    </PageTitle>
 
-          <form class="flex flex-col gap-4" @submit="onSubmit">
-            <FormField v-slot="{ componentField }" name="name">
+    <Sheet v-model:open="isAddOpen">
+      <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto p-6">
+        <SheetHeader class="p-0">
+          <SheetTitle>Add Client</SheetTitle>
+          <SheetDescription>
+            Add a new client to the pipeline.
+          </SheetDescription>
+        </SheetHeader>
+
+        <form class="flex flex-col gap-4" @submit="onSubmit">
+          <FormField v-slot="{ componentField }" name="name">
+            <FormItem>
+              <FormLabel>Client Name</FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="Acme Corp" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <div class="grid grid-cols-2 gap-4">
+            <FormField v-slot="{ componentField }" name="contactName">
               <FormItem>
-                <FormLabel>Client Name</FormLabel>
+                <FormLabel>Contact Name</FormLabel>
                 <FormControl>
-                  <Input type="text" placeholder="Acme Corp" v-bind="componentField" />
+                  <Input type="text" placeholder="Jane Doe" v-bind="componentField" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             </FormField>
 
-            <div class="grid grid-cols-2 gap-4">
-              <FormField v-slot="{ componentField }" name="contactName">
-                <FormItem>
-                  <FormLabel>Contact Name</FormLabel>
-                  <FormControl>
-                    <Input type="text" placeholder="Jane Doe" v-bind="componentField" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-
-              <FormField v-slot="{ componentField }" name="contactEmail">
-                <FormItem>
-                  <FormLabel>Contact Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="jane@acme.com" v-bind="componentField" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <FormField v-slot="{ componentField }" name="contactPhone">
-                <FormItem>
-                  <FormLabel>Contact Phone</FormLabel>
-                  <FormControl>
-                    <Input type="text" placeholder="Optional" v-bind="componentField" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-
-              <FormField v-slot="{ componentField }" name="stage">
-                <FormItem>
-                  <FormLabel>Stage</FormLabel>
-                  <Select v-bind="componentField">
-                    <FormControl>
-                      <SelectTrigger class="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem v-for="option in stages" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-            </div>
-
-            <FormField v-slot="{ componentField }" name="assigneeIds">
+            <FormField v-slot="{ componentField }" name="contactEmail">
               <FormItem>
-                <FormLabel>Assign to (optional)</FormLabel>
+                <FormLabel>Contact Email</FormLabel>
                 <FormControl>
-                  <StaffAssigneePicker v-bind="componentField" :staff="activeStaff" />
+                  <Input type="email" placeholder="jane@acme.com" v-bind="componentField" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <FormField v-slot="{ componentField }" name="contactPhone">
+              <FormItem>
+                <FormLabel>Contact Phone</FormLabel>
+                <FormControl>
+                  <Input type="text" placeholder="Optional" v-bind="componentField" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             </FormField>
 
-            <DuplicateWarning entity="clients" :matches="duplicateMatches" />
+            <FormField v-slot="{ componentField }" name="stage">
+              <FormItem>
+                <FormLabel>Stage</FormLabel>
+                <Select v-bind="componentField">
+                  <FormControl>
+                    <SelectTrigger class="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem v-for="option in stages" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+          </div>
 
-            <SheetFooter class="p-0">
-              <Button type="submit" :disabled="!!blockingDuplicate">
-                Add Client
-              </Button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
-    </div>
+          <FormField v-slot="{ componentField }" name="assigneeIds">
+            <FormItem>
+              <FormLabel>Assign to (optional)</FormLabel>
+              <FormControl>
+                <StaffAssigneePicker v-bind="componentField" :staff="activeStaff" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
 
-    <Tabs v-model="viewScope">
-      <TabsList>
-        <TabsTrigger value="all">
-          All
-        </TabsTrigger>
-        <TabsTrigger value="team">
-          My Team
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
+          <DuplicateWarning entity="clients" :matches="duplicateMatches" />
 
-    <DataTable :data="clients" :columns="columns" @select="openClient">
+          <SheetFooter class="p-0">
+            <Button type="submit" :disabled="!!blockingDuplicate">
+              Add Client
+            </Button>
+          </SheetFooter>
+        </form>
+      </SheetContent>
+    </Sheet>
+
+    <DataTable :data="visibleItems" :columns="columns" @select="openClient">
       <template #toolbar="{ table }">
         <DataTableToolbar :table="table" />
       </template>

@@ -120,7 +120,6 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/components': { redirect: '/components/accordion' },
     '/settings': { redirect: '/settings/profile' },
   },
 
@@ -156,10 +155,6 @@ export default defineNuxtConfig({
     },
     prerender: {
       ignore: [
-        '/examples/forms',
-        '/terms',
-        '/privacy',
-        '/components/pagination',
         '/docs',
       ],
     },

@@ -73,9 +73,9 @@ function formatDateTime(value: string) {
           <div class="text-sm text-muted-foreground">
             Tenant · {{ tenant.slug }}
           </div>
-          <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
+          <h1 class="text-4xl font-black leading-none tracking-[-0.045em] text-foreground sm:text-[44px]">
             {{ tenant.name }}
-          </h2>
+          </h1>
         </div>
         <div class="flex items-center gap-2">
           <ConsoleStatusBadge :status="tenant.status" />

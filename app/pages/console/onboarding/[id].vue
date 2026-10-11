@@ -175,9 +175,9 @@ async function copyInvite() {
               · {{ draft.usersEstimate }} users
             </template> · {{ ORG_PLANS.find(p => p.id === draft!.plan)?.label }} plan · Owner {{ draft.ownerName ?? '—' }}
           </div>
-          <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
+          <h1 class="text-4xl font-black leading-none tracking-[-0.045em] text-foreground sm:text-[44px]">
             {{ draft.clientName }}
-          </h2>
+          </h1>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <ConsoleStatusBadge :status="saved!.status" />
