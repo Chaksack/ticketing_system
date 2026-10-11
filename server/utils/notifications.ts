@@ -15,7 +15,7 @@ export interface NewNotification {
 
 export async function createNotification(input: NewNotification) {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const id = await nextNotificationId()
   const now = new Date().toISOString()
@@ -41,7 +41,7 @@ const READ_RETENTION_MS = 30 * 60 * 1000
 
 export async function pruneReadNotifications() {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const cutoff = new Date(Date.now() - READ_RETENTION_MS).toISOString()
   const due = await db.prepare('SELECT id FROM notifications WHERE read = 1 AND read_at IS NOT NULL AND read_at <= ?').all(cutoff) as { id: string }[]

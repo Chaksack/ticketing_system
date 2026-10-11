@@ -47,7 +47,7 @@ export interface TimesheetFilter {
 
 /** One flexible filtered query, with an optional-filter builder. */
 export async function getTimesheets(filter: TimesheetFilter = {}): Promise<TimesheetEntry[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const conditions: string[] = []
   const params: string[] = []
@@ -87,7 +87,7 @@ export async function getTimesheets(filter: TimesheetFilter = {}): Promise<Times
 }
 
 export async function getTimesheetById(id: string): Promise<TimesheetEntry | undefined> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare(`
     SELECT timesheets.*, staff.name AS staff_name, tasks.title AS task_title, tasks.project_id AS project_id, projects.name AS project_name
@@ -117,7 +117,7 @@ function utilizationStatus(pct: number): UtilizationStatus {
 }
 
 export async function getResourceUtilization(from: string, to: string): Promise<ResourceUtilizationRow[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const days = Math.max(1, Math.round((new Date(to).getTime() - new Date(from).getTime()) / (24 * 60 * 60 * 1000)) + 1)
   const capacityHours = WEEKLY_CAPACITY_HOURS * (days / 7)

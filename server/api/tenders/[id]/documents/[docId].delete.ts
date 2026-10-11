@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const document = await db.prepare('SELECT * FROM tender_documents WHERE id = ? AND tender_id = ?').get(docId, tenderId) as TenderDocumentRow | undefined
   if (!document) {

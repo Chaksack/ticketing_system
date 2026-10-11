@@ -38,7 +38,7 @@ export function mapSalesOrderRow(row: SalesOrderRow, lineItems: LineItem[] = [])
 }
 
 export async function loadFullSalesOrder(id: string): Promise<SalesOrder> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare(`
     SELECT sales_orders.*, staff.name AS created_by_name
@@ -57,7 +57,7 @@ export async function loadFullSalesOrder(id: string): Promise<SalesOrder> {
 }
 
 export async function getSalesOrdersForRecord(regardingType: RegardingType, regardingId: string): Promise<SalesOrder[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const rows = await db.prepare(`
     SELECT sales_orders.*, staff.name AS created_by_name

@@ -1,5 +1,4 @@
 import type { StaffRow } from '../../../utils/mappers'
-import { randomBytes } from 'node:crypto'
 
 // Longer than the self-serve "forgot password" link (1 hour) — the person may not see the
 // admin's email straight away.
@@ -20,7 +19,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare('SELECT * FROM staff WHERE id = ?').get(id) as StaffRow | undefined
   if (!row) {
@@ -34,7 +33,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const isSelf = row.id === admin.id
-  const token = randomBytes(32).toString('hex')
+  const token = newOrgToken()
   const expiresAt = new Date(Date.now() + ADMIN_RESET_LINK_HOURS * 60 * 60 * 1000).toISOString()
   await db.prepare('UPDATE staff SET reset_token = ?, reset_expires_at = ? WHERE id = ?').run(token, expiresAt, row.id)
 

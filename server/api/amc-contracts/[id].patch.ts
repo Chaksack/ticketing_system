@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT * FROM client_amc_contracts WHERE id = ?').get(id) as ContractRow | undefined
   if (!existing) {

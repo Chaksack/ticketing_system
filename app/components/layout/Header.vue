@@ -3,6 +3,7 @@ import type { AuthUser } from '~/composables/useAuth'
 import { toast } from 'vue-sonner'
 
 const route = useRoute()
+const { homePath } = useAuth()
 const { isRefreshing, refreshAll, onAppRefresh } = useAppRefresh()
 const currentUser = useState<AuthUser | null>('current-user')
 
@@ -18,8 +19,8 @@ async function onRefresh() {
 }
 
 function setLinks() {
-  if (route.fullPath === '/') {
-    return [{ title: 'Home', href: '/' }]
+  if (route.fullPath === homePath.value) {
+    return [{ title: 'Home', href: homePath.value }]
   }
 
   const segments = route.fullPath.split('/').filter(item => item !== '')
@@ -37,7 +38,7 @@ function setLinks() {
     }
   })
 
-  return [{ title: 'Home', href: '/' }, ...breadcrumbs]
+  return [{ title: 'Home', href: homePath.value }, ...breadcrumbs]
 }
 
 const links = ref<{
@@ -53,7 +54,9 @@ watch(() => route.fullPath, (val) => {
 </script>
 
 <template>
-  <header class="sticky top-0 md:peer-data-[variant=inset]:top-2 z-10 h-(--header-height) flex items-center gap-4 border-b bg-background px-4 md:px-6 md:rounded-tl-xl md:rounded-tr-xl">
+  <!-- `dark` scopes the dark-mode tokens to the bar, so every button, menu trigger and the
+       breadcrumb inside it reads light-on-forest without restyling each one. -->
+  <header class="dark sticky top-0 md:peer-data-[variant=inset]:top-2 z-10 h-(--header-height) flex items-center gap-4 bg-brand-forest text-foreground px-4 md:px-6 md:rounded-tl-xl md:rounded-tr-xl">
     <div class="w-full flex items-center gap-4 h-4">
       <SidebarTrigger />
       <Separator orientation="vertical" />

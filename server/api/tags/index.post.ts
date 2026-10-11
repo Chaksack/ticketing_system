@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const name = body.name.trim()
   const existing = await db.prepare('SELECT * FROM tags WHERE name = ?').get(name) as TagRow | undefined

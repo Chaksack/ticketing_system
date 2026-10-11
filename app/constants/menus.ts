@@ -27,7 +27,7 @@ export const navMenu: NavMenu[] = [
       {
         title: 'Overview',
         icon: 'i-lucide-home',
-        link: '/',
+        link: '/overview',
         roles: ['bd', 'sm'],
       },
       {
@@ -122,8 +122,37 @@ export const navMenu: NavMenu[] = [
     ],
   },
   {
+    heading: 'Canopy Console',
+    items: [
+      {
+        title: 'Console Overview',
+        icon: 'i-lucide-radar',
+        link: '/console',
+        platformOnly: true,
+      },
+      {
+        title: 'Tenants',
+        icon: 'i-lucide-building-2',
+        link: '/console/tenants',
+        platformOnly: true,
+      },
+      {
+        title: 'Client Onboarding',
+        icon: 'i-lucide-file-signature',
+        link: '/console/onboarding',
+        platformOnly: true,
+      },
+    ],
+  },
+  {
     heading: 'Administration',
     items: [
+      {
+        title: 'Organisation',
+        icon: 'i-lucide-building',
+        link: '/admin/organization',
+        adminOnly: true,
+      },
       {
         title: 'Executive Dashboard',
         icon: 'i-lucide-layout-dashboard',

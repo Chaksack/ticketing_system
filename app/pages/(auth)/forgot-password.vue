@@ -7,9 +7,8 @@ definePageMeta({
 <template>
   <div class="flex flex-col items-center justify-center gap-6 bg-muted p-6 min-h-svh md:p-10">
     <div class="max-w-sm w-full flex flex-col gap-6">
-      <NuxtLink to="/login" class="flex items-center self-center gap-2 font-medium">
-        <img src="/icons/logo.png" alt="" class="h-6 w-6 object-contain">
-        Intelligent Building Solutions
+      <NuxtLink to="/login" aria-label="Canopy, back to sign in" class="flex items-center self-center">
+        <BrandLogo :size="30" />
       </NuxtLink>
       <Card>
         <CardHeader class="text-center">

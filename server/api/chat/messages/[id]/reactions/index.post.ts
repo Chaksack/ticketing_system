@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const messageRow = await db.prepare(`
     SELECT chat_messages.*, staff.name AS author_name

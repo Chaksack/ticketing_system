@@ -104,7 +104,7 @@ export async function testConnection(row: ErpConnectionRow): Promise<{ ok: boole
 
 /** Fetches one path from the external ERP, logs the raw response into erp_import_records, and updates the connection's sync status. */
 export async function fetchResource(row: ErpConnectionRow, path: string): Promise<unknown> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const url = new URL(path, row.base_url).toString()
   const now = new Date().toISOString()
 

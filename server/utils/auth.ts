@@ -14,6 +14,10 @@ interface SessionData {
   user?: SessionUser
   /** When this session signed in. Sessions older than staff.password_changed_at are rejected. */
   authAt?: string
+  /** The company (organisation) this person signed in to — see server/utils/tenancy.ts. */
+  orgId?: string
+  /** Self-serve sign-up in progress (server/api/signup), before the company exists. */
+  signup?: SignupDraft
   /** CSRF nonce for the in-progress personal-Gmail OAuth connect flow, cleared once used. */
   gmailOAuthState?: string
   /** CSRF nonce + provider id for the in-progress Settings > Integrations OAuth connect flow, cleared once used. */
@@ -44,7 +48,7 @@ export async function getSessionUser(event: H3Event): Promise<SessionUser | null
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const row = await db.prepare('SELECT * FROM staff WHERE id = ?').get(sessionUser.id) as StaffRow | undefined
 
   if (!row || row.status === 'disabled') {
@@ -66,10 +70,20 @@ export async function getSessionUser(event: H3Event): Promise<SessionUser | null
   }
 }
 
-/** Signs `user` in on this request's session, stamped with the sign-in time (see getSessionUser). */
+/** Signs `user` in to the current company on this session, stamped with the sign-in time (see getSessionUser). */
 export async function startUserSession(event: H3Event, user: SessionUser, authAt = new Date().toISOString()) {
   const session = await useAuthSession(event)
-  await session.update({ user, authAt })
+  await session.update({ user, authAt, orgId: currentOrgId(), signup: undefined })
+}
+
+export interface SignupDraft {
+  firstName: string
+  lastName: string
+  email: string
+  passwordHash: string
+  org?: { name: string, slug: string, country?: string, size?: string, sector?: string }
+  apps?: string[]
+  sampleData?: boolean
 }
 
 /**
@@ -77,7 +91,7 @@ export async function startUserSession(event: H3Event, user: SessionUser, authAt
  * session for that person. Returns the timestamp so the caller can keep its own session valid.
  */
 export async function setStaffPassword(staffId: string, password: string): Promise<string> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const changedAt = new Date().toISOString()
   await db.prepare(`
     UPDATE staff SET password_hash = ?, password_changed_at = ?, reset_token = NULL, reset_expires_at = NULL WHERE id = ?
@@ -92,6 +106,14 @@ export async function requireSessionUser(event: H3Event): Promise<SessionUser> {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
+  return user
+}
+
+/** Canopy staff: admins of the home workspace, who run the staff console across all companies. */
+export async function requirePlatformStaff(event: H3Event): Promise<SessionUser> {
+  const user = await requireAdmin(event)
+  if (currentOrgId() !== HOME_ORG_ID)
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   return user
 }
 

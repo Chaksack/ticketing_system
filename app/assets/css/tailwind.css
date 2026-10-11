@@ -8,7 +8,7 @@
 @theme inline {
   --breakpoint-3xl: 1600px;
   --breakpoint-4xl: 2000px;
-  --font-sans: "Geist", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -47,6 +47,12 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand-forest: var(--brand-forest);
+  --color-brand-spruce: var(--brand-spruce);
+  --color-brand-lime: var(--brand-lime);
+  --color-brand-mist: var(--brand-mist);
+  --color-brand-fog: var(--brand-fog);
+  --color-brand-obsidian: var(--brand-obsidian);
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
@@ -72,42 +78,52 @@
 }
 
 :root {
-  --header-height: 54px;
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --header-height: 60px;
+  --radius: 0.75rem;
+
+  /* Brand palette (reference: "Canopy" design canvas) — Forest Ink + Lime on soft neutrals. */
+  --brand-forest: #163300;
+  --brand-spruce: #054d28;
+  --brand-lime: #9fe870;
+  --brand-mist: #e2f6d5;
+  --brand-fog: #e8ebe6;
+  --brand-obsidian: #0e0f0c;
+
+  --background: #f6f7f5;
+  --foreground: #0e0f0c;
+  --card: #ffffff;
+  --card-foreground: #0e0f0c;
+  --popover: #ffffff;
+  --popover-foreground: #0e0f0c;
+  /* Forest buttons carry lime text — the brand's signature pairing (contrast ≈ 10:1). */
+  --primary: #163300;
+  --primary-foreground: #9fe870;
+  --secondary: #e8ebe6;
+  --secondary-foreground: #163300;
   --warning: oklch(85.2% 0.199 91.936);
   --warning-foreground: oklch(42.1% 0.095 57.708);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --muted: #eef0ec;
+  --muted-foreground: #5d605d;
+  --accent: #e2f6d5;
+  --accent-foreground: #163300;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --surface: oklch(0.98 0 0);
+  --border: #e1e4de;
+  --input: #d3d8cf;
+  --ring: #054d28;
+  --chart-1: #9fe870;
+  --chart-2: #054d28;
+  --chart-3: #163300;
+  --chart-4: #c9f2ad;
+  --chart-5: #5d605d;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #454745;
+  --sidebar-primary: #163300;
+  --sidebar-primary-foreground: #9fe870;
+  --sidebar-accent: #e2f6d5;
+  --sidebar-accent-foreground: #163300;
+  --sidebar-border: #e8ebe6;
+  --sidebar-ring: #054d28;
+  --surface: #f6f7f5;
   --surface-foreground: var(--foreground);
 
   --vis-primary-color: var(--primary);
@@ -123,41 +139,42 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.269 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  --background: #0c140a;
+  --foreground: #eef3ea;
+  --card: #131e10;
+  --card-foreground: #eef3ea;
+  --popover: #172414;
+  --popover-foreground: #eef3ea;
+  /* In the dark the roles swap: lime buttons with forest text. */
+  --primary: #9fe870;
+  --primary-foreground: #163300;
+  --secondary: #1f2e19;
+  --secondary-foreground: #e2f6d5;
   --warning: oklch(79.5% 0.184 86.047);
   --warning-foreground: oklch(42.1% 0.095 57.708);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --muted: #1b2817;
+  --muted-foreground: #a7b2a2;
+  --accent: #23361a;
+  --accent-foreground: #e2f6d5;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.439 0 0);
-  --surface: oklch(0.2 0 0);
-  --surface-foreground: oklch(0.708 0 0);
+  --border: rgb(226 246 213 / 12%);
+  --input: rgb(226 246 213 / 18%);
+  --ring: #9fe870;
+  --chart-1: #9fe870;
+  --chart-2: #4fb05c;
+  --chart-3: #e2f6d5;
+  --chart-4: #2f6b2a;
+  --chart-5: #a7b2a2;
+  --sidebar: #0f190d;
+  --sidebar-foreground: #c9d3c4;
+  --sidebar-primary: #9fe870;
+  --sidebar-primary-foreground: #163300;
+  --sidebar-accent: #1f3317;
+  --sidebar-accent-foreground: #e2f6d5;
+  --sidebar-border: rgb(226 246 213 / 10%);
+  --sidebar-ring: #9fe870;
+  --surface: #0c140a;
+  --surface-foreground: #a7b2a2;
   --vis-tooltip-background-color: none !important;
   --vis-tooltip-border-color: none !important;
   --vis-tooltip-text-color: none !important;
@@ -176,6 +193,12 @@
     font-family: var(--font-sans);
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Headline style from the reference: heavy weight, tight tracking. */
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
   }
 
   html {

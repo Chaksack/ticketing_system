@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const tender = await db.prepare('SELECT * FROM tenders WHERE id = ?').get(id) as TenderRow | undefined
   if (!tender) {

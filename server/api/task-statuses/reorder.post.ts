@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const now = new Date().toISOString()
   for (const [index, id] of body.ids.entries()) {

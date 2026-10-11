@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { NavVisibilityContext } from '~/composables/useVisibleNav'
 import type { NavGroup, NavLink, NavSectionTitle } from '~/types/nav'
 import type { StaffRole } from '~/types/staff'
 import { navMenu, navMenuBottom } from '~/constants/menus'
@@ -21,26 +22,26 @@ const ROLE_LABELS: Record<StaffRole, string> = {
   engineering_lead: 'Engineering Lead',
 }
 
-const { currentUser, isAdmin } = useAuth()
+const { currentUser, currentOrg, isAdmin, isPlatformStaff } = useAuth()
 
 const teams = computed(() => [
   {
-    name: 'BSM Platform',
-    logo: '/icons/logo.png',
+    name: currentOrg.value?.name ?? 'Canopy',
+    logo: '/brand/canopy-app-icon.svg',
     role: currentUser.value?.roles.map(role => ROLE_LABELS[role]).join(', ') ?? '',
   },
 ])
 
-function isItemOrGroupVisible(item: NavLink | NavGroup | NavSectionTitle, admin: boolean, roles: StaffRole[]) {
+function isItemOrGroupVisible(item: NavLink | NavGroup | NavSectionTitle, admin: boolean, roles: StaffRole[], context: NavVisibilityContext) {
   if ('children' in item)
-    return item.children.some(child => isNavItemVisible(child, admin, roles))
-  return isNavItemVisible(item, admin, roles)
+    return item.children.some(child => isNavItemVisible(child, admin, roles, context))
+  return isNavItemVisible(item, admin, roles, context)
 }
 
 const visibleNavMenu = computed(() => navMenu
   .map(group => ({
     ...group,
-    items: group.items.filter(item => isItemOrGroupVisible(item, isAdmin.value, currentUser.value?.roles ?? [])),
+    items: group.items.filter(item => isItemOrGroupVisible(item, isAdmin.value, currentUser.value?.roles ?? [], { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value })),
   }))
   .filter(group => group.items.length > 0))
 
@@ -49,7 +50,8 @@ const { sidebar } = useAppSettings()
 
 <template>
   <Sidebar :collapsible="sidebar?.collapsible" :side="sidebar?.side" :variant="sidebar?.variant">
-    <SidebarHeader>
+    <!-- Same forest band and height as the top bar, so the two read as one continuous bar. -->
+    <SidebarHeader class="dark h-(--header-height) justify-center bg-brand-forest text-foreground">
       <LayoutSidebarNavHeader :teams="teams" />
     </SidebarHeader>
     <SidebarContent>

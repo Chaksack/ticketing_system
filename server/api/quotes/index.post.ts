@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const table = body.regardingType === 'lead' ? 'leads' : 'tenders'
   const record = await db.prepare(`SELECT id FROM ${table} WHERE id = ?`).get(body.regardingId)

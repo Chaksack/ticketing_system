@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireSessionUser(event)
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const rows = await db.prepare(`
     SELECT * FROM notifications WHERE staff_id = ? ORDER BY created_at DESC LIMIT 30

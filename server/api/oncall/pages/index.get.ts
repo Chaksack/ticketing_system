@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   await requireSessionUser(event)
   await ensureDb()
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT * FROM pages ORDER BY created_at DESC LIMIT 20').all() as PageRow[]
 
   return {

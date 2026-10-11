@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare('SELECT * FROM interactions WHERE id = ?').get(id) as InteractionRow | undefined
   if (!row) {

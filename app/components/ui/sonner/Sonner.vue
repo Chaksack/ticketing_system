@@ -26,8 +26,8 @@ const props = defineProps<ToasterProps>()
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  background-color: #fff;
-  background-image: url('/icons/logo.png');
+  background-color: transparent;
+  background-image: url('/brand/canopy-app-icon.svg');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

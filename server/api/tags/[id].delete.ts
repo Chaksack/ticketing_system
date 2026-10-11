@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   await db.prepare('DELETE FROM ticket_tags WHERE tag_id = ?').run(id)
   await db.prepare('DELETE FROM tags WHERE id = ?').run(id)

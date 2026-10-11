@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   await requireBd(event)
   await ensureDb()
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT c.id, c.client_id, clients.name AS client_name, amc_plans.name AS plan_name, c.end_date
     FROM client_amc_contracts c

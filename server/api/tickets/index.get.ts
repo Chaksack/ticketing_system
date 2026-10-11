@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   await requireSessionUser(event)
   await ensureDb()
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT tickets.*, staff.name AS assignee_name
     FROM tickets

@@ -1,9 +1,56 @@
 import type { NavGroup, NavLink, NavMenu, NavSectionTitle } from '~/types/nav'
+import type { OrgApp } from '~/types/organization'
 import { navMenu } from '~/constants/menus'
 
-export function isNavItemVisible(item: NavLink | NavGroup | NavSectionTitle, isAdmin: boolean, userRoles: string[]) {
+/**
+ * Which app (chosen per company at sign-up, editable under Admin → Organisation) each page
+ * belongs to. Pages not listed — calendar, email, chat, admin, settings — are always available.
+ */
+const APP_BY_PATH: [prefix: string, app: OrgApp][] = [
+  ['/tickets', 'service'],
+  ['/reports', 'service'],
+  ['/admin/automations', 'service'],
+  ['/admin/sla', 'service'],
+  ['/admin/macros', 'service'],
+  ['/overview', 'sales'],
+  ['/leads', 'sales'],
+  ['/tenders', 'sales'],
+  ['/clients', 'sales'],
+  ['/bd-reports', 'sales'],
+  ['/admin/bd-automations', 'sales'],
+  ['/admin/bd-quotas', 'sales'],
+  ['/admin/products', 'sales'],
+  ['/projects', 'projects'],
+  ['/tasks', 'projects'],
+  ['/sprints', 'projects'],
+  ['/amc-plans', 'projects'],
+  ['/timesheets', 'projects'],
+  ['/resource-utilization', 'projects'],
+  ['/executive-dashboard', 'insights'],
+]
+
+export function appForPath(path: string): OrgApp | undefined {
+  return APP_BY_PATH.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`))?.[1]
+}
+
+export interface NavVisibilityContext {
+  /** The company's enabled apps; undefined = no company loaded yet (show everything). */
+  apps?: OrgApp[]
+  isPlatformStaff?: boolean
+}
+
+export function isNavItemVisible(item: NavLink | NavGroup | NavSectionTitle, isAdmin: boolean, userRoles: string[], context: NavVisibilityContext = {}) {
+  if ('platformOnly' in item && item.platformOnly && !context.isPlatformStaff)
+    return false
+
   if ('adminOnly' in item && item.adminOnly && !isAdmin)
     return false
+
+  if ('link' in item && context.apps) {
+    const app = appForPath(item.link)
+    if (app && !context.apps.includes(app))
+      return false
+  }
 
   if ('roles' in item && item.roles?.length && !isAdmin) {
     if (!item.roles.some(role => userRoles.includes(role)))
@@ -15,14 +62,15 @@ export function isNavItemVisible(item: NavLink | NavGroup | NavSectionTitle, isA
 
 /** Flat list of every nav link (across all headings) the current user can actually see. */
 export function useVisibleNavLinks() {
-  const { currentUser, isAdmin } = useAuth()
+  const { currentUser, currentOrg, isAdmin, isPlatformStaff } = useAuth()
 
   return computed<NavLink[]>(() => {
     const userRoles = currentUser.value?.roles ?? []
+    const context = { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value }
 
     return (navMenu as NavMenu[])
       .flatMap(group => group.items)
       .filter((item): item is NavLink => 'link' in item)
-      .filter(item => isNavItemVisible(item, isAdmin.value, userRoles))
+      .filter(item => isNavItemVisible(item, isAdmin.value, userRoles, context))
   })
 }

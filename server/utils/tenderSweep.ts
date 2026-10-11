@@ -2,7 +2,7 @@ import type { TenderRow } from './mappers'
 
 export async function checkTenderReminders() {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date().toISOString()
 
   const due = await db.prepare(`

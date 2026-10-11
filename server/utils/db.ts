@@ -1,14 +1,21 @@
-let ready: Promise<void> | null = null
+// One migration run per company database (see server/utils/tenancy.ts), memoised per process.
+const ready = new Map<string, Promise<void>>()
 
 export function ensureDb() {
-  if (!ready)
-    ready = migrate()
-
-  return ready
+  const orgId = currentOrgId()
+  let pending = ready.get(orgId)
+  if (!pending) {
+    pending = migrate().catch((error) => {
+      ready.delete(orgId)
+      throw error
+    })
+    ready.set(orgId, pending)
+  }
+  return pending
 }
 
 async function migrate() {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS staff (
@@ -1129,7 +1136,7 @@ async function migrate() {
 
 export async function nextSequence(name: string): Promise<number> {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare('SELECT value FROM counters WHERE name = ?').get(name) as { value: number } | undefined
   const next = (row?.value ?? 0) + 1

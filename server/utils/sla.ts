@@ -21,7 +21,7 @@ export function mapSlaPolicyRow(row: SlaPolicyRow): SlaPolicy {
 }
 
 export async function getSlaPolicy(priority: TicketPriority): Promise<SlaPolicy | undefined> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const row = await db.prepare('SELECT * FROM sla_policies WHERE priority = ?').get(priority) as SlaPolicyRow | undefined
   return row ? mapSlaPolicyRow(row) : undefined
 }

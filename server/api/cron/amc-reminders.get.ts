@@ -1,7 +1,7 @@
+// Runs once per active company, each in its own database (server/utils/controlPlane.ts).
 export default defineEventHandler(async (event) => {
   requireCronAuth(event)
 
-  await ensureDb()
-  const result = await checkAmcRenewals()
-  return { ok: true, ...result }
+  const results = await forEachActiveOrg('amc-reminders', () => checkAmcRenewals())
+  return { ok: true, results }
 })

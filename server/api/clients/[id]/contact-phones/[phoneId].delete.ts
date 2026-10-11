@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   await db.prepare('DELETE FROM client_contact_phones WHERE id = ? AND client_id = ?').run(phoneId, clientId)
 

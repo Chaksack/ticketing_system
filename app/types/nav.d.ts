@@ -6,6 +6,8 @@ export interface NavLink {
   icon?: string
   new?: boolean
   adminOnly?: boolean
+  /** Canopy staff only (admins of the home workspace) — the staff console. */
+  platformOnly?: boolean
   roles?: StaffRole[]
 }
 

@@ -78,9 +78,9 @@ watch(open, (isOpen) => {
 </script>
 
 <template>
-  <Button variant="ghost" size="icon" @click="open = !open">
-    <Icon name="i-lucide-sparkles" class="size-5" />
-    <span class="sr-only">Ask AI</span>
+  <Button size="sm" class="h-10 bg-brand-lime px-4 text-brand-forest hover:bg-brand-lime/90" aria-label="Ask AI (⌘J)" @click="open = !open">
+    <Icon name="i-lucide-sparkles" class="size-4" />
+    <span class="hidden sm:inline">Ask AI</span>
   </Button>
 
   <Sheet v-model:open="open">

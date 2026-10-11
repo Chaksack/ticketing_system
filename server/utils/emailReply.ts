@@ -1,9 +1,11 @@
 const TICKET_ID_IN_MESSAGE_ID = /ticket-(TICKET-\d+)\./i
-const TICKET_ID_IN_SUBJECT = /\[(TICKET-\d+)\]/i
+const ORG_IN_MESSAGE_ID = /ticket-TICKET-\d+\.org-([a-z0-9][a-z0-9-]{1,40})\./i
+const TICKET_ID_IN_SUBJECT = /\[(TICKET-\d+)(?:\s*·\s*([a-z0-9][a-z0-9-]{1,40}))?\]/i
 
 /**
  * Every email this app sends carries a Message-ID shaped like
- * "<ticket-TICKET-1042.<random>@ibsgh.com>". When a customer replies, their mail client
+ * "<ticket-TICKET-1042.<random>@canopy.com>" (the domain isn't checked, so older @ibsgh.com
+ * ids still match). When a customer replies, their mail client
  * echoes that id back in the In-Reply-To/References headers — search either (or both,
  * concatenated) for our encoded ticket id. This is the primary, most reliable way to route
  * a reply back to its ticket, since it doesn't depend on the customer's client preserving
@@ -22,6 +24,15 @@ export function extractTicketIdFromThreadHeaders(headerValue: string): string | 
 export function extractTicketIdFromSubject(subject: string): string | undefined {
   const match = TICKET_ID_IN_SUBJECT.exec(subject)
   return match?.[1]?.toUpperCase()
+}
+
+/**
+ * Which company a reply belongs to — ticket numbers repeat across companies, so outbound mail
+ * carries it in the Message-ID ("ticket-TICKET-12.org-acme.…") and the subject tag
+ * ("[TICKET-12 · acme]"). Neither present → mail from before multi-company support → home.
+ */
+export function extractOrgIdFromReply(threadHeaders: string, subject: string): string | undefined {
+  return ORG_IN_MESSAGE_ID.exec(threadHeaders)?.[1]?.toLowerCase() ?? TICKET_ID_IN_SUBJECT.exec(subject)?.[2]?.toLowerCase()
 }
 
 const QUOTE_MARKERS = [

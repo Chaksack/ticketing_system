@@ -76,7 +76,7 @@ export default defineNuxtConfig({
       {
         url: '/openapi.json',
         pathRouting: { basePath: '/docs' },
-        metaData: { title: 'IBS Platform API Reference' },
+        metaData: { title: 'Canopy API Reference' },
       },
       ...(isDev
         ? [{
@@ -112,7 +112,7 @@ export default defineNuxtConfig({
 
   fonts: {
     defaults: {
-      weights: [300, 400, 500, 600, 700, 800],
+      weights: [400, 500, 600, 700, 800, 900],
     },
     providers: {
       fontshare: false,
@@ -133,6 +133,9 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       database: true,
+      // Lets any server code find the current request (useEvent) — used to pick the signed-in
+      // company's database (server/utils/tenancy.ts).
+      asyncContext: true,
       // Auto-generated route list for /docs/internal — development only. It must be off (not just
       // `openAPI.production: false`) in builds: @scalar/nuxt sets `openAPI.production ||= 'prerender'`,
       // which overwrites `false` and would publish every internal route as /_openapi.json.
@@ -140,7 +143,7 @@ export default defineNuxtConfig({
     },
     openAPI: {
       production: false,
-      meta: { title: 'IBS Platform internal routes', version: 'dev' },
+      meta: { title: 'Canopy internal routes', version: 'dev' },
       ui: { scalar: false, swagger: false },
     },
     database: {
@@ -167,7 +170,7 @@ export default defineNuxtConfig({
     gmailClientSecret: '',
     gmailRefreshToken: '',
     gmailSender: '',
-    gmailFromName: 'IBS Ticketing System',
+    gmailFromName: 'Canopy',
     cronSecret: '',
     sessionPassword: '',
     vapidPrivateKey: '',

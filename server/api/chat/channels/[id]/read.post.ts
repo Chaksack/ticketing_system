@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'You are not a member of this channel' })
   }
 
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('UPDATE chat_channel_members SET last_read_at = ? WHERE channel_id = ? AND staff_id = ?').run(new Date().toISOString(), channelId, user.id)
 
   return { success: true }

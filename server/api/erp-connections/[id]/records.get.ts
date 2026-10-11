@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const rows = await db.prepare(`
     SELECT * FROM erp_import_records WHERE connection_id = ? ORDER BY fetched_at DESC LIMIT 50

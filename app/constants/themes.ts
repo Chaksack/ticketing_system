@@ -5,7 +5,7 @@ export const THEME_COLORS = [
   },
   {
     name: 'ibsgh',
-    value: 'oklch(0.542 0.152 148.732)',
+    value: '#163300',
   },
   {
     name: 'blue',

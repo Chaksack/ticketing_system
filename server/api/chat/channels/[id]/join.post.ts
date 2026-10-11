@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const channelRow = await db.prepare('SELECT type FROM chat_channels WHERE id = ?').get(channelId) as { type: string } | undefined
   if (!channelRow) {

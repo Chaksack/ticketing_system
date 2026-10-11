@@ -9,7 +9,7 @@ export interface RateLimitResult {
  * `key` identifies the caller (e.g. IP address or email).
  */
 export async function checkRateLimit(scope: string, key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const windowStart = new Date(Math.floor(Date.now() / windowMs) * windowMs).toISOString()
 
   const row = await db.prepare(`
@@ -23,7 +23,7 @@ export async function checkRateLimit(scope: string, key: string, limit: number, 
 }
 
 export async function pruneRateLimitCounters(olderThanMs = 24 * 60 * 60 * 1000) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const cutoff = new Date(Date.now() - olderThanMs).toISOString()
   await db.prepare('DELETE FROM rate_limit_counters WHERE window_start < ?').run(cutoff)
 }

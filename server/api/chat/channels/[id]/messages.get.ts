@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'You are not a member of this channel' })
   }
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT chat_messages.*, staff.name AS author_name
     FROM chat_messages

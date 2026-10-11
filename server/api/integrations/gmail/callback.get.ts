@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
     const profile = await fetchGmailProfile(tokens.access_token!)
 
     await ensureDb()
-    const db = useDatabase()
+    const db = useTenantDb()
     await db.prepare('UPDATE staff SET gmail_email = ?, gmail_refresh_token = ?, gmail_connected_at = ? WHERE id = ?')
       .run(profile.emailAddress, tokens.refresh_token, new Date().toISOString(), user.id)
 

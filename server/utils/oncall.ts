@@ -3,7 +3,7 @@ import type { StaffRow } from './mappers'
 
 export async function pageOnCallForTicket(ticket: Ticket) {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const onCallStaff = await db.prepare(
     'SELECT * FROM staff WHERE on_call = 1 AND status = \'active\'',

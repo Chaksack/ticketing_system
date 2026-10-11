@@ -2,7 +2,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireSessionUser(event)
   await ensureDb()
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const row = await db.prepare(`
     SELECT COUNT(*) as count
     FROM chat_messages m

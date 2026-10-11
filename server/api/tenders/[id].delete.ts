@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const documents = await db.prepare('SELECT * FROM tender_documents WHERE tender_id = ?').all(id) as TenderDocumentRow[]
   for (const document of documents)

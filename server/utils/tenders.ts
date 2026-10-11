@@ -4,7 +4,7 @@ import type { TenderActivityRow, TenderDocumentRow, TenderRow } from './mappers'
 const TENDER_SELECT = 'SELECT * FROM tenders WHERE id = ?'
 
 export async function loadFullTender(id: string): Promise<Tender> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare(TENDER_SELECT).get(id) as TenderRow | undefined
   if (!row) {
@@ -34,7 +34,7 @@ export async function logTenderActivity(options: {
   toValue?: string
   message?: string
 }) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const id = await nextTenderActivityId()
   const now = new Date().toISOString()
 

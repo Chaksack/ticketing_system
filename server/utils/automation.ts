@@ -44,7 +44,7 @@ function matchesRule(ticket: Ticket, rule: AutomationRule): boolean {
  * first match's field changes. Only runs at creation time to avoid update-triggered loops.
  */
 export async function applyAutomationRules(ticket: Ticket): Promise<Ticket> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const ruleRows = await db.prepare('SELECT * FROM automation_rules WHERE enabled = 1 ORDER BY created_at ASC').all() as AutomationRuleRow[]
   const rule = ruleRows.map(mapAutomationRuleRow).find(r => matchesRule(ticket, r))
@@ -83,7 +83,7 @@ export async function autoAssign(ticket: Ticket): Promise<Ticket> {
   if (ticket.assigneeId)
     return ticket
 
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const candidate = await db.prepare(`
     SELECT staff.*, COALESCE(load.open_count, 0) AS open_count

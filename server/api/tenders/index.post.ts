@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const id = await nextTenderId()
   const now = new Date().toISOString()

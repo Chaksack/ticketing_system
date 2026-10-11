@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT id FROM project_financial_entries WHERE id = ? AND project_id = ?').get(entryId, projectId)
   if (!existing) {

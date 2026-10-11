@@ -4,7 +4,8 @@ import { Toaster } from '@/components/ui/sonner'
 import 'vue-sonner/style.css'
 
 const colorMode = useColorMode()
-const color = computed(() => colorMode.value === 'dark' ? '#09090b' : '#ffffff')
+// The forest top bar in both modes, so the browser chrome blends into it.
+const color = computed(() => '#163300')
 const { theme } = useAppSettings()
 
 useHead({
@@ -14,9 +15,10 @@ useHead({
     { key: 'theme-color', name: 'theme-color', content: color },
   ],
   link: [
-    { rel: 'icon', href: '/favicon.ico' },
+    { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+    { rel: 'icon', href: '/favicon.ico', sizes: '64x64' },
     { rel: 'manifest', href: '/manifest.webmanifest' },
-    { rel: 'apple-touch-icon', href: '/icons/icon-192.png' },
+    { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png' },
   ],
   htmlAttrs: {
     lang: 'en',
@@ -26,8 +28,8 @@ useHead({
   },
 })
 
-const title = 'BSM Platform - Ticketing System'
-const description = 'ticketing system to help IBS offer support to their clients'
+const title = 'Canopy'
+const description = 'Every customer. Every team. One canopy. Support, sales, projects and reporting on one record.'
 
 useSeoMeta({
   title,

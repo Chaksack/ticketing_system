@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<UpdateApiKeyBody>(event)
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT id FROM api_keys WHERE id = ?').get(id)
   if (!existing) {

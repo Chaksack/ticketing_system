@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   await db.prepare('DELETE FROM quote_line_items WHERE quote_id = ?').run(id)
   await db.prepare('DELETE FROM quotes WHERE id = ?').run(id)

@@ -50,8 +50,9 @@ export function useTickets() {
     return ticket
   }
 
-  async function addTicket(payload: NewTicket) {
-    const { ticket } = await $fetch('/api/tickets', { method: 'POST', body: payload })
+  /** `workspace` (a company's portal slug) files the ticket in that company — used by /portal/<slug>. */
+  async function addTicket(payload: NewTicket, options: { workspace?: string } = {}) {
+    const { ticket } = await $fetch('/api/tickets', { method: 'POST', body: payload, query: options.workspace ? { workspace: options.workspace } : undefined })
     tickets.value.unshift(ticket)
     return ticket
   }

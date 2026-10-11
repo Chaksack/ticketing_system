@@ -39,7 +39,7 @@ function periodRange(period: string): { start: string, end: string } {
 }
 
 async function getWonValueByStaff(period: string): Promise<Map<string, number>> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const { start, end } = periodRange(period)
 
   const leadRows = await db.prepare(`
@@ -70,7 +70,7 @@ async function getWonValueByStaff(period: string): Promise<Map<string, number>> 
 }
 
 export async function getQuotaProgress(period: string): Promise<BdQuotaProgress[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const staffRows = await db.prepare('SELECT * FROM staff WHERE status = \'active\'').all() as StaffRow[]
   const bdStaff = staffRows.filter(row => parseStaffRoles(row).some(role => role === 'bd' || role === 'sm'))

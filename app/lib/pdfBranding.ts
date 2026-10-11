@@ -143,7 +143,7 @@ export function addPageFooter(doc: jsPDF) {
     doc.setTextColor(...PDF_COLORS.muted)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
-    doc.text('www.ibsgh.com', 12, pageHeight - 8)
+    doc.text('Canopy · Every customer. Every team. One canopy.', 12, pageHeight - 8)
     doc.text(`Page ${page} of ${pageCount}`, pageWidth - 12, pageHeight - 8, { align: 'right' })
   }
 }

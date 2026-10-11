@@ -49,7 +49,7 @@ export function sumLineItems(lineItems: LineItem[]): number {
 }
 
 export async function getContractLineItems(contractId: string): Promise<LineItem[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT * FROM contract_line_items WHERE contract_id = ? ORDER BY created_at ASC').all(contractId) as LineItemRow[]
   return rows.map(row => mapLineItemRow(row))
 }

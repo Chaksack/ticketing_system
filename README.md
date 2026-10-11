@@ -1,6 +1,6 @@
-# IBS Ticketing System
+# Canopy
 
-A customer support / helpdesk platform built with Nuxt 4, built for IBS to receive, triage,
+Every customer. Every team. One canopy. A customer support / helpdesk and CRM platform built with Nuxt 4, to receive, triage,
 and resolve customer support requests — with SLA tracking, automation, canned responses,
 and reporting, in the spirit of Jira Service Management or Zendesk.
 
@@ -42,6 +42,49 @@ feature below.
   inbound (a customer's email reply lands back on the ticket, reopening it if needed) both go
   through the Gmail API against one mailbox — no separate transactional-email vendor. See
   "Email (Gmail API)" below.
+
+## Multiple companies (tenancy)
+
+Canopy is a CRM for many companies. **Each company gets its own Postgres database**
+(`canopy_t_<slug>`) on the same Neon server as `DATABASE_URL`, so one company's data can't reach
+another's even if a query forgets a filter.
+
+- **Home workspace:** the original database (`DATABASE_URL`) is Canopy's own workspace (org id
+  `canopy`). Its **admins are Canopy staff**: they see the **Canopy Console** in the sidebar.
+- **Control plane:** tables in the main database only (`server/utils/controlPlane.ts`):
+  - `cp_organizations` — every company, its workspace address (slug), plan, apps and status
+  - `cp_directory` — which company each staff email belongs to (one company per person)
+  - `cp_onboardings` — staff-led onboardings (CSA, SLA, signature status, checklist)
+  - `cp_audit_log` — every staff action on a tenant
+- **How a request finds its company** (`server/utils/tenancy.ts`, `useTenantDb()`), in order:
+  - the signed-in session;
+  - `?workspace=<slug>` on portal and embed submissions;
+  - the `erp_<company>_<secret>` API key;
+  - the `<company>.<token>` prefix on invite and password-reset links;
+  - the email address at sign-in;
+  - the company named in an email reply's Message-ID (`ticket-TICKET-12.org-acme.…`) or subject
+    tag (`[TICKET-12 · acme]`).
+
+  Scheduled jobs run once per active company (`forEachActiveOrg`). Always use `useTenantDb()`
+  for app data and `useControlDb()` for the control plane, never Nitro's `useDatabase()` directly.
+- **Self-serve sign-up** (`/signup`, `server/api/signup/*`): account → organisation & sector →
+  apps → invite team. The last step creates the database (`CREATE DATABASE` + migrations), the
+  admin and the invites, and signs the admin in. It takes a few seconds when the app and Neon are
+  in the same region. Run from far away it's much slower: about 40 s from West Africa to
+  us-east-1, since migrations make ~150 round trips.
+- **Staff-led onboarding** (`/console/onboarding`): client details → plan & apps → CSA & SLA
+  (Standard / Gold / Platinum, editable) → signature (agreement PDF, then staff mark each
+  signature) → provision, which emails the client's admin a 7-day invite.
+- **Suspend** a tenant from `/console/tenants/<id>`. Its staff, portal and API keys stop working
+  within ~15 s, since org status is cached briefly per instance. Nothing is deleted.
+- Each company's customers use `/portal/<slug>`. `/portal` on its own is Canopy's own support.
+- Each company's admins manage their workspace name and apps under **Admin → Organisation**.
+  Apps only decide which sections appear in the sidebar; the data stays if an app is switched off.
+- All email goes out through Canopy's shared mailbox, as "<Company> via Canopy".
+
+**Not built yet:** Google/Microsoft sign-in, choosing a data region, billing/trials, built-in
+e-signature, CSV/CRM import, and deleting a company from the UI (`deleteOrganization` exists
+server-side for clean-up).
 
 ## Tech stack
 
@@ -95,7 +138,7 @@ See `.env.example` for the full template.
 it's also safe to call directly from another site's contact form. To allow that cross-origin:
 
 1. Set `NUXT_PUBLIC_PORTAL_CORS_ORIGINS` to the origin(s) that should be allowed, e.g.
-   `https://www.ibsgh.com,https://ibsgh.com`.
+   `https://www.canopy.com,https://canopy.com`.
 2. POST JSON to `https://<your-app-domain>/api/tickets` with `subject`, `description`,
    `requester`, `requesterEmail`, `category`, `priority` (`low`/`medium`/`high`/`urgent`)
    required, and optional `requesterPhone`, `referenceNumber` and `attachments` (array of
@@ -236,7 +279,7 @@ which is exactly why this uses the REST API instead.
    `.env` locally and to your Vercel project's environment variables for production.
 
 **How threading works:** every outbound email gets a `Message-ID` shaped like
-`ticket-<id>.<random>@ibsgh.com`. When a customer replies, their mail client echoes that id
+`ticket-<id>.<random>@canopy.com`. When a customer replies, their mail client echoes that id
 back in the `In-Reply-To`/`References` headers, which is how an inbound message gets matched
 to the right ticket (falling back to parsing `[TICKET-1042]` out of the subject line if those
 headers are missing) — see `server/utils/emailReply.ts` for the matching and

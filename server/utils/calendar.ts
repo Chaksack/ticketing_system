@@ -44,7 +44,7 @@ export async function resolveRegardingLabel(regardingType: RegardingType | null 
   if (!regardingType || !regardingId)
     return undefined
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const tables: Record<RegardingType, { table: string, nameColumn: string }> = {
     lead: { table: 'leads', nameColumn: 'name' },
     tender: { table: 'tenders', nameColumn: 'title' },
@@ -56,7 +56,7 @@ export async function resolveRegardingLabel(regardingType: RegardingType | null 
 }
 
 export async function getEventAttendees(eventId: string): Promise<AssigneeRef[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   return await db.prepare(`
     SELECT staff.id, staff.name
     FROM calendar_event_attendees
@@ -67,14 +67,14 @@ export async function getEventAttendees(eventId: string): Promise<AssigneeRef[]>
 }
 
 export async function setEventAttendees(eventId: string, staffIds: string[]) {
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('DELETE FROM calendar_event_attendees WHERE event_id = ?').run(eventId)
   for (const staffId of new Set(staffIds))
     await db.prepare('INSERT INTO calendar_event_attendees (event_id, staff_id) VALUES (?, ?)').run(eventId, staffId)
 }
 
 export async function loadFullEvent(eventId: string): Promise<CalendarEvent | null> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const row = await db.prepare(`
     SELECT calendar_events.*, staff.name AS created_by_name
     FROM calendar_events

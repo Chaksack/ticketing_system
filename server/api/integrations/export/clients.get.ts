@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT id, name, contact_name, contact_email, contact_phone, stage, estimated_value, created_at, updated_at
     FROM clients

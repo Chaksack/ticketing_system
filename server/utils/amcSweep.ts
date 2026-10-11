@@ -3,7 +3,7 @@ import type { ContractRow } from './mappers'
 const DAY_MS = 24 * 60 * 60 * 1000
 
 async function sendRenewalReminder(contract: ContractRow, windowLabel: string) {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const client = await db.prepare('SELECT name, assigned_to FROM clients WHERE id = ?').get(contract.client_id) as { name: string, assigned_to: string | null } | undefined
   if (!client)
@@ -26,7 +26,7 @@ async function sendRenewalReminder(contract: ContractRow, windowLabel: string) {
 }
 
 export async function checkAmcRenewals() {
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date()
 
   const in30Days = new Date(now.getTime() + 30 * DAY_MS).toISOString()

@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as TaskRow | undefined
   if (!existing) {

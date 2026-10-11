@@ -19,14 +19,14 @@ self.addEventListener('push', (event) => {
     payload = event.data.json()
   }
   catch {
-    payload = { title: 'IBS Ticketing System', body: event.data.text() }
+    payload = { title: 'Canopy', body: event.data.text() }
   }
 
-  const title = payload.title || 'IBS Ticketing System'
+  const title = payload.title || 'Canopy'
   const isPage = payload.type === 'page'
   const options = {
     body: payload.body || '',
-    icon: '/favicon.ico',
+    icon: '/icons/icon-192.png',
     tag: payload.tag,
     data: { url: payload.url || '/', type: payload.type, tag: payload.tag },
     // Pager-style pages stay on screen (don't auto-dismiss) and vibrate until acknowledged.

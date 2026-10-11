@@ -37,6 +37,8 @@ export default defineEventHandler(async (event) => {
   // index.options.ts), so this never hits the preflight branch — it just appends the
   // regular CORS response headers.
   applyPortalCors(event)
+  // Which company's portal this came from (?workspace=<slug>); staff-created tickets use the session's.
+  await useWorkspaceFromRequest(event)
 
   const body = await readBody<NewTicketBody>(event)
 
@@ -50,7 +52,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const ip = getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'
   const [ipLimit, emailLimit] = await Promise.all([

@@ -87,7 +87,7 @@ interface ExistingClient {
 }
 
 async function syncCustomers(row: ErpConnectionRow, config: ErpSyncResourceConfig<ErpCustomerFieldMap>) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const result = emptyResult()
   const records = await fetchAllRecords(row, config)
   result.fetched = records.length
@@ -171,7 +171,7 @@ interface ExistingProject {
 }
 
 async function syncProjects(row: ErpConnectionRow, config: ErpSyncResourceConfig<ErpProjectFieldMap>) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const result = emptyResult()
   const records = await fetchAllRecords(row, config)
   result.fetched = records.length
@@ -249,7 +249,7 @@ async function syncProjects(row: ErpConnectionRow, config: ErpSyncResourceConfig
  * customer). Records are matched by the ERP's own id, so reruns update instead of duplicating.
  */
 export async function runErpSync(row: ErpConnectionRow): Promise<ErpSyncSummary> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const config = parseSyncConfig(row.sync_config)
   const summary: ErpSyncSummary = { startedAt: new Date().toISOString(), finishedAt: '' }
   let failed = false
@@ -287,7 +287,7 @@ export async function runErpSync(row: ErpConnectionRow): Promise<ErpSyncSummary>
 /** Hourly entry point (cron route + in-process interval): syncs every connection that has at least one resource enabled. */
 export async function runAllErpSyncs() {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT * FROM erp_connections WHERE sync_config IS NOT NULL').all() as ErpConnectionRow[]
 
   const results: { connectionId: string, summary?: ErpSyncSummary, error?: string }[] = []

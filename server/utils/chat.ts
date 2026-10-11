@@ -55,7 +55,7 @@ export async function getReactionsForMessages(messageIds: string[], currentStaff
   if (!messageIds.length)
     return result
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT chat_message_reactions.message_id AS message_id, chat_message_reactions.emoji AS emoji,
       chat_message_reactions.staff_id AS staff_id, staff.name AS staff_name
@@ -89,7 +89,7 @@ export async function getReactionsForMessages(messageIds: string[], currentStaff
 
 /** Toggles a staff member's reaction on a message: adds it if absent, removes it if already reacted. */
 export async function toggleMessageReaction(messageId: string, staffId: string, emoji: string) {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT id FROM chat_message_reactions WHERE message_id = ? AND staff_id = ? AND emoji = ?').get(messageId, staffId, emoji) as { id: string } | undefined
 
@@ -104,7 +104,7 @@ export async function toggleMessageReaction(messageId: string, staffId: string, 
 }
 
 export async function getChannelMembers(channelId: string): Promise<AssigneeRef[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   return await db.prepare(`
     SELECT staff.id, staff.name
     FROM chat_channel_members
@@ -115,7 +115,7 @@ export async function getChannelMembers(channelId: string): Promise<AssigneeRef[
 }
 
 export async function isChannelMember(channelId: string, staffId: string): Promise<boolean> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const row = await db.prepare('SELECT 1 FROM chat_channel_members WHERE channel_id = ? AND staff_id = ?').get(channelId, staffId)
   return !!row
 }
@@ -126,7 +126,7 @@ interface BrowsableChannelRow extends ChatChannelRow {
 
 /** Every project channel, with the project's name and whether the current user has already joined — used by the "Browse channels" picker. */
 export async function getBrowsableProjectChannels(userId: string): Promise<BrowsableChatChannel[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const rows = await db.prepare(`
     SELECT chat_channels.*, projects.name AS project_name,
@@ -151,7 +151,7 @@ export async function getBrowsableProjectChannels(userId: string): Promise<Brows
 }
 
 export async function loadChannelForUser(channelId: string, userId: string): Promise<ChatChannel | null> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const channelRow = await db.prepare(`
     SELECT chat_channels.*, projects.name AS project_name
@@ -195,7 +195,7 @@ export async function loadChannelForUser(channelId: string, userId: string): Pro
 }
 
 export async function getChannelsForUser(userId: string): Promise<ChatChannel[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const rows = await db.prepare('SELECT channel_id FROM chat_channel_members WHERE staff_id = ?').all(userId) as { channel_id: string }[]
 

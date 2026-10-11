@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   await db.prepare('DELETE FROM erp_import_records WHERE connection_id = ?').run(id)
   await db.prepare('DELETE FROM erp_connections WHERE id = ?').run(id)

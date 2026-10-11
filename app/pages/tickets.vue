@@ -78,7 +78,7 @@ const onReportSubmit = handleSubmit(async (values) => {
   <div class="w-full flex flex-col items-stretch gap-4">
     <div class="flex flex-wrap items-end justify-between gap-2">
       <div>
-        <h2 class="text-2xl font-bold tracking-tight">
+        <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
           Tickets
         </h2>
         <p class="text-muted-foreground">

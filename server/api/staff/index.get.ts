@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   await requireSessionUser(event)
   await ensureDb()
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT * FROM staff ORDER BY created_at DESC').all() as StaffRow[]
 
   return { staff: rows.map(mapStaffRow) }

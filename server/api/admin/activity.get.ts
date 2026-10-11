@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
   const staffId = typeof query.staffId === 'string' && query.staffId ? query.staffId : undefined
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const ticketRows = await db.prepare(`
     SELECT ticket_activity.id, ticket_activity.ticket_id AS entity_id, tickets.subject AS entity_label,

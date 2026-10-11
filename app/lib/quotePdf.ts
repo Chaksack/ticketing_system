@@ -15,7 +15,7 @@ export async function downloadQuotePdf(quote: Quote, record: QuoteRecordInfo) {
   const logo = await loadLogoDataUrl()
 
   let y = addBrandHeader(doc, {
-    title: 'Intelligent Building Solutions',
+    title: 'Canopy',
     subtitle: 'Quotation',
     topRight: `Quote #${quote.id}`,
     bottomRight: `Date: ${formatPdfDate(quote.createdAt)}`,

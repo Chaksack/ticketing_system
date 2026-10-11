@@ -6,8 +6,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing invite token' })
   }
 
+  // The token says which company it belongs to (newOrgToken) — open that company's database.
+  await useOrgFromToken(event, token)
+
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare('SELECT * FROM staff WHERE invite_token = ?').get(token) as StaffRow | undefined
 

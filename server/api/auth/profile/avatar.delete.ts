@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   const sessionUser = await requireSessionUser(event)
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('UPDATE staff SET avatar_url = NULL WHERE id = ?').run(sessionUser.id)
 
   if (sessionUser.avatarUrl) {

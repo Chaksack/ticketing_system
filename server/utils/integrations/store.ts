@@ -18,7 +18,7 @@ export interface StaffIntegrationRow {
 }
 
 export async function getStaffIntegration(staffId: string, provider: IntegrationProvider): Promise<StaffIntegrationRow | undefined> {
-  const db = useDatabase()
+  const db = useTenantDb()
   return await db.prepare('SELECT * FROM staff_integrations WHERE staff_id = ? AND provider = ?').get(staffId, provider) as StaffIntegrationRow | undefined
 }
 
@@ -44,7 +44,7 @@ export async function getDecryptedAccessToken(staffId: string, provider: Integra
 
 export async function upsertStaffIntegration(staffId: string, provider: IntegrationProvider, result: NormalizedTokenResult) {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await getStaffIntegration(staffId, provider)
   const now = new Date().toISOString()
@@ -70,6 +70,6 @@ export async function upsertStaffIntegration(staffId: string, provider: Integrat
 
 export async function deleteStaffIntegration(staffId: string, provider: IntegrationProvider) {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('DELETE FROM staff_integrations WHERE staff_id = ? AND provider = ?').run(staffId, provider)
 }

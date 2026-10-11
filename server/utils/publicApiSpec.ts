@@ -79,10 +79,10 @@ export function buildPublicApiSpec(origin: string) {
   return {
     openapi: '3.1.0',
     info: {
-      title: 'IBS Platform API',
+      title: 'Canopy API',
       version: '1.0.0',
       description: [
-        'Public APIs for systems that integrate with the IBS platform.',
+        'Public APIs for systems that integrate with Canopy.',
         '',
         '- **ERP Export API**: read-only access to clients, projects, products and tenders, with an API key.',
         '- **Ticket Submission API**: create support tickets from your own website or contact form (no auth, CORS-enabled for configured origins).',

@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   await requireBd(event)
   await ensureDb()
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`${TASK_LIST_SELECT} ORDER BY tasks.created_at DESC`).all() as TaskRow[]
   const assigneesByTask = await getAllTaskAssignees()
 

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT * FROM products ORDER BY name ASC').all() as ProductRow[]
   const items = rows.map(row => mapProductRow(row))
 

@@ -1,5 +1,4 @@
 import type { StaffRow } from '../../utils/mappers'
-import { randomBytes } from 'node:crypto'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{ email?: string }>(event)
@@ -8,15 +7,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Email is required' })
   }
 
-  await ensureDb()
-  const db = useDatabase()
+  const orgId = (await lookupOrgIdByEmail(body.email)) ?? HOME_ORG_ID
+  const org = await getOrganization(orgId)
+  if (!org || org.status !== 'active')
+    return { success: true }
+  setRequestOrg(event, orgId)
 
-  const row = await db.prepare('SELECT * FROM staff WHERE email = ?').get(body.email) as StaffRow | undefined
+  await ensureDb()
+  const db = useTenantDb()
+
+  const row = await db.prepare('SELECT * FROM staff WHERE LOWER(email) = LOWER(?)').get(body.email) as StaffRow | undefined
 
   // Always respond the same way whether or not the email exists, so this
   // endpoint can't be used to enumerate valid staff accounts.
   if (row && row.status !== 'disabled') {
-    const token = randomBytes(32).toString('hex')
+    const token = newOrgToken()
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
 
     await db.prepare('UPDATE staff SET reset_token = ?, reset_expires_at = ? WHERE id = ?').run(token, expiresAt, row.id)

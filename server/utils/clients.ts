@@ -6,7 +6,7 @@ import { deleteProjectCascade, PROJECT_TOTALS_COLUMNS } from './projects'
 const CLIENT_SELECT = 'SELECT * FROM clients WHERE id = ?'
 
 export async function loadFullClient(id: string): Promise<Client> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare(CLIENT_SELECT).get(id) as ClientRow | undefined
   if (!row) {
@@ -87,7 +87,7 @@ export async function logClientActivity(options: {
   toValue?: string
   message?: string
 }) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const id = await nextClientActivityId()
   const now = new Date().toISOString()
 
@@ -98,7 +98,7 @@ export async function logClientActivity(options: {
 }
 
 export async function touchClient(clientId: string) {
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('UPDATE clients SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), clientId)
 }
 
@@ -109,7 +109,7 @@ export async function touchClient(clientId: string) {
  * and the lead/tender it was converted from — are kept and just unlinked.
  */
 export async function deleteClientCascade(id: string) {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const projectRows = await db.prepare('SELECT id FROM projects WHERE client_id = ?').all(id) as { id: string }[]
   for (const project of projectRows)

@@ -7,7 +7,7 @@ const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
 
-const { login, currentUser } = useAuth()
+const { login, homePath } = useAuth()
 const route = useRoute()
 
 async function onSubmit(event: Event) {
@@ -19,9 +19,9 @@ async function onSubmit(event: Event) {
 
   try {
     await login(email.value, password.value)
-    const canSeeTickets = currentUser.value?.roles.some(role => role === 'agent' || role === 'admin')
-    const fallback = canSeeTickets ? '/tickets' : '/'
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : fallback
+    // "/" is the public landing page now, so a stale ?redirect=/ also goes to the person's home.
+    const requested = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    const redirect = requested && requested !== '/' ? requested : homePath.value
     await navigateTo(redirect)
   }
   catch {

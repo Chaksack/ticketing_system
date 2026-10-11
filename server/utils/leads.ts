@@ -4,7 +4,7 @@ import type { LeadActivityRow, LeadContactEmailRow, LeadContactPhoneRow, LeadDoc
 const LEAD_SELECT = 'SELECT * FROM leads WHERE id = ?'
 
 export async function loadFullLead(id: string): Promise<Lead> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare(LEAD_SELECT).get(id) as LeadRow | undefined
   if (!row) {
@@ -38,7 +38,7 @@ export async function logLeadActivity(options: {
   toValue?: string
   message?: string
 }) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const id = await nextLeadActivityId()
   const now = new Date().toISOString()
 

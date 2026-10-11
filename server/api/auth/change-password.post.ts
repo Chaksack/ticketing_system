@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare('SELECT * FROM staff WHERE id = ?').get(sessionUser.id) as StaffRow | undefined
   if (!row?.password_hash || !verifyPassword(body.currentPassword, row.password_hash)) {

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const ticket = await db.prepare('SELECT * FROM tickets WHERE id = ?').get(id) as TicketRow | undefined
   if (!ticket) {

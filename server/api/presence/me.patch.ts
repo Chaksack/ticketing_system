@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT id, last_active_at, presence_override, status_text, status_emoji, status_expires_at FROM staff WHERE id = ?').get(user.id) as PresenceRow | undefined
   if (!existing) {

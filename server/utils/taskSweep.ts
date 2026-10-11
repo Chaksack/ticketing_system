@@ -2,7 +2,7 @@ import type { TaskRow } from './mappers'
 
 export async function checkTaskReminders() {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date().toISOString()
 
   const due = await db.prepare(`

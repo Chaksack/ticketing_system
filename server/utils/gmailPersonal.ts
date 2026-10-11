@@ -17,7 +17,7 @@ function getPersonalOAuthClient(refreshToken: string): OAuth2Client {
 
 export async function requireConnectedGmailAccount(staffId: string): Promise<{ gmailEmail: string, refreshToken: string }> {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare('SELECT gmail_email, gmail_refresh_token FROM staff WHERE id = ?').get(staffId) as { gmail_email: string | null, gmail_refresh_token: string | null } | undefined
 

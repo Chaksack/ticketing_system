@@ -38,7 +38,7 @@ export function geminiOAuthClient(redirectUri?: string) {
 }
 
 async function loadRows(staffId: string): Promise<AiIntegrationRow[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   return await db.prepare(`
     SELECT provider, access_token, refresh_token, external_account_label, connected_at
     FROM staff_integrations WHERE staff_id = ? AND provider LIKE 'ai:%'
@@ -46,7 +46,7 @@ async function loadRows(staffId: string): Promise<AiIntegrationRow[]> {
 }
 
 export async function getAiSettings(staffId: string): Promise<AiSettings> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await loadRows(staffId)
   const staff = await db.prepare('SELECT ai_provider FROM staff WHERE id = ?').get(staffId) as { ai_provider: string | null } | undefined
   const preferred = AI_PROVIDERS.some(p => p.id === staff?.ai_provider) ? staff!.ai_provider as AiProvider : null
@@ -86,12 +86,12 @@ function pickProvider(providers: AiProviderStatus[], preferred: AiProvider | nul
 }
 
 export async function setPreferredAiProvider(staffId: string, provider: AiProvider | null) {
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('UPDATE staff SET ai_provider = ? WHERE id = ?').run(provider, staffId)
 }
 
 async function upsertAiRow(staffId: string, provider: AiProvider, values: { accessToken?: string, refreshToken?: string, accountLabel: string }) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date().toISOString()
   const access = values.accessToken ? encryptSecret(values.accessToken) : null
   const refresh = values.refreshToken ? encryptSecret(values.refreshToken) : null
@@ -148,7 +148,7 @@ export async function saveAiApiKey(staffId: string, provider: 'openai' | 'anthro
 }
 
 export async function removeAiProvider(staffId: string, provider: AiProvider) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const row = await db.prepare('SELECT refresh_token FROM staff_integrations WHERE staff_id = ? AND provider = ?').get(staffId, rowKey(provider)) as { refresh_token: string | null } | undefined
 
   // Best-effort: also revoke Google's grant so the app no longer appears under the person's Google account.

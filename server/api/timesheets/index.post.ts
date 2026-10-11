@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const task = await db.prepare('SELECT id FROM tasks WHERE id = ?').get(body.taskId.trim())
   if (!task) {

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<NewChannelBody>(event)
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date().toISOString()
 
   if (body.type === 'direct') {

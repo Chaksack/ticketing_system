@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
 
   const query = getQuery(event)
-  const db = useDatabase()
+  const db = useTenantDb()
 
   let rows: TenderRow[]
   if (query.scope === 'team') {

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT * FROM sla_policies WHERE priority = ?').get(priority) as SlaPolicyRow | undefined
   if (!existing) {

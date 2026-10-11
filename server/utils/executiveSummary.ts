@@ -42,7 +42,7 @@ function mondayOfCurrentWeek() {
 }
 
 export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   // Support
   const openTicketsRow = await db.prepare(`SELECT COUNT(*) AS count FROM tickets WHERE status NOT IN ('resolved', 'closed')`).get() as { count: number }

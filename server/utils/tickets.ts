@@ -9,7 +9,7 @@ const TICKET_SELECT = `
 `
 
 export async function loadFullTicket(id: string): Promise<Ticket> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare(TICKET_SELECT).get(id) as TicketRow | undefined
   if (!row) {
@@ -42,7 +42,7 @@ export async function logTicketActivity(options: {
   toValue?: string
   message?: string
 }) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const id = await nextActivityId()
   const now = new Date().toISOString()
 
@@ -53,6 +53,6 @@ export async function logTicketActivity(options: {
 }
 
 export async function touchTicket(ticketId: string) {
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('UPDATE tickets SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), ticketId)
 }

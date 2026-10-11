@@ -10,7 +10,7 @@ interface SweepTicketRow {
 }
 
 export async function escalateBreachedSla() {
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date().toISOString()
 
   const breached = await db.prepare(`
@@ -38,7 +38,7 @@ export async function escalateBreachedSla() {
 }
 
 export async function autoCloseInactiveTickets() {
-  const db = useDatabase()
+  const db = useTenantDb()
   const cutoff = new Date(Date.now() - AUTO_CLOSE_AFTER_MS).toISOString()
   const now = new Date().toISOString()
 

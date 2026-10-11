@@ -4,7 +4,7 @@ const REMINDER_LEAD_MINUTES = 15
 
 export async function checkMeetingReminders() {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const now = new Date()
   const threshold = new Date(now.getTime() + REMINDER_LEAD_MINUTES * 60 * 1000).toISOString()

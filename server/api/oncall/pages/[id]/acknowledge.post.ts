@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('UPDATE pages SET acknowledged = 1 WHERE id = ?').run(id)
 
   return { success: true }

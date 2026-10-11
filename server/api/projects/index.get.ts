@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   await requireBd(event)
   await ensureDb()
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT projects.*, clients.name AS client_name, ${PROJECT_TOTALS_COLUMNS}
     FROM projects

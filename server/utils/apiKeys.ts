@@ -16,7 +16,7 @@ export function mapApiKeyRow(row: ApiKeyRow & { created_by_name?: string | null 
 }
 
 export async function getAllApiKeys(): Promise<ApiKey[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT api_keys.*, staff.name AS created_by_name
     FROM api_keys

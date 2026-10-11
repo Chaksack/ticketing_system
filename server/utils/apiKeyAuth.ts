@@ -17,10 +17,22 @@ function hashKey(key: string): string {
   return createHash('sha256').update(key).digest('hex')
 }
 
-/** A key is shown once, at creation — only its hash is ever stored, same reasoning as a password. */
-export function generateApiKey(): { key: string, prefix: string, hash: string } {
-  const key = `erp_${randomBytes(32).toString('hex')}`
-  return { key, prefix: key.slice(0, 12), hash: hashKey(key) }
+/**
+ * A key is shown once, at creation — only its hash is ever stored, same reasoning as a password.
+ * Shaped `erp_<company>_<secret>` so an export request can find the right company's database;
+ * keys issued before multi-company support (`erp_<secret>`) belong to the home workspace.
+ */
+export function generateApiKey(orgId = currentOrgId()): { key: string, prefix: string, hash: string } {
+  const secret = randomBytes(32).toString('hex')
+  const key = `erp_${orgId}_${secret}`
+  return { key, prefix: `erp_${orgId}_${secret.slice(0, 6)}`, hash: hashKey(key) }
+}
+
+function orgIdFromApiKey(key: string): string | null {
+  const match = /^erp_([a-z0-9][a-z0-9-]{1,40})_[0-9a-f]{64}$/.exec(key)
+  if (match)
+    return match[1]!
+  return /^erp_[0-9a-f]{64}$/.test(key) ? HOME_ORG_ID : null
 }
 
 /**
@@ -38,8 +50,15 @@ export async function requireApiKey(event: H3Event, resource?: string): Promise<
     throw createError({ statusCode: 401, statusMessage: 'Missing Authorization: Bearer <api key> header' })
   }
 
+  const orgId = orgIdFromApiKey(presented)
+  const org = orgId ? await getOrganization(orgId) : null
+  if (!org || org.status !== 'active') {
+    throw createError({ statusCode: 401, statusMessage: 'Invalid or revoked API key' })
+  }
+  setRequestOrg(event, org.id)
+
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare('SELECT * FROM api_keys WHERE key_hash = ?').get(hashKey(presented)) as ApiKeyRow | undefined
   if (!row || row.revoked_at) {

@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(body.endpoint)
 
   return { success: true }

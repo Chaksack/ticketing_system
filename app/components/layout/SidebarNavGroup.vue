@@ -11,10 +11,10 @@ const props = withDefaults(defineProps<{
 })
 
 const { setOpenMobile } = useSidebar()
-const { currentUser, isAdmin } = useAuth()
+const { currentUser, currentOrg, isAdmin, isPlatformStaff } = useAuth()
 const route = useRoute()
 
-const visibleChildren = computed(() => props.item.children.filter(child => isNavItemVisible(child, isAdmin.value, currentUser.value?.roles ?? [])))
+const visibleChildren = computed(() => props.item.children.filter(child => isNavItemVisible(child, isAdmin.value, currentUser.value?.roles ?? [], { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value })))
 
 const openCollapsible = ref(visibleChildren.value.some(child => child.link === route.path))
 </script>

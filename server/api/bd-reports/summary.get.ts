@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
   const from = `${fromDate ?? defaultFrom}T00:00:00.000Z`
   const to = `${toDate ?? defaultTo}T23:59:59.999Z`
 
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const newLeadsRow = await db.prepare('SELECT COUNT(*) as count FROM leads WHERE created_at BETWEEN ? AND ?').get(from, to) as CountRow
   const convertedLeadsRow = await db.prepare('SELECT COUNT(DISTINCT lead_id) as count FROM lead_activity WHERE type = \'converted\' AND created_at BETWEEN ? AND ?').get(from, to) as CountRow

@@ -78,9 +78,17 @@ function handleSelectLink(link: string) {
 </script>
 
 <template>
-  <Button variant="ghost" size="icon" @click="openCommand = !openCommand">
+  <button
+    type="button"
+    class="hidden h-10 w-56 items-center gap-2 rounded-full bg-white/10 px-4 text-left text-sm text-foreground/80 transition-colors hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-ring lg:flex xl:w-72"
+    @click="openCommand = !openCommand"
+  >
+    <Icon name="i-lucide-search" class="size-4 shrink-0" />
+    <span class="flex-1 truncate">Search tickets, clients, leads…</span>
+    <kbd class="rounded-md bg-white/10 px-1.5 py-0.5 font-sans text-[11px] font-medium">⌘K</kbd>
+  </button>
+  <Button variant="ghost" size="icon" class="lg:hidden" aria-label="Search" @click="openCommand = !openCommand">
     <Icon name="i-lucide-search" class="size-5" />
-    <span class="sr-only">Search</span>
   </Button>
 
   <CommandDialog v-model:open="openCommand">

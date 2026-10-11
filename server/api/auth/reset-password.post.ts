@@ -12,8 +12,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Password must be at least 8 characters' })
   }
 
+  // The token says which company it belongs to (newOrgToken) — open that company's database.
+  await useOrgFromToken(event, body.token)
+
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare('SELECT * FROM staff WHERE reset_token = ?').get(body.token) as StaffRow | undefined
 

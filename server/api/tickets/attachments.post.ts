@@ -32,6 +32,8 @@ const HOUR_MS = 60 * 60 * 1000
 export default defineEventHandler(async (event) => {
   // This handler only ever receives POST (Nitro dispatches OPTIONS to attachments.options.ts).
   applyPortalCors(event)
+  // Which company's portal this came from (?workspace=<slug>); staff-created tickets use the session's.
+  await useWorkspaceFromRequest(event)
 
   const ip = getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'
   const ipLimit = await checkRateLimit('ticket-attachment-ip', ip, UPLOADS_PER_IP_PER_HOUR, HOUR_MS)

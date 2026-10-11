@@ -12,7 +12,7 @@ export async function downloadCalendarReportPdf(events: CalendarEvent[], range: 
   const logo = await loadLogoDataUrl()
 
   let y = addBrandHeader(doc, {
-    title: 'Intelligent Building Solutions',
+    title: 'Canopy',
     subtitle: 'Calendar Activity Report',
     topRight: `${formatPdfDate(range.from)} – ${formatPdfDate(range.to)}`,
     bottomRight: `Generated ${formatPdfDate(new Date().toISOString())}`,

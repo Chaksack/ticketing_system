@@ -13,7 +13,7 @@ export async function downloadBdReportPdf(summary: BdReportSummary, quota?: { la
   const logo = await loadLogoDataUrl()
 
   let y = addBrandHeader(doc, {
-    title: 'Intelligent Building Solutions',
+    title: 'Canopy',
     subtitle: 'BD & SM Report',
     topRight: `${formatPdfDate(summary.range.from)} – ${formatPdfDate(summary.range.to)}`,
     bottomRight: `Generated ${formatPdfDate(new Date().toISOString())}`,

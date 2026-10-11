@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id) as ProductRow | undefined
   if (!existing) {

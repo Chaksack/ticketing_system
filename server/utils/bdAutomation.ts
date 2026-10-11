@@ -56,7 +56,7 @@ function matchesCreationRule(record: BdRecord, rule: BdAutomationRule): boolean 
 export async function applyBdCreationRules(entityType: 'lead', record: Lead): Promise<Lead>
 export async function applyBdCreationRules(entityType: 'tender', record: Tender): Promise<Tender>
 export async function applyBdCreationRules(entityType: BdEntityType, record: BdRecord): Promise<BdRecord> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const ruleRows = await db.prepare(
     'SELECT * FROM bd_automation_rules WHERE enabled = 1 AND entity_type = ? AND trigger = \'created\' ORDER BY created_at ASC',
@@ -99,7 +99,7 @@ export async function applyBdCreationRules(entityType: BdEntityType, record: BdR
 export async function applyBdStageChangeRules(entityType: 'lead', record: Lead): Promise<Lead>
 export async function applyBdStageChangeRules(entityType: 'tender', record: Tender): Promise<Tender>
 export async function applyBdStageChangeRules(entityType: BdEntityType, record: BdRecord): Promise<BdRecord> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const ruleRows = await db.prepare(
     'SELECT * FROM bd_automation_rules WHERE enabled = 1 AND entity_type = ? AND trigger = \'stage_changed\' AND to_stage = ? ORDER BY created_at ASC',
@@ -171,7 +171,7 @@ export async function autoAssignLead(lead: Lead): Promise<Lead> {
   if (lead.assignees.length)
     return lead
 
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const staffRows = await db.prepare('SELECT * FROM staff WHERE status = \'active\'').all() as StaffRow[]
   const candidates = staffRows.filter(row => parseStaffRoles(row).includes('bd'))

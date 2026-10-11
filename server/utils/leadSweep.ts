@@ -2,7 +2,7 @@ import type { LeadRow } from './mappers'
 
 export async function checkLeadReminders() {
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date().toISOString()
 
   const due = await db.prepare(`

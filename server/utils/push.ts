@@ -38,7 +38,7 @@ export async function sendPushNotification(sub: PushSubscriptionRecord, payload:
   }
   catch (error: any) {
     if (error?.statusCode === 404 || error?.statusCode === 410) {
-      const db = useDatabase()
+      const db = useTenantDb()
       await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(sub.endpoint)
     }
     else {
@@ -49,7 +49,7 @@ export async function sendPushNotification(sub: PushSubscriptionRecord, payload:
 }
 
 export async function sendPushToStaff(staffId: string, payload: PushPayload) {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE staff_id = ?').all(staffId) as PushSubscriptionRecord[]
 
   await Promise.all(rows.map(row => sendPushNotification(row, payload)))

@@ -59,7 +59,7 @@ const TOOLS: Record<string, ToolDef> = {
   get_overview: { description: 'A general cross-area snapshot (tickets, clients, staff) scoped to whatever the current user\'s role can see. Use this for vague requests like "give me a report" or "how are things looking".', allowed: () => true, run: user => overview(user) },
 }
 
-const SYSTEM_PROMPT = `You are the in-app assistant for IBS's internal CRM/ticketing platform, used by a support team and a BD/sales team.
+const SYSTEM_PROMPT = `You are the in-app assistant for Canopy, the team's CRM/ticketing platform, used by a support team and a BD/sales team.
 
 Modules staff use day to day:
 - Tickets: customer support requests with SLA targets, auto-assignment, escalation (Engineer -> Engineering Coordinator -> Engineering Lead), macros, tags, automation rules.

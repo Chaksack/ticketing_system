@@ -64,7 +64,7 @@ interface CandidateRow {
 }
 
 async function loadCandidates(table: DuplicateCheckTable): Promise<CandidateRow[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   // Converted leads are skipped — the client they became is already checked directly.
   const convertedColumn = table === 'leads' ? ', converted_client_id' : ''
   return await db.prepare(`

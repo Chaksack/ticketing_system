@@ -13,24 +13,22 @@ const ERP_SYNC_INTERVAL_MS = 60 * 60 * 1000
 export default defineNitroPlugin(async () => {
   await ensureDb()
 
+  // Every sweep runs once per active company, in that company's database.
   setInterval(() => {
-    runTicketSweep().catch(error => console.error('Ticket sweep failed', error))
+    forEachActiveOrg('ticket-sweep', () => runTicketSweep())
+      .then(() => forEachActiveOrg('amc-renewals', () => checkAmcRenewals()))
+      .then(() => forEachActiveOrg('task-reminders', () => checkTaskReminders()))
+      .then(() => forEachActiveOrg('lead-reminders', () => checkLeadReminders()))
+      .then(() => forEachActiveOrg('tender-reminders', () => checkTenderReminders()))
+      .then(() => forEachActiveOrg('amc-follow-ups', () => checkAmcFollowUps()))
+      .then(() => forEachActiveOrg('meeting-reminders', () => checkMeetingReminders()))
+      .then(() => forEachActiveOrg('prune-notifications', () => pruneReadNotifications()))
+      .catch(error => console.error('Sweep failed', error))
 
-    checkAmcRenewals().catch(error => console.error('AMC renewal sweep failed', error))
-
-    checkTaskReminders().catch(error => console.error('Task reminder sweep failed', error))
-
-    checkLeadReminders().catch(error => console.error('Lead reminder sweep failed', error))
-
-    checkTenderReminders().catch(error => console.error('Tender reminder sweep failed', error))
-
-    checkAmcFollowUps().catch(error => console.error('AMC follow-up sweep failed', error))
-
-    checkMeetingReminders().catch(error => console.error('Meeting reminder sweep failed', error))
-
-    pruneReadNotifications().catch(error => console.error('Notification prune failed', error))
-
-    checkGmailInbox().catch((error) => {
+    runWithTenant(HOME_ORG_ID, async () => {
+      await ensureDb()
+      await checkGmailInbox()
+    }).catch((error) => {
       // Not configured is expected until NUXT_GMAIL_REFRESH_TOKEN is set — don't spam logs for it.
       if (!(error instanceof Error) || !error.message.includes('not configured'))
         console.error('Gmail inbox check failed', error)
@@ -39,6 +37,6 @@ export default defineNitroPlugin(async () => {
 
   // Hourly, matching .github/workflows/erp-sync.yml (/api/cron/erp-sync) in production.
   setInterval(() => {
-    runAllErpSyncs().catch(error => console.error('ERP sync failed', error))
+    forEachActiveOrg('erp-sync', () => runAllErpSyncs()).catch(error => console.error('ERP sync failed', error))
   }, ERP_SYNC_INTERVAL_MS)
 })

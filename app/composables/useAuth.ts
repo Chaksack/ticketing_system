@@ -1,4 +1,16 @@
+import type { OrgApp, OrgPlan } from '~/types/organization'
 import type { StaffRole } from '~/types/staff'
+
+export interface AuthOrg {
+  id: string
+  name: string
+  slug: string
+  apps: OrgApp[]
+  plan: OrgPlan
+  sector?: string
+  /** Canopy's own workspace — its admins run the staff console. */
+  isHome: boolean
+}
 
 export interface AuthUser {
   id: string
@@ -6,6 +18,7 @@ export interface AuthUser {
   email: string
   roles: StaffRole[]
   avatarUrl?: string
+  org?: AuthOrg | null
 }
 
 export function useAuth() {
@@ -22,6 +35,12 @@ export function useAuth() {
   const isEngineeringCoordinator = computed(() => currentUser.value?.roles.includes('engineering_coordinator') ?? false)
   const isEngineeringLead = computed(() => currentUser.value?.roles.includes('engineering_lead') ?? false)
   const isLoggedIn = computed(() => !!currentUser.value)
+  const currentOrg = computed(() => currentUser.value?.org ?? null)
+  /** Canopy staff: admins of the home workspace. */
+  const isPlatformStaff = computed(() => !!currentOrg.value?.isHome && isAdmin.value)
+  function hasApp(app: OrgApp) {
+    return currentOrg.value ? currentOrg.value.apps.includes(app) : true
+  }
 
   async function ensureAuth() {
     if (authReady.value)
@@ -41,6 +60,22 @@ export function useAuth() {
     return currentUser.value
   }
 
+  /**
+   * Where this person's work starts — used after sign-in and when a signed-in person opens the
+   * public landing page at "/". Mirrors which sidebar sections their roles can see.
+   */
+  const homePath = computed(() => {
+    const roles = currentUser.value?.roles ?? []
+    const admin = roles.includes('admin')
+    if (hasApp('service') && (admin || roles.some(role => role === 'agent' || role === 'engineer' || role === 'engineering_coordinator' || role === 'engineering_lead')))
+      return '/tickets'
+    if (hasApp('sales') && (admin || roles.some(role => role === 'bd' || role === 'sm')))
+      return '/overview'
+    if (hasApp('projects') && (admin || roles.includes('finance')))
+      return admin ? '/projects' : '/resource-utilization'
+    return '/calendar'
+  })
+
   async function login(email: string, password: string) {
     const { user } = await $fetch('/api/auth/login', {
       method: 'POST',
@@ -58,5 +93,5 @@ export function useAuth() {
     currentUser.value = null
   }
 
-  return { currentUser, authReady, isAdmin, isAgent, isBd, isSm, isFinance, isEngineer, isEngineeringCoordinator, isEngineeringLead, isLoggedIn, ensureAuth, login, logout }
+  return { currentUser, currentOrg, authReady, isAdmin, isAgent, isBd, isSm, isFinance, isEngineer, isEngineeringCoordinator, isEngineeringLead, isLoggedIn, isPlatformStaff, hasApp, homePath, ensureAuth, login, logout }
 }

@@ -2,18 +2,20 @@ function trimTrailingSlash(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url
 }
 
-export async function sendStaffInviteEmail(params: { to: string, name: string, token: string }) {
+export async function sendStaffInviteEmail(params: { to: string, name: string, token: string, expiresIn?: string }) {
   const config = useRuntimeConfig()
   const link = `${trimTrailingSlash(config.siteUrl)}/invite/${params.token}`
+  const org = await getOrganization(currentOrgId())
+  const workspace = org && !org.isHome ? `${org.name}'s workspace on Canopy` : 'Canopy'
 
   await sendGmailMessage({
     to: params.to,
-    subject: 'You\'ve been invited to IBS Ticketing System',
+    subject: `You've been invited to ${workspace}`,
     html: `
       <p>Hi ${params.name},</p>
-      <p>You've been added as staff on IBS Ticketing System. Click the link below to create your password and get started:</p>
+      <p>You've been added to ${workspace}. Click the link below to create your password and get started:</p>
       <p><a href="${link}">${link}</a></p>
-      <p>This link expires in 48 hours. If you weren't expecting this, you can ignore this email.</p>
+      <p>This link expires in ${params.expiresIn ?? '48 hours'}. If you weren't expecting this, you can ignore this email.</p>
     `,
   })
 }
@@ -21,7 +23,8 @@ export async function sendStaffInviteEmail(params: { to: string, name: string, t
 export async function sendTicketReplyEmail(params: { to: string, name: string, ticketId: string, subject: string, message: string }) {
   await sendGmailMessage({
     to: params.to,
-    subject: `Re: [${params.ticketId}] ${params.subject}`,
+    // The company slug in the tag routes the customer's reply back to the right workspace.
+    subject: `Re: [${params.ticketId}${currentOrgId() === HOME_ORG_ID ? '' : ` · ${currentOrgId()}`}] ${params.subject}`,
     ticketId: params.ticketId,
     html: `
       <p>Hi ${params.name},</p>
@@ -44,7 +47,7 @@ export async function sendPasswordResetEmail(params: { to: string, name: string,
 
   await sendGmailMessage({
     to: params.to,
-    subject: 'Reset your IBS Ticketing System password',
+    subject: 'Reset your Canopy password',
     html: `
       <p>Hi ${params.name},</p>
       <p>${intro}</p>

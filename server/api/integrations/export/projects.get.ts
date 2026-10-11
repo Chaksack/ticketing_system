@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT projects.id, projects.name, projects.description, projects.client_id,
       clients.name AS client_name, projects.status, projects.start_date, projects.end_date,

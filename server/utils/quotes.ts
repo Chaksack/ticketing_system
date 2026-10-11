@@ -32,7 +32,7 @@ export function mapQuoteRow(row: QuoteRow, lineItems: LineItem[] = []): Quote {
 }
 
 export async function loadFullQuote(id: string): Promise<Quote> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare(`
     SELECT quotes.*, staff.name AS created_by_name
@@ -51,7 +51,7 @@ export async function loadFullQuote(id: string): Promise<Quote> {
 }
 
 export async function getQuotesForRecord(regardingType: RegardingType, regardingId: string): Promise<Quote[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const rows = await db.prepare(`
     SELECT quotes.*, staff.name AS created_by_name

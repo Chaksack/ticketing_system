@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const client = await db.prepare('SELECT id FROM clients WHERE id = ?').get(clientId)
   if (!client) {

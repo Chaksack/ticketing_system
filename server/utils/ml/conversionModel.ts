@@ -64,7 +64,7 @@ function buildFeatureVector(input: {
 }
 
 async function loadInteractionStats(regardingType: RegardingType, regardingId: string, cutoffIso: string): Promise<{ count: number, lastOccurredAt: string | null }> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const row = await db.prepare(`
     SELECT COUNT(*) AS count, MAX(occurred_at) AS last_occurred_at
     FROM interactions
@@ -75,7 +75,7 @@ async function loadInteractionStats(regardingType: RegardingType, regardingId: s
 }
 
 async function loadDecidedOpportunities(): Promise<OpportunityRow[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const leadRows = await db.prepare(`
     SELECT id, source, estimated_value, created_at, updated_at, stage
@@ -132,7 +132,7 @@ async function buildTrainingSet(): Promise<{ rows: number[][], labels: number[],
 }
 
 async function loadModelRow(): Promise<{ weights: string, trained_at: string, training_examples: number, metrics: string | null } | undefined> {
-  const db = useDatabase()
+  const db = useTenantDb()
   return await db.prepare('SELECT weights, trained_at, training_examples, metrics FROM ml_models WHERE id = ?').get(CONVERSION_MODEL_ID) as { weights: string, trained_at: string, training_examples: number, metrics: string | null } | undefined
 }
 
@@ -161,7 +161,7 @@ export async function getConversionModelStatus(): Promise<ConversionModelStatus>
 export async function trainConversionModel(): Promise<ConversionModelStatus> {
   const { rows, labels, sourceVocab } = await buildTrainingSet()
   const now = new Date().toISOString()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   if (rows.length < MIN_TRAINING_EXAMPLES) {
     // Still record the attempt (example count only) so the UI can show real progress toward the
@@ -237,7 +237,7 @@ function buildSuggestionText(input: { urgency: SuggestionUrgency, winProbability
 }
 
 export async function getOpportunitySuggestion(regardingType: RegardingType, regardingId: string): Promise<OpportunitySuggestion> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   let source: string | null = null
   let estimatedValue: number | null = null

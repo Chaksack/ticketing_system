@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const from = typeof query.from === 'string' && query.from ? query.from : null
   const to = typeof query.to === 'string' && query.to ? query.to : null
 
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const rows = await db.prepare(`
     SELECT calendar_events.*, staff.name AS created_by_name

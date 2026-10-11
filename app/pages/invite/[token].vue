@@ -95,7 +95,7 @@ const onSubmit = handleSubmit(async (values) => {
         <CardHeader>
           <CardTitle>Welcome, {{ invite?.name }}</CardTitle>
           <CardDescription>
-            Create a password for {{ invite?.email }} to activate your IBS Ticketing System account.
+            Create a password for {{ invite?.email }} to activate your Canopy account.
           </CardDescription>
         </CardHeader>
         <CardContent>

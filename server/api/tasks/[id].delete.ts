@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const subtasks = await db.prepare('SELECT id FROM tasks WHERE parent_task_id = ?').all(id) as { id: string }[]
   for (const subtask of subtasks)

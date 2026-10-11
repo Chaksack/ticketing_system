@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const sent = await sendSlackDmToStaff(user.id, {
     title: 'Test notification',
-    body: 'If you can see this, notifications from IBS Ticketing System will reach you here on Slack.',
+    body: 'If you can see this, notifications from Canopy will reach you here on Slack.',
   })
 
   if (!sent) {

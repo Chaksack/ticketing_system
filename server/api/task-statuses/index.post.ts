@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const maxPositionRow = await db.prepare('SELECT MAX(position) as max_position FROM task_statuses').get() as { max_position: number | null }
   const position = (maxPositionRow.max_position ?? -1) + 1

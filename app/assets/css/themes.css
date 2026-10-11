@@ -347,26 +347,32 @@
 }
 
 .color-ibsgh {
-  --primary: oklch(0.542 0.152 148.732);
-  --primary-foreground: oklch(1 0 0);
-  --ring: oklch(0.594 0.168 148.45);
+  /* The default theme — the brand palette from tailwind.css (Forest Ink + Lime). */
+  --primary: var(--brand-forest);
+  --primary-foreground: var(--brand-lime);
+  --ring: var(--brand-spruce);
   --vis-primary-color: var(--primary);
-  --chart-1: oklch(0.75 0.14 148);
-  --chart-2: oklch(0.65 0.16 148);
-  --chart-3: oklch(0.594 0.168 148.45);
-  --chart-4: oklch(0.542 0.152 148.732);
-  --chart-5: oklch(0.4 0.13 148);
-  --sidebar-primary: oklch(0.542 0.152 148.732);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-ring: oklch(0.594 0.168 148.45);
+  --chart-1: #9fe870;
+  --chart-2: #054d28;
+  --chart-3: #163300;
+  --chart-4: #c9f2ad;
+  --chart-5: #5d605d;
+  --sidebar-primary: var(--brand-forest);
+  --sidebar-primary-foreground: var(--brand-lime);
+  --sidebar-ring: var(--brand-spruce);
 
   @variant dark {
-    --primary: oklch(0.594 0.168 148.45);
-    --primary-foreground: oklch(1 0 0);
-    --ring: oklch(0.35 0.1 148);
-    --sidebar-primary: oklch(0.594 0.168 148.45);
-    --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-ring: oklch(0.3 0.08 148);
+    --primary: var(--brand-lime);
+    --primary-foreground: var(--brand-forest);
+    --ring: var(--brand-lime);
+    --chart-1: #9fe870;
+    --chart-2: #4fb05c;
+    --chart-3: #e2f6d5;
+    --chart-4: #2f6b2a;
+    --chart-5: #a7b2a2;
+    --sidebar-primary: var(--brand-lime);
+    --sidebar-primary-foreground: var(--brand-forest);
+    --sidebar-ring: var(--brand-lime);
   }
 }
 

@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
     attachmentSize = attachmentPart.data.length
   }
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const id = await nextChatMessageId()
   const now = new Date().toISOString()
 

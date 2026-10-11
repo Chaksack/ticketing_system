@@ -9,7 +9,7 @@ const INTERACTIONS_SELECT = `
 `
 
 export async function getInteractions(regardingType: RegardingType, regardingId: string): Promise<Interaction[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     ${INTERACTIONS_SELECT}
     WHERE interactions.regarding_type = ? AND interactions.regarding_id = ?
@@ -32,7 +32,7 @@ export async function logInteraction(options: {
   occurredAt?: string
   loggedBy?: string
 }): Promise<string> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const id = await nextInteractionId()
   const now = new Date().toISOString()
 
@@ -59,7 +59,7 @@ export async function logInteraction(options: {
 }
 
 export async function deleteInteraction(id: string) {
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('DELETE FROM interactions WHERE id = ?').run(id)
 }
 
@@ -68,7 +68,7 @@ export async function upsertMeetingInteraction(event: CalendarEvent, loggedBy?: 
     return
   }
 
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('DELETE FROM interactions WHERE calendar_event_id = ?').run(event.id)
   await logInteraction({
     regardingType: event.regardingType,
@@ -83,6 +83,6 @@ export async function upsertMeetingInteraction(event: CalendarEvent, loggedBy?: 
 }
 
 export async function removeMeetingInteraction(eventId: string) {
-  const db = useDatabase()
+  const db = useTenantDb()
   await db.prepare('DELETE FROM interactions WHERE calendar_event_id = ?').run(eventId)
 }

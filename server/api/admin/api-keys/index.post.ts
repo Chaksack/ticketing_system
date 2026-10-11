@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const { key, prefix, hash } = generateApiKey()
   const id = await nextApiKeyId()

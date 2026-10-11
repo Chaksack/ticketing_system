@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const tag = await db.prepare('SELECT * FROM tags WHERE id = ?').get(tagId) as TagRow | undefined
 

@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   await assertNoDuplicateName('clients', body.name)
 

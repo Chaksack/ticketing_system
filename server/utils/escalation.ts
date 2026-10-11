@@ -24,7 +24,7 @@ export function nextEscalationLevel(current: string | null): EscalationLevel | n
  * stored as a JSON array column, not queryable with plain SQL.
  */
 async function leastLoadedStaffWithRole(role: EscalationLevel): Promise<StaffRow | undefined> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const staffRows = await db.prepare('SELECT * FROM staff WHERE status = \'active\'').all() as StaffRow[]
   const candidates = staffRows.filter(row => parseStaffRoles(row).includes(role))
@@ -43,7 +43,7 @@ async function leastLoadedStaffWithRole(role: EscalationLevel): Promise<StaffRow
 }
 
 export async function escalateTicket(ticketId: string, actor: { id?: string, name: string }): Promise<Ticket> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId) as TicketRow | undefined
   if (!existing) {

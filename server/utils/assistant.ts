@@ -53,7 +53,7 @@ export function isAdminUser(user: SessionUser) {
 }
 
 export async function ticketStatusBreakdown(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT status, COUNT(*) AS count FROM tickets GROUP BY status').all() as { status: string, count: number }[]
 
   if (!rows.length)
@@ -66,7 +66,7 @@ export async function ticketStatusBreakdown(): Promise<AssistantSection[]> {
 }
 
 export async function ticketPriorityBreakdown(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT priority, COUNT(*) AS count FROM tickets GROUP BY priority').all() as { priority: string, count: number }[]
 
   if (!rows.length)
@@ -79,7 +79,7 @@ export async function ticketPriorityBreakdown(): Promise<AssistantSection[]> {
 }
 
 export async function slaBreachSummary(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const nowIso = new Date().toISOString()
 
   const openOverdue = await db.prepare(`
@@ -102,7 +102,7 @@ export async function slaBreachSummary(): Promise<AssistantSection[]> {
 }
 
 export async function myTickets(user: SessionUser): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT status, COUNT(*) AS count FROM tickets WHERE assignee_id = ? GROUP BY status').all(user.id) as { status: string, count: number }[]
 
   if (!rows.length)
@@ -115,7 +115,7 @@ export async function myTickets(user: SessionUser): Promise<AssistantSection[]> 
 }
 
 export async function ticketVolume(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
   const weekStart = new Date(now.getTime() - 7 * DAY_MS).toISOString()
@@ -133,7 +133,7 @@ export async function ticketVolume(): Promise<AssistantSection[]> {
 }
 
 export async function clientsByStage(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT stage, COUNT(*) AS count FROM clients GROUP BY stage').all() as { stage: string, count: number }[]
 
   if (!rows.length)
@@ -146,7 +146,7 @@ export async function clientsByStage(): Promise<AssistantSection[]> {
 }
 
 export async function myClients(user: SessionUser): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT stage, COUNT(*) AS count FROM clients WHERE assigned_to = ? GROUP BY stage').all(user.id) as { stage: string, count: number }[]
 
   if (!rows.length)
@@ -159,7 +159,7 @@ export async function myClients(user: SessionUser): Promise<AssistantSection[]> 
 }
 
 export async function contractsExpiringSoon(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date()
   const in30Days = new Date(now.getTime() + 30 * DAY_MS).toISOString()
   const nowIso = now.toISOString()
@@ -187,7 +187,7 @@ export async function contractsExpiringSoon(): Promise<AssistantSection[]> {
 }
 
 export async function contractCounts(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT status, end_date FROM client_amc_contracts').all() as { status: string, end_date: string }[]
 
   const tally: Record<AmcContractDisplayStatus, number> = { submitted: 0, negotiating: 0, active: 0, expiring: 0, lost: 0, expired: 0, cancelled: 0 }
@@ -211,7 +211,7 @@ export async function contractCounts(): Promise<AssistantSection[]> {
 }
 
 export async function onCallStaff(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT name FROM staff WHERE on_call = 1 AND status = \'active\'').all() as { name: string }[]
 
   if (!rows.length)
@@ -224,7 +224,7 @@ export async function onCallStaff(): Promise<AssistantSection[]> {
 }
 
 export async function staffHeadcount(): Promise<AssistantSection[]> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT role, roles FROM staff').all() as { role: string, roles: string | null }[]
 
   const tally: Record<string, number> = { admin: 0, agent: 0, bd: 0, sm: 0, engineer: 0, engineering_coordinator: 0, engineering_lead: 0 }

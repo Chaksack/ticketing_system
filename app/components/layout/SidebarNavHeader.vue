@@ -23,14 +23,15 @@ const activeTeam = ref(props.teams[0])
             size="lg"
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <div class="aspect-square size-8 flex items-center justify-center rounded-lg bg-white p-1">
+            <div class="aspect-square size-8 flex items-center justify-center">
               <img :src="activeTeam!.logo" alt="" class="size-full object-contain">
             </div>
             <div class="grid flex-1 text-left text-sm leading-tight">
-              <span class="truncate font-semibold">
+              <!-- Sits on the forest band (see AppSidebar), so the name uses the brand lime. -->
+              <span class="truncate font-black tracking-[-0.03em] text-brand-lime">
                 {{ activeTeam!.name }}
               </span>
-              <span class="truncate text-xs">{{ activeTeam!.role }}</span>
+              <span class="truncate text-xs text-brand-mist">{{ activeTeam!.role }}</span>
             </div>
             <Icon name="i-lucide-chevrons-up-down" class="ml-auto" />
           </SidebarMenuButton>

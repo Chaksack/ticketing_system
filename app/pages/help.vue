@@ -58,11 +58,11 @@ const faqs = [
 <template>
   <div class="w-full flex flex-col gap-6">
     <div>
-      <h2 class="text-2xl font-bold tracking-tight">
+      <h2 class="text-3xl font-black tracking-[-0.04em] text-foreground">
         Help &amp; Support
       </h2>
       <p class="text-muted-foreground">
-        How the IBS Ticketing System works, and how to get the most out of it.
+        How the Canopy works, and how to get the most out of it.
       </p>
     </div>
 
@@ -152,7 +152,7 @@ const faqs = [
                     Tickets
                   </NuxtLink>
                   is the support queue,
-                  <NuxtLink to="/" class="underline">
+                  <NuxtLink to="/overview" class="underline">
                     Overview
                   </NuxtLink>
                   is the BD/SM dashboard, and

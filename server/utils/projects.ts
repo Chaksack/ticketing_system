@@ -15,7 +15,7 @@ const PROJECT_SELECT = `
 `
 
 export async function loadFullProject(id: string): Promise<Project> {
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const row = await db.prepare(PROJECT_SELECT).get(id) as ProjectRow | undefined
   if (!row) {
@@ -55,7 +55,7 @@ export async function loadFullProject(id: string): Promise<Project> {
  * rather than deleted.
  */
 export async function deleteProjectCascade(id: string) {
-  const db = useDatabase()
+  const db = useTenantDb()
   // Keep the AMC contract history — just detach it from the project being removed, mirroring
   // how deleting a task epic nulls epic_id on its tasks rather than deleting them.
   await db.prepare('UPDATE client_amc_contracts SET project_id = NULL WHERE project_id = ?').run(id)

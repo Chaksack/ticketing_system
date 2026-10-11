@@ -15,7 +15,7 @@ const MAX_LIST_ROWS = 200
  * use: a column with id 'done' if there is one, otherwise the last column.
  */
 export async function getDoneTaskStatusId(): Promise<string> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare('SELECT id FROM task_statuses ORDER BY position ASC').all() as { id: string }[]
   return rows.find(r => r.id === 'done')?.id ?? rows.at(-1)?.id ?? 'done'
 }
@@ -55,7 +55,7 @@ function countBy<T>(items: T[], key: (item: T) => string) {
  * `from`/`to` are full ISO timestamps (inclusive range); "upcoming" is always the next 14 days.
  */
 export async function getBdReportExtras(from: string, to: string): Promise<Extras> {
-  const db = useDatabase()
+  const db = useTenantDb()
   const now = new Date()
   const nowIso = now.toISOString()
   const upcomingEnd = new Date(now.getTime() + UPCOMING_DAYS * DAY_MS).toISOString()

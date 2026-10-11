@@ -4,7 +4,9 @@ import { randomUUID } from 'node:crypto'
 import { OAuth2Client } from 'google-auth-library'
 
 const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me'
-const MESSAGE_ID_DOMAIN = 'ibsgh.com'
+// Reply matching (server/utils/emailReply.ts) only looks for "ticket-<id>." and ignores the
+// domain, so replies to older emails sent with @ibsgh.com Message-IDs still find their ticket.
+const MESSAGE_ID_DOMAIN = 'canopy.com'
 
 let cachedClient: OAuth2Client | null = null
 
@@ -107,7 +109,7 @@ function buildMimeMessage(options: {
 
 /**
  * Sends an email through the configured Gmail mailbox. Every message gets a Message-ID
- * shaped "ticket-<ticketId>.<random>@ibsgh.com" when `ticketId` is given, so an eventual
+ * shaped "ticket-<ticketId>.<random>@canopy.com" when `ticketId` is given, so an eventual
  * reply's In-Reply-To/References headers can be matched back to the ticket by
  * `extractTicketIdFromThreadHeaders` — see `server/utils/emailReply.ts`.
  */
@@ -115,11 +117,14 @@ export async function sendGmailMessage(options: { to: string, subject: string, h
   const config = useRuntimeConfig()
   const accessToken = await getAccessToken()
 
-  const messageId = `${options.ticketId ? `ticket-${options.ticketId}.` : ''}${randomUUID()}@${MESSAGE_ID_DOMAIN}`
+  const orgId = currentOrgId()
+  const messageId = `${options.ticketId ? `ticket-${options.ticketId}.org-${orgId}.` : ''}${randomUUID()}@${MESSAGE_ID_DOMAIN}`
+  // Every company's mail goes out through Canopy's mailbox, named after the company.
+  const org = orgId === HOME_ORG_ID ? null : await getOrganization(orgId)
 
   const raw = buildMimeMessage({
     from: config.gmailSender,
-    fromName: config.gmailFromName,
+    fromName: org ? `${org.name} via Canopy` : config.gmailFromName,
     to: options.to,
     subject: options.subject,
     html: options.html,
@@ -183,7 +188,21 @@ async function processInboundGmailMessage(accessToken: string, messageId: string
   if (!ticketId)
     return false
 
-  const db = useDatabase()
+  // The shared mailbox serves every company — file the reply in the company it came from.
+  const orgId = extractOrgIdFromReply(threadHeaders, headers.subject ?? '') ?? HOME_ORG_ID
+  const org = await getOrganization(orgId)
+  if (!org || org.status !== 'active') {
+    console.warn(`[gmail] Reply for ${ticketId} names unknown or inactive workspace ${orgId}`)
+    return false
+  }
+  return await runWithTenant(orgId, async () => {
+    await ensureDb()
+    return await fileInboundReply(message, ticketId)
+  })
+}
+
+async function fileInboundReply(message: any, ticketId: string): Promise<boolean> {
+  const db = useTenantDb()
   const ticket = await db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId) as TicketRow | undefined
   if (!ticket) {
     console.warn(`[gmail] Reply matched unknown ticket ${ticketId}`)
@@ -240,7 +259,7 @@ async function processInboundGmailMessage(accessToken: string, messageId: string
  */
 export async function checkGmailInbox(): Promise<{ processed: number }> {
   const accessToken = await getAccessToken()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const state = await db.prepare('SELECT value FROM integration_state WHERE key = ?').get('gmail_history_id') as { value: string } | undefined
 

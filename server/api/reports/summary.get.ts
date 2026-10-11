@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   await requireAdmin(event)
   await ensureDb()
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const tickets = await db.prepare(`
     SELECT id, status, priority, category, created_at, resolved_at, due_at, first_response_at, assignee_id
     FROM tickets

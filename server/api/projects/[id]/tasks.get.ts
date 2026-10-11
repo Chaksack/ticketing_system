@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing project id' })
   }
 
-  const db = useDatabase()
+  const db = useTenantDb()
   const rows = await db.prepare(`
     SELECT tasks.*, epics.title AS epic_title, epics.color AS epic_color,
       sprints.name AS sprint_name, sprints.status AS sprint_status,

@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await ensureDb()
-  const db = useDatabase()
+  const db = useTenantDb()
 
   const existing = await db.prepare('SELECT id FROM push_subscriptions WHERE endpoint = ?').get(body.endpoint) as { id: string } | undefined
 
