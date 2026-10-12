@@ -51,6 +51,7 @@ const stats = computed(() => lead.value
   ? [
       { label: 'Est. value', value: money(lead.value.estimatedValue) },
       { label: 'Weighted', value: weighted.value === null ? '—' : `${money(weighted.value)} · ${stageInfo.value?.probability}%` },
+      { label: 'Next step', value: lead.value.nextStepAt ? new Date(lead.value.nextStepAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) : '—' },
       { label: 'Owner', value: lead.value.assignees.map(a => a.name).join(', ') || 'Unassigned' },
     ]
   : [])
@@ -192,24 +193,52 @@ function activityLabel(activity: LeadActivity) {
       return activity.message ?? 'Updated'
   }
 }
-const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const timeline = computed(() => lead.value
+  ? [
+      ...lead.value.activity.map(a => ({ id: a.id, label: activityLabel(a), actor: a.actorName, at: a.createdAt })),
+      { id: 'created', label: 'Lead created', actor: lead.value.source ? `Source: ${lead.value.source}` : undefined, at: lead.value.createdAt },
+    ]
+  : [])
+const tab = ref('summary')
+const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-[1360px] flex-col gap-4">
+  <div class="w-full">
     <p v-if="notFound" class="text-muted-foreground">
       This lead doesn't exist or was deleted. <NuxtLink to="/leads" class="underline">
         Back to leads
       </NuxtLink>
     </p>
 
-    <template v-else-if="lead">
-      <PageActions label="Lead actions">
-        <Button variant="ghost" size="icon" as-child aria-label="Back to leads">
-          <NuxtLink to="/leads">
-            <Icon name="i-lucide-arrow-left" />
-          </NuxtLink>
-        </Button>
+    <RecordPage
+      v-else-if="lead"
+      v-model:tab="tab"
+      back-to="/leads"
+      back-label="Back to leads"
+      actions-label="Lead actions"
+      :eyebrow="`Lead · ${lead.source || 'No source'} · ${lead.id}`"
+      :title="lead.name"
+      :subtitle="[lead.contactName, lead.contactEmail].filter(Boolean).join(' · ') || undefined"
+      :stats="stats"
+      :stages="PROCESS"
+      :stage="lead.stage"
+      :stage-note="daysInStage"
+      :stage-readonly="isConverted"
+      :closed-label="lead.stage === 'lost' ? 'This lead was lost.' : undefined"
+      regarding-type="lead"
+      :regarding-id="lead.id"
+      :record-name="lead.name"
+      :contact="{ name: lead.contactName, email: lead.contactEmail, phone: lead.contactPhone }"
+      :interactions="lead.interactions"
+      :documents="lead.documents"
+      :upload="(file) => uploadDocument(lead!.id, file)"
+      :remove-document="(docId) => removeDocument(lead!.id, docId)"
+      :timeline="timeline"
+      @stage="(value) => moveStage(value as LeadStage)"
+      @reopen="moveStage('new')"
+    >
+      <template #actions>
         <Button variant="lime" :disabled="saving || !isDirty || !form.name.trim()" @click="save">
           Save
         </Button>
@@ -224,6 +253,9 @@ const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'nu
         <Button v-if="lead.stage !== 'lost' && !isConverted" variant="ghost" @click="moveStage('lost')">
           Mark as lost
         </Button>
+        <Button variant="ghost" @click="tab = 'quotes'">
+          New quote
+        </Button>
         <Popover>
           <PopoverTrigger as-child>
             <Button variant="ghost">
@@ -234,163 +266,115 @@ const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'nu
             <StaffAssigneePicker :model-value="lead.assignees.map(a => a.id)" :staff="activeStaff" @update:model-value="onAssigneesChange" />
           </PopoverContent>
         </Popover>
-        <Button variant="ghost" as-child>
-          <a href="#quotes">Create quote</a>
-        </Button>
         <Button variant="ghost" class="text-destructive hover:text-destructive" @click="isDeleteOpen = true">
           Delete
         </Button>
-      </PageActions>
+      </template>
 
-      <RecordHeader :eyebrow="`Lead · ${lead.source || 'No source'} · ${lead.id}`" :title="lead.name" :subtitle="[lead.contactName, lead.contactEmail].filter(Boolean).join(' · ') || undefined" :stats="stats">
-        <p v-if="lead.stage === 'lost'" class="m-0 flex flex-wrap items-center gap-3 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-          This lead was lost.
-          <Button size="sm" variant="outline" @click="moveStage('new')">
-            Reopen
-          </Button>
-        </p>
-        <RecordStageBar v-else :stages="PROCESS" :current="lead.stage" label="Sales process" :note="daysInStage" :readonly="isConverted" @select="moveStage" />
-      </RecordHeader>
-
-      <div class="flex flex-wrap items-start gap-4">
-        <RecordCard title="Contact" class="flex-[1_1_340px]">
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div class="flex flex-col gap-1.5 sm:col-span-2">
-              <Label for="lead-name" class="text-[13px] font-semibold">Company / lead name</Label>
-              <Input id="lead-name" v-model="form.name" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="lead-contact" class="text-[13px] font-semibold">Contact name</Label>
-              <Input id="lead-contact" v-model="form.contactName" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="lead-source" class="text-[13px] font-semibold">Source</Label>
-              <Input id="lead-source" v-model="form.source" placeholder="e.g. Referral, Website" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="lead-email" class="text-[13px] font-semibold">Email</Label>
-              <Input id="lead-email" v-model="form.contactEmail" type="email" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="lead-phone" class="text-[13px] font-semibold">Phone</Label>
-              <Input id="lead-phone" v-model="form.contactPhone" type="tel" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="lead-value" class="text-[13px] font-semibold">Estimated value</Label>
-              <Input id="lead-value" v-model="form.estimatedValue" inputmode="decimal" />
-            </div>
+      <template #details>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <Label for="rec-name" class="text-[13px] font-semibold">Company / lead name</Label>
+            <Input id="rec-name" v-model="form.name" />
           </div>
-          <RecordExtraContacts
-            :emails="lead.additionalEmails"
-            :phones="lead.additionalPhones"
-            :add-email="(v) => addContactEmail(lead!.id, v)"
-            :remove-email="(eid) => removeContactEmail(lead!.id, eid)"
-            :add-phone="(v) => addContactPhone(lead!.id, v)"
-            :remove-phone="(pid) => removeContactPhone(lead!.id, pid)"
-          />
           <div class="flex flex-col gap-1.5">
-            <Label for="lead-notes" class="text-[13px] font-semibold">Need / notes</Label>
-            <Textarea id="lead-notes" v-model="form.notes" rows="3" placeholder="What are they looking for?" />
+            <Label for="rec-contact" class="text-[13px] font-semibold">Contact name</Label>
+            <Input id="rec-contact" v-model="form.contactName" />
           </div>
-        </RecordCard>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rec-value" class="text-[13px] font-semibold">Estimated value</Label>
+            <Input id="rec-value" v-model="form.estimatedValue" inputmode="decimal" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rec-email" class="text-[13px] font-semibold">Email</Label>
+            <Input id="rec-email" v-model="form.contactEmail" type="email" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rec-phone" class="text-[13px] font-semibold">Phone</Label>
+            <Input id="rec-phone" v-model="form.contactPhone" type="tel" />
+          </div>
+          <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <Label for="rec-source" class="text-[13px] font-semibold">Source</Label>
+            <Input id="rec-source" v-model="form.source" placeholder="e.g. Referral, Website" />
+          </div>
+        </div>
+        <RecordExtraContacts
+          :emails="lead.additionalEmails"
+          :phones="lead.additionalPhones"
+          :add-email="(v) => addContactEmail(lead!.id, v)"
+          :remove-email="(eid) => removeContactEmail(lead!.id, eid)"
+          :add-phone="(v) => addContactPhone(lead!.id, v)"
+          :remove-phone="(pid) => removeContactPhone(lead!.id, pid)"
+        />
+        <div class="flex flex-col gap-1.5">
+          <Label for="rec-notes" class="text-[13px] font-semibold">Notes</Label>
+          <Textarea id="rec-notes" v-model="form.notes" rows="3" placeholder="What are they looking for?" />
+        </div>
+      </template>
 
-        <RecordCard title="Activity" class="flex-[1_1_340px]">
-          <p v-if="!lead.activity.length" class="m-0 text-sm text-muted-foreground">
-            No activity yet.
+      <template #key-card>
+        <RecordCard title="Next step" tone="mist">
+          <Textarea v-model="nextStep.text" rows="2" placeholder="What's the next action on this lead?" class="bg-card" aria-label="Next step" />
+          <Label for="rec-key-at" class="text-[13px] font-semibold">Remind me</Label>
+          <Input id="rec-key-at" v-model="nextStep.at" type="datetime-local" class="bg-card" />
+          <Button class="self-start" @click="saveNextStep">
+            Save next step
+          </Button>
+          <p v-if="lead.nextStepAt" class="m-0 text-xs">
+            Due {{ dateLabel(lead.nextStepAt) }}
           </p>
-          <ol class="m-0 flex list-none flex-col p-0">
-            <li v-for="activity in lead.activity" :key="activity.id" class="border-b border-border py-3 last:border-0">
-              <div class="flex justify-between gap-3">
-                <b class="text-sm text-foreground">{{ activityLabel(activity) }}</b>
-                <span class="shrink-0 text-xs text-muted-foreground">{{ when(activity.createdAt) }}</span>
-              </div>
-              <div v-if="activity.actorName" class="text-[13px] text-muted-foreground">
-                {{ activity.actorName }}
-              </div>
-            </li>
-            <li class="py-3">
-              <div class="flex justify-between gap-3">
-                <b class="text-sm text-foreground">Lead created</b>
-                <span class="shrink-0 text-xs text-muted-foreground">{{ when(lead.createdAt) }}</span>
-              </div>
-              <div v-if="lead.source" class="text-[13px] text-muted-foreground">
-                Source: {{ lead.source }}
-              </div>
-            </li>
-          </ol>
         </RecordCard>
+      </template>
 
-        <aside class="flex flex-[1_1_300px] flex-col gap-4">
-          <RecordCard title="Next step" tone="mist">
-            <Textarea v-model="nextStep.text" rows="2" placeholder="What's the next action on this lead?" class="bg-card" aria-label="Next step" />
-            <Label for="lead-next-at" class="text-[13px] font-semibold">Remind me</Label>
-            <Input id="lead-next-at" v-model="nextStep.at" type="datetime-local" class="bg-card" />
-            <Button class="self-start" @click="saveNextStep">
-              Save next step
+      <Dialog v-model:open="isQualifyOpen">
+        <DialogContent class="rounded-[28px]">
+          <DialogHeader>
+            <DialogTitle>Convert to client</DialogTitle>
+            <DialogDescription>Canopy creates the client and links this lead's history, quotes and files to it.</DialogDescription>
+          </DialogHeader>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between rounded-xl bg-muted/60 px-3.5 py-3 text-sm">
+              <span><b>Client</b> · {{ lead.name }}</span><span class="text-xs font-semibold text-muted-foreground">New</span>
+            </div>
+            <div v-if="lead.contactName" class="flex items-center justify-between rounded-xl bg-muted/60 px-3.5 py-3 text-sm">
+              <span><b>Contact</b> · {{ lead.contactName }}</span><span class="text-xs font-semibold text-muted-foreground">New</span>
+            </div>
+          </div>
+          <div v-if="clientMatches.length" class="rounded-xl bg-amber-100 px-3.5 py-3 text-sm text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">
+            <b>Possible duplicate:</b> {{ clientMatches.map(m => `${m.label} (${m.id}, same ${m.reason})`).join('; ') }}.
+          </div>
+          <div v-else class="rounded-xl bg-brand-mist px-3.5 py-3 text-sm text-brand-forest">
+            <b>Duplicate check:</b> no matching client found.
+          </div>
+          <DialogFooter>
+            <Button variant="outline" @click="isQualifyOpen = false">
+              Cancel
             </Button>
-          </RecordCard>
-          <InsightsAiSuggestionCard regarding-type="lead" :regarding-id="lead.id" />
-          <RecordDocumentsCard :documents="lead.documents" :upload="(file) => uploadDocument(lead!.id, file)" :remove="(docId) => removeDocument(lead!.id, docId)" />
-        </aside>
-      </div>
+            <Button variant="lime" :disabled="converting" @click="qualify">
+              Convert &amp; open client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <RecordCard>
-        <InteractionsSection regarding-type="lead" :regarding-id="lead.id" :interactions="lead.interactions" />
-      </RecordCard>
-
-      <RecordCard id="quotes" class="scroll-mt-4">
-        <QuotesSection regarding-type="lead" :regarding-id="lead.id" :record-name="lead.name" :contact-name="lead.contactName" :contact-email="lead.contactEmail" :contact-phone="lead.contactPhone" />
-      </RecordCard>
-    </template>
+      <AlertDialog v-model:open="isDeleteOpen">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {{ lead.name }}?</AlertDialogTitle>
+            <AlertDialogDescription>This permanently removes the lead and its activity history.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="destructive" @click="onDelete">
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </RecordPage>
 
     <p v-else class="text-sm text-muted-foreground">
       Loading…
     </p>
-
-    <Dialog v-model:open="isQualifyOpen">
-      <DialogContent v-if="lead" class="rounded-[28px]">
-        <DialogHeader>
-          <DialogTitle>Convert to client</DialogTitle>
-          <DialogDescription>Canopy creates the client and links this lead's history, quotes and files to it.</DialogDescription>
-        </DialogHeader>
-        <div class="flex flex-col gap-2">
-          <div class="flex items-center justify-between rounded-xl bg-muted/60 px-3.5 py-3 text-sm">
-            <span><b>Client</b> · {{ lead.name }}</span><span class="text-xs font-semibold text-muted-foreground">New</span>
-          </div>
-          <div v-if="lead.contactName" class="flex items-center justify-between rounded-xl bg-muted/60 px-3.5 py-3 text-sm">
-            <span><b>Contact</b> · {{ lead.contactName }}</span><span class="text-xs font-semibold text-muted-foreground">New</span>
-          </div>
-        </div>
-        <div v-if="clientMatches.length" class="rounded-xl bg-amber-100 px-3.5 py-3 text-sm text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">
-          <b>Possible duplicate:</b> {{ clientMatches.map(m => `${m.label} (${m.id}, same ${m.reason})`).join('; ') }}.
-        </div>
-        <div v-else class="rounded-xl bg-brand-mist px-3.5 py-3 text-sm text-brand-forest">
-          <b>Duplicate check:</b> no matching client found.
-        </div>
-        <DialogFooter>
-          <Button variant="outline" @click="isQualifyOpen = false">
-            Cancel
-          </Button>
-          <Button variant="lime" :disabled="converting" @click="qualify">
-            Convert &amp; open client
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    <AlertDialog v-model:open="isDeleteOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete {{ lead?.name }}?</AlertDialogTitle>
-          <AlertDialogDescription>This permanently removes the lead and its activity history.</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <Button variant="destructive" @click="onDelete">
-            Delete
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   </div>
 </template>

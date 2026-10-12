@@ -52,8 +52,8 @@ const daysInStage = computed(() => {
 const stats = computed(() => tender.value
   ? [
       { label: 'Est. value', value: money(tender.value.estimatedValue) },
-      { label: 'Submission deadline', value: dateLabel(tender.value.submissionDeadline) },
-      { label: 'Probability', value: `${stageInfo.value?.probability ?? 0}%` },
+      { label: 'Weighted', value: tender.value.estimatedValue && !['won', 'lost'].includes(tender.value.stage) ? `${money(Math.round(tender.value.estimatedValue * (stageInfo.value?.probability ?? 0) / 100))} · ${stageInfo.value?.probability ?? 0}%` : '—' },
+      { label: 'Deadline', value: tender.value.submissionDeadline ? new Date(tender.value.submissionDeadline).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) : '—' },
       { label: 'Owner', value: tender.value.assignees.map(a => a.name).join(', ') || 'Unassigned' },
     ]
   : [])
@@ -193,37 +193,70 @@ function activityLabel(activity: TenderActivity) {
       return activity.message ?? 'Updated'
   }
 }
-const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase()
+const timeline = computed(() => tender.value
+  ? [
+      ...tender.value.activity.map(a => ({ id: a.id, label: activityLabel(a), actor: a.actorName, at: a.createdAt })),
+      { id: 'created', label: 'Tender created', actor: tender.value.source ? `Source: ${tender.value.source}` : undefined, at: tender.value.createdAt },
+    ]
+  : [])
+const tab = ref('summary')
+const deadlineLeft = computed(() => {
+  if (!tender.value?.submissionDeadline)
+    return null
+  const days = Math.ceil((new Date(tender.value.submissionDeadline).getTime() - Date.now()) / 86400000)
+  return days < 0 ? `${-days} day${days === -1 ? '' : 's'} ago` : days === 0 ? 'Today' : `In ${days} day${days === 1 ? '' : 's'}`
+})
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-[1360px] flex-col gap-4">
+  <div class="w-full">
     <p v-if="notFound" class="text-muted-foreground">
       This tender doesn't exist or was deleted. <NuxtLink to="/tenders" class="underline">
         Back to tenders
       </NuxtLink>
     </p>
 
-    <template v-else-if="tender">
-      <PageActions label="Tender actions">
-        <Button variant="ghost" size="icon" as-child aria-label="Back to tenders">
-          <NuxtLink to="/tenders">
-            <Icon name="i-lucide-arrow-left" />
-          </NuxtLink>
-        </Button>
+    <RecordPage
+      v-else-if="tender"
+      v-model:tab="tab"
+      back-to="/tenders"
+      back-label="Back to tenders"
+      actions-label="Tender actions"
+      :eyebrow="['Tender', tender.issuingAuthority || tender.source || 'No source', tender.id].filter(Boolean).join(' · ')"
+      :title="tender.title"
+      :subtitle="[tender.contactName, tender.contactEmail].filter(Boolean).join(' · ') || undefined"
+      :stats="stats"
+      :stages="PROCESS"
+      :stage="tender.stage"
+      :stage-note="daysInStage"
+      :stage-readonly="isConverted"
+      :closed-label="tender.stage === 'lost' ? 'This tender was lost.' : undefined"
+      regarding-type="tender"
+      :regarding-id="tender.id"
+      :record-name="tender.title"
+      :contact="{ name: tender.contactName, email: tender.contactEmail, phone: tender.contactPhone }"
+      :interactions="tender.interactions"
+      :documents="tender.documents"
+      :upload="(file) => uploadDocument(tender!.id, file)"
+      :remove-document="(docId) => removeDocument(tender!.id, docId)"
+      :timeline="timeline"
+      :extra-tabs="[{ value: 'tasks', label: 'Tasks', count: tasks.length }]"
+      @stage="(value) => moveStage(value as TenderStage)"
+      @reopen="moveStage('evaluation')"
+    >
+      <template #actions>
         <Button variant="lime" :disabled="saving || !isDirty || !form.title.trim()" @click="save">
           Save
         </Button>
         <template v-if="!isConverted">
-          <Button v-if="tender.stage !== 'won'" variant="ghost" @click="moveStage('won')">
-            Close as won
-          </Button>
-          <Button v-else variant="ghost" :disabled="converting" @click="convert">
+          <Button v-if="tender.stage === 'won'" variant="ghost" :disabled="converting" @click="convert">
             Convert to client
           </Button>
+          <Button v-else variant="ghost" @click="moveStage('won')">
+            Mark as won
+          </Button>
           <Button v-if="tender.stage !== 'lost'" variant="ghost" @click="moveStage('lost')">
-            Close as lost
+            Mark as lost
           </Button>
         </template>
         <Button v-else variant="ghost" as-child>
@@ -231,8 +264,8 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
             Open client
           </NuxtLink>
         </Button>
-        <Button variant="ghost" as-child>
-          <a href="#quotes">Create quote</a>
+        <Button variant="ghost" @click="tab = 'quotes'">
+          New quote
         </Button>
         <Popover>
           <PopoverTrigger as-child>
@@ -247,113 +280,64 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
         <Button variant="ghost" class="text-destructive hover:text-destructive" @click="isDeleteOpen = true">
           Delete
         </Button>
-      </PageActions>
+      </template>
 
-      <RecordHeader :eyebrow="['Tender', tender.issuingAuthority, tender.referenceNumber, tender.id].filter(Boolean).join(' · ')" :title="tender.title" :stats="stats">
-        <p v-if="tender.stage === 'lost'" class="m-0 flex flex-wrap items-center gap-3 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-          This tender was lost.
-          <Button size="sm" variant="outline" @click="moveStage('evaluation')">
-            Reopen
-          </Button>
-        </p>
-        <RecordStageBar v-else :stages="PROCESS" :current="tender.stage" label="Tender process" :note="daysInStage" :readonly="isConverted" @select="moveStage" />
-      </RecordHeader>
-
-      <div class="flex flex-wrap items-start gap-4">
-        <RecordCard title="Tender details" class="flex-[1_1_300px]">
-          <div class="flex flex-col gap-1.5">
-            <Label for="t-title" class="text-[13px] font-semibold">Title</Label>
-            <Input id="t-title" v-model="form.title" />
-          </div>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div class="flex flex-col gap-1.5">
-              <Label for="t-authority" class="text-[13px] font-semibold">Issuing authority</Label>
-              <Input id="t-authority" v-model="form.issuingAuthority" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="t-ref" class="text-[13px] font-semibold">Reference</Label>
-              <Input id="t-ref" v-model="form.referenceNumber" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="t-value" class="text-[13px] font-semibold">Estimated value</Label>
-              <Input id="t-value" v-model="form.estimatedValue" inputmode="decimal" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="t-deadline" class="text-[13px] font-semibold">Submission deadline</Label>
-              <Input id="t-deadline" v-model="form.deadline" type="datetime-local" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="t-contact" class="text-[13px] font-semibold">Contact</Label>
-              <Input id="t-contact" v-model="form.contactName" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="t-source" class="text-[13px] font-semibold">Source</Label>
-              <Input id="t-source" v-model="form.source" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="t-email" class="text-[13px] font-semibold">Email</Label>
-              <Input id="t-email" v-model="form.contactEmail" type="email" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="t-phone" class="text-[13px] font-semibold">Phone</Label>
-              <Input id="t-phone" v-model="form.contactPhone" type="tel" />
-            </div>
+      <template #details>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <Label for="rec-name" class="text-[13px] font-semibold">Tender title</Label>
+            <Input id="rec-name" v-model="form.title" />
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="t-notes" class="text-[13px] font-semibold">Scope / notes</Label>
-            <Textarea id="t-notes" v-model="form.notes" rows="3" />
+            <Label for="rec-contact" class="text-[13px] font-semibold">Contact name</Label>
+            <Input id="rec-contact" v-model="form.contactName" />
           </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rec-value" class="text-[13px] font-semibold">Estimated value</Label>
+            <Input id="rec-value" v-model="form.estimatedValue" inputmode="decimal" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rec-email" class="text-[13px] font-semibold">Email</Label>
+            <Input id="rec-email" v-model="form.contactEmail" type="email" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rec-phone" class="text-[13px] font-semibold">Phone</Label>
+            <Input id="rec-phone" v-model="form.contactPhone" type="tel" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rec-authority" class="text-[13px] font-semibold">Issuing authority</Label>
+            <Input id="rec-authority" v-model="form.issuingAuthority" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rec-ref" class="text-[13px] font-semibold">Reference</Label>
+            <Input id="rec-ref" v-model="form.referenceNumber" />
+          </div>
+          <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <Label for="rec-source" class="text-[13px] font-semibold">Source</Label>
+            <Input id="rec-source" v-model="form.source" placeholder="e.g. Tender portal, Referral" />
+          </div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <Label for="rec-notes" class="text-[13px] font-semibold">Notes</Label>
+          <Textarea id="rec-notes" v-model="form.notes" rows="3" placeholder="Scope, requirements, evaluation criteria…" />
+        </div>
+      </template>
+
+      <template #key-card>
+        <RecordCard title="Submission deadline" tone="mist">
+          <div v-if="tender.submissionDeadline" class="text-2xl font-black tracking-[-0.03em]">
+            {{ dateLabel(tender.submissionDeadline) }} <span class="text-sm font-semibold">{{ deadlineLeft }}</span>
+          </div>
+          <Label for="rec-key-at" class="text-[13px] font-semibold">Deadline</Label>
+          <Input id="rec-key-at" v-model="form.deadline" type="datetime-local" class="bg-card" />
+          <p class="m-0 text-xs">
+            Assignees get a reminder before it's due. Saved with Save.
+          </p>
         </RecordCard>
+      </template>
 
-        <RecordCard title="Timeline" class="flex-[2_1_420px]">
-          <ol class="m-0 flex list-none flex-col p-0">
-            <li v-for="activity in tender.activity" :key="activity.id" class="border-b border-border py-3 last:border-0">
-              <div class="flex justify-between gap-3">
-                <b class="text-sm text-foreground">{{ activityLabel(activity) }}</b>
-                <span class="shrink-0 text-xs text-muted-foreground">{{ when(activity.createdAt) }}</span>
-              </div>
-              <div v-if="activity.actorName" class="text-[13px] text-muted-foreground">
-                {{ activity.actorName }}
-              </div>
-            </li>
-            <li class="py-3">
-              <div class="flex justify-between gap-3">
-                <b class="text-sm text-foreground">Tender created</b>
-                <span class="shrink-0 text-xs text-muted-foreground">{{ when(tender.createdAt) }}</span>
-              </div>
-            </li>
-          </ol>
-        </RecordCard>
-
-        <aside class="flex flex-[1_1_280px] flex-col gap-4">
-          <RecordCard v-if="tender.contactName || tender.contactEmail" title="Contact">
-            <div class="flex items-center gap-3">
-              <span aria-hidden="true" class="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-mist text-sm font-bold text-brand-forest">{{ initials(tender.contactName ?? tender.contactEmail ?? '?') }}</span>
-              <div class="min-w-0 text-sm">
-                <div class="font-semibold text-foreground">
-                  {{ tender.contactName ?? tender.contactEmail }}
-                </div>
-                <div class="truncate text-muted-foreground">
-                  {{ [tender.contactEmail, tender.contactPhone].filter(Boolean).join(' · ') }}
-                </div>
-              </div>
-            </div>
-          </RecordCard>
-          <InsightsAiSuggestionCard regarding-type="tender" :regarding-id="tender.id" />
-          <RecordCard title="Linked records">
-            <a href="#tasks" class="flex justify-between text-sm font-medium hover:underline"><span>Tasks</span><span class="font-bold">{{ tasks.length }}</span></a>
-            <a href="#files" class="flex justify-between text-sm font-medium hover:underline"><span>Files</span><span class="font-bold">{{ tender.documents.length }}</span></a>
-            <a href="#quotes" class="flex justify-between text-sm font-medium hover:underline"><span>Quotes</span><span class="font-bold">→</span></a>
-          </RecordCard>
-        </aside>
-      </div>
-
-      <RecordCard>
-        <InteractionsSection regarding-type="tender" :regarding-id="tender.id" :interactions="tender.interactions" />
-      </RecordCard>
-
-      <div class="flex flex-wrap items-start gap-4">
-        <RecordCard id="tasks" title="Tasks" class="flex-[1_1_420px] scroll-mt-4">
+      <template #tab-tasks>
+        <RecordCard title="Tasks">
           <template #actions>
             <Button size="sm" variant="outline" @click="openTask(null)">
               <Icon name="i-lucide-plus" /> Add task
@@ -374,33 +358,28 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
             </span>
           </button>
         </RecordCard>
-        <RecordDocumentsCard id="files" class="flex-[1_1_320px] scroll-mt-4" :documents="tender.documents" :upload="(file) => uploadDocument(tender!.id, file)" :remove="(docId) => removeDocument(tender!.id, docId)" />
-      </div>
-
-      <RecordCard id="quotes" class="scroll-mt-4">
-        <QuotesSection regarding-type="tender" :regarding-id="tender.id" :record-name="tender.title" :contact-name="tender.contactName" :contact-email="tender.contactEmail" :contact-phone="tender.contactPhone" />
-      </RecordCard>
+      </template>
 
       <TaskFormSheet v-model:open="isTaskFormOpen" :task="editingTask" :tender-id="tender.id" />
-    </template>
+
+      <AlertDialog v-model:open="isDeleteOpen">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {{ tender.title }}?</AlertDialogTitle>
+            <AlertDialogDescription>This permanently removes the tender and its activity history.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="destructive" @click="onDelete">
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </RecordPage>
 
     <p v-else class="text-sm text-muted-foreground">
       Loading…
     </p>
-
-    <AlertDialog v-model:open="isDeleteOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete {{ tender?.title }}?</AlertDialogTitle>
-          <AlertDialogDescription>This permanently removes the tender and its activity history.</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <Button variant="destructive" @click="onDelete">
-            Delete
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   </div>
 </template>

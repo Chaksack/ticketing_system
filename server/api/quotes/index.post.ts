@@ -19,8 +19,8 @@ export default defineEventHandler(async (event) => {
   const user = await requireBd(event)
   const body = await readBody<NewQuoteBody>(event)
 
-  if ((body?.regardingType !== 'lead' && body?.regardingType !== 'tender') || !body?.regardingId?.trim()) {
-    throw createError({ statusCode: 400, statusMessage: 'regardingType (lead or tender) and regardingId are required' })
+  if ((body?.regardingType !== 'lead' && body?.regardingType !== 'tender' && body?.regardingType !== 'client') || !body?.regardingId?.trim()) {
+    throw createError({ statusCode: 400, statusMessage: 'regardingType (lead, tender or client) and regardingId are required' })
   }
 
   const lineItems = body.lineItems ?? []
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
   const db = useTenantDb()
 
-  const table = body.regardingType === 'lead' ? 'leads' : 'tenders'
+  const table = body.regardingType === 'lead' ? 'leads' : body.regardingType === 'tender' ? 'tenders' : 'clients'
   const record = await db.prepare(`SELECT id FROM ${table} WHERE id = ?`).get(body.regardingId)
   if (!record) {
     throw createError({ statusCode: 404, statusMessage: `${body.regardingType} not found` })

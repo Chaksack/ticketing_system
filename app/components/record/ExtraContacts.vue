@@ -29,7 +29,7 @@ async function onAddPhone() {
 </script>
 
 <template>
-  <div class="grid gap-4 sm:grid-cols-2">
+  <div class="grid gap-4">
     <div class="flex flex-col gap-1.5">
       <Label class="text-[13px] font-semibold">More emails</Label>
       <div v-for="item in emails" :key="item.id" class="flex items-center gap-2 text-sm">

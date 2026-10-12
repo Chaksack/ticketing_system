@@ -8,8 +8,8 @@ export default defineEventHandler(async (event) => {
   const regardingType = query.regardingType
   const regardingId = query.regardingId
 
-  if ((regardingType !== 'lead' && regardingType !== 'tender') || typeof regardingId !== 'string' || !regardingId) {
-    throw createError({ statusCode: 400, statusMessage: 'regardingType (lead or tender) and regardingId are required' })
+  if ((regardingType !== 'lead' && regardingType !== 'tender' && regardingType !== 'client') || typeof regardingId !== 'string' || !regardingId) {
+    throw createError({ statusCode: 400, statusMessage: 'regardingType (lead, tender or client) and regardingId are required' })
   }
 
   const quotes = await getQuotesForRecord(regardingType as RegardingType, regardingId)
