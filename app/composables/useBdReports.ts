@@ -7,7 +7,7 @@ export function useBdReports() {
   async function fetchSummary(range?: { from: string, to: string }) {
     isLoading.value = true
     try {
-      summary.value = await $fetch<BdReportSummary>('/api/bd-reports/summary', {
+      summary.value = await fetchUntyped<BdReportSummary>('/api/bd-reports/summary', {
         query: range,
       })
     }

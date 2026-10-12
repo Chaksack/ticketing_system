@@ -5,7 +5,6 @@ import { useForm } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import * as z from 'zod'
 import { projectStatuses } from '~/components/projects/data'
-import ProjectDetailSheet from '~/components/projects/ProjectDetailSheet.vue'
 import { optionalAmount } from '~/lib/formNumbers'
 import { DEFAULT_PROJECT_CURRENCY, formatProjectMoney, PROJECT_CURRENCIES, PROJECT_STATUS_PROGRESS } from '~/types/project'
 
@@ -21,10 +20,9 @@ definePageMeta({
   middleware: 'bd',
 })
 
-const { projects, fetchProjects, fetchProject, addProject } = useProjects()
+const { projects, fetchProjects, addProject } = useProjects()
 const { clients, fetchClients } = useClients()
 const route = useRoute()
-const isDesktop = useMediaQuery('(min-width: 768px)')
 
 onMounted(async () => {
   await Promise.all([fetchProjects(), fetchClients()])
@@ -76,30 +74,18 @@ function exportProjects() {
   ]))
 }
 
-const isDetailOpen = ref(false)
-const selectedProjectId = ref<string | null>(null)
-const selectedProject = computed(() => projects.value.find(p => p.id === selectedProjectId.value) ?? null)
-
 function money(project: Project, value?: number) {
   return value === undefined ? '—' : formatProjectMoney(project.currency, value, 0)
 }
 
-async function openProject(project: Project) {
-  // Mobile opens the full page instead of a sheet — the sheet's 80vw width doesn't fit a phone
-  // screen usefully, so it becomes a real route there.
-  if (!isDesktop.value) {
-    await navigateTo(`/projects/${project.id}`)
-    return
-  }
-
-  selectedProjectId.value = project.id
-  isDetailOpen.value = true
-  await fetchProject(project.id)
+function openProject(project: Project) {
+  navigateTo(`/projects/${project.id}`)
 }
 
-watch(() => route.query.open, async (openId) => {
+// Older links (notifications, search) use /projects?open=<id>.
+watch(() => route.query.open, (openId) => {
   if (typeof openId === 'string')
-    await openProject({ id: openId } as Project)
+    navigateTo(`/projects/${openId}`, { replace: true })
 }, { immediate: true })
 
 const isAddOpen = ref(false)
@@ -401,7 +387,5 @@ function formatDate(value?: string) {
         </TableBody>
       </Table>
     </div>
-
-    <ProjectDetailSheet v-model:open="isDetailOpen" :project="selectedProject" />
   </div>
 </template>

@@ -52,7 +52,7 @@ async function send(text?: string) {
     // Send the whole conversation so far — this is a real back-and-forth chat now, not
     // independent single-shot questions, so the assistant needs the prior turns for context.
     const history = messages.value.map(m => ({ role: m.role, text: m.text }))
-    const { text: reply, sections, answeredBy } = await $fetch<{ text: string, sections: AssistantSection[], answeredBy?: string }>('/api/assistant/query', {
+    const { text: reply, sections, answeredBy } = await fetchUntyped<{ text: string, sections: AssistantSection[], answeredBy?: string }>('/api/assistant/query', {
       method: 'POST',
       body: { messages: history },
     })

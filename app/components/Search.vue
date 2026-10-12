@@ -43,7 +43,7 @@ const runSearch = useDebounceFn(async (q: string) => {
     return
   }
   try {
-    results.value = await $fetch<SearchResults>('/api/search', { query: { q } })
+    results.value = await fetchUntyped<SearchResults>('/api/search', { query: { q } })
   }
   catch {
     results.value = { ...EMPTY_RESULTS }

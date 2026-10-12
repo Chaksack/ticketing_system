@@ -11,27 +11,27 @@ export type OnboardingPatch = Partial<Pick<ClientOnboarding, 'clientName' | 'slu
 
 /** Canopy staff console (home-workspace admins): tenants and staff-led client onboarding. */
 export function useConsole() {
-  const fetchOverview = () => $fetch<ConsoleOverview>('/api/console/overview')
+  const fetchOverview = () => fetchUntyped<ConsoleOverview>('/api/console/overview')
 
-  const fetchTenants = async () => (await $fetch<{ tenants: TenantSummary[] }>('/api/console/tenants')).tenants
+  const fetchTenants = async () => (await fetchUntyped<{ tenants: TenantSummary[] }>('/api/console/tenants')).tenants
 
-  const fetchTenant = (id: string) => $fetch<{ tenant: TenantSummary, onboarding: ClientOnboarding | null, audit: AuditEntry[] }>(`/api/console/tenants/${id}`)
+  const fetchTenant = (id: string) => fetchUntyped<{ tenant: TenantSummary, onboarding: ClientOnboarding | null, audit: AuditEntry[] }>(`/api/console/tenants/${id}`)
 
   const updateTenant = async (id: string, patch: { status?: OrgStatus, plan?: OrgPlan, apps?: OrgApp[], slaTier?: SlaTier | null }) =>
-    (await $fetch<{ tenant: Organization }>(`/api/console/tenants/${id}`, { method: 'PATCH', body: patch })).tenant
+    (await fetchUntyped<{ tenant: Organization }>(`/api/console/tenants/${id}`, { method: 'PATCH', body: patch })).tenant
 
-  const fetchOnboardings = async () => (await $fetch<{ onboardings: ClientOnboarding[] }>('/api/console/onboardings')).onboardings
+  const fetchOnboardings = async () => (await fetchUntyped<{ onboardings: ClientOnboarding[] }>('/api/console/onboardings')).onboardings
 
   const createOnboarding = async (clientName: string) =>
-    (await $fetch<{ onboarding: ClientOnboarding }>('/api/console/onboardings', { method: 'POST', body: { clientName } })).onboarding
+    (await fetchUntyped<{ onboarding: ClientOnboarding }>('/api/console/onboardings', { method: 'POST', body: { clientName } })).onboarding
 
-  const fetchOnboarding = async (id: string) => (await $fetch<{ onboarding: ClientOnboarding }>(`/api/console/onboardings/${id}`)).onboarding
+  const fetchOnboarding = async (id: string) => (await fetchUntyped<{ onboarding: ClientOnboarding }>(`/api/console/onboardings/${id}`)).onboarding
 
   const updateOnboarding = async (id: string, patch: OnboardingPatch) =>
-    (await $fetch<{ onboarding: ClientOnboarding }>(`/api/console/onboardings/${id}`, { method: 'PATCH', body: patch })).onboarding
+    (await fetchUntyped<{ onboarding: ClientOnboarding }>(`/api/console/onboardings/${id}`, { method: 'PATCH', body: patch })).onboarding
 
   const provisionOnboarding = (id: string) =>
-    $fetch<{ onboarding: ClientOnboarding, tenant: Organization, inviteSent: boolean, inviteUrl?: string }>(`/api/console/onboardings/${id}/provision`, { method: 'POST' })
+    fetchUntyped<{ onboarding: ClientOnboarding, tenant: Organization, inviteSent: boolean, inviteUrl?: string }>(`/api/console/onboardings/${id}/provision`, { method: 'POST' })
 
   return { fetchOverview, fetchTenants, fetchTenant, updateTenant, fetchOnboardings, createOnboarding, fetchOnboarding, updateOnboarding, provisionOnboarding }
 }

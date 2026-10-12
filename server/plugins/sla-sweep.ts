@@ -23,6 +23,7 @@ export default defineNitroPlugin(async () => {
       .then(() => forEachActiveOrg('amc-follow-ups', () => checkAmcFollowUps()))
       .then(() => forEachActiveOrg('meeting-reminders', () => checkMeetingReminders()))
       .then(() => forEachActiveOrg('prune-notifications', () => pruneReadNotifications()))
+      .then(() => forEachActiveOrg('marketing-journeys', () => runJourneys()))
       .catch(error => console.error('Sweep failed', error))
 
     runWithTenant(HOME_ORG_ID, async () => {

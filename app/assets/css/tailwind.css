@@ -242,3 +242,20 @@ button,
 [type="button"] {
   @apply cursor-pointer;
 }
+/* Rendered Markdown (knowledge articles, marketing email previews) — app/lib/markdown.ts */
+.kb-prose {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--color-foreground);
+}
+.kb-prose > * + * { margin-top: 0.75rem; }
+.kb-prose h2, .kb-prose h3, .kb-prose h4 { font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; margin-top: 1.25rem; }
+.kb-prose h2 { font-size: 1.5rem; }
+.kb-prose h3 { font-size: 1.25rem; }
+.kb-prose h4 { font-size: 1.05rem; }
+.kb-prose ol { list-style: decimal; padding-left: 1.4rem; }
+.kb-prose ul { list-style: disc; padding-left: 1.4rem; }
+.kb-prose li + li { margin-top: 0.35rem; }
+.kb-prose a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 2px; }
+.dark .kb-prose a { color: var(--color-brand-lime); }
+.kb-prose strong { color: var(--color-foreground); font-weight: 700; }

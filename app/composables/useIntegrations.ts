@@ -4,7 +4,7 @@ export function useIntegrations() {
   const integrations = useState<IntegrationStatus[]>('integrations-status', () => [])
 
   async function fetchIntegrations() {
-    const { integrations: result } = await $fetch<{ integrations: IntegrationStatus[] }>('/api/integrations')
+    const { integrations: result } = await fetchUntyped<{ integrations: IntegrationStatus[] }>('/api/integrations')
     integrations.value = result
   }
 
@@ -13,7 +13,7 @@ export function useIntegrations() {
   }
 
   async function disconnect(provider: IntegrationProvider) {
-    const { status } = await $fetch<{ status: IntegrationStatus }>(`/api/integrations/${provider}`, { method: 'DELETE' })
+    const { status } = await fetchUntyped<{ status: IntegrationStatus }>(`/api/integrations/${provider}`, { method: 'DELETE' })
     const index = integrations.value.findIndex(i => i.provider === provider)
     if (index !== -1)
       integrations.value[index] = status

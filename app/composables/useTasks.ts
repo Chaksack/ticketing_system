@@ -58,25 +58,25 @@ export function useTasks() {
   }
 
   async function updateTask(id: string, patch: TaskPatch) {
-    const { task } = await $fetch<{ task: Task }>(`/api/tasks/${id}`, { method: 'PATCH', body: patch })
+    const { task } = await fetchUntyped<{ task: Task }>(`/api/tasks/${id}`, { method: 'PATCH', body: patch })
     replaceTask(task)
     return task
   }
 
   async function removeTask(id: string) {
-    await $fetch<{ success: true }>(`/api/tasks/${id}`, { method: 'DELETE' })
+    await fetchUntyped<{ success: true }>(`/api/tasks/${id}`, { method: 'DELETE' })
     tasks.value = tasks.value.filter(t => t.id !== id && t.parentTaskId !== id)
   }
 
   /** Tasks scoped to one project — not merged into the global `tasks` list, since it's a separate concern from the Tasks/Sprints board. */
   async function fetchTasksForProject(projectId: string) {
-    const { tasks: rows } = await $fetch<{ tasks: Task[] }>(`/api/projects/${projectId}/tasks`)
+    const { tasks: rows } = await fetchUntyped<{ tasks: Task[] }>(`/api/projects/${projectId}/tasks`)
     return rows
   }
 
   /** Tasks scoped to one tender — same convention as fetchTasksForProject. */
   async function fetchTasksForTender(tenderId: string) {
-    const { tasks: rows } = await $fetch<{ tasks: Task[] }>(`/api/tenders/${tenderId}/tasks`)
+    const { tasks: rows } = await fetchUntyped<{ tasks: Task[] }>(`/api/tenders/${tenderId}/tasks`)
     return rows
   }
 

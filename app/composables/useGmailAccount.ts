@@ -6,7 +6,7 @@ export function useGmailAccount() {
   const isLoadingMessages = useState('gmail-messages-loading', () => false)
 
   async function fetchStatus() {
-    status.value = await $fetch<GmailStatus>('/api/integrations/gmail/status')
+    status.value = await fetchUntyped<GmailStatus>('/api/integrations/gmail/status')
   }
 
   function connect() {
@@ -14,7 +14,7 @@ export function useGmailAccount() {
   }
 
   async function disconnect() {
-    await $fetch('/api/integrations/gmail', { method: 'DELETE' })
+    await fetchUntyped<unknown>('/api/integrations/gmail', { method: 'DELETE' })
     status.value = { connected: false }
     messages.value = []
   }
@@ -22,7 +22,7 @@ export function useGmailAccount() {
   async function fetchMessages(query?: string) {
     isLoadingMessages.value = true
     try {
-      const { messages: rows } = await $fetch<{ messages: GmailMessage[] }>('/api/integrations/gmail/messages', {
+      const { messages: rows } = await fetchUntyped<{ messages: GmailMessage[] }>('/api/integrations/gmail/messages', {
         query: query ? { q: query } : {},
       })
       messages.value = rows
@@ -33,7 +33,7 @@ export function useGmailAccount() {
   }
 
   async function fetchMessageBody(id: string) {
-    const detail = await $fetch<{ text: string, messageIdHeader?: string, from?: string, to?: string, cc?: string }>(`/api/integrations/gmail/messages/${id}`)
+    const detail = await fetchUntyped<{ text: string, messageIdHeader?: string, from?: string, to?: string, cc?: string }>(`/api/integrations/gmail/messages/${id}`)
     const message = messages.value.find(m => m.id === id)
     if (message) {
       message.text = detail.text
@@ -45,7 +45,7 @@ export function useGmailAccount() {
   }
 
   async function sendReply(payload: { to: string, subject: string, text: string, threadId?: string, inReplyToMessageId?: string }) {
-    await $fetch('/api/integrations/gmail/send', { method: 'POST', body: payload })
+    await fetchUntyped<unknown>('/api/integrations/gmail/send', { method: 'POST', body: payload })
   }
 
   function removeFromList(id: string) {
@@ -53,29 +53,29 @@ export function useGmailAccount() {
   }
 
   async function archiveMessage(id: string) {
-    await $fetch(`/api/integrations/gmail/messages/${id}/modify`, { method: 'POST', body: { removeLabelIds: ['INBOX'] } })
+    await fetchUntyped<unknown>(`/api/integrations/gmail/messages/${id}/modify`, { method: 'POST', body: { removeLabelIds: ['INBOX'] } })
     removeFromList(id)
   }
 
   async function markAsSpam(id: string) {
-    await $fetch(`/api/integrations/gmail/messages/${id}/modify`, { method: 'POST', body: { addLabelIds: ['SPAM'], removeLabelIds: ['INBOX'] } })
+    await fetchUntyped<unknown>(`/api/integrations/gmail/messages/${id}/modify`, { method: 'POST', body: { addLabelIds: ['SPAM'], removeLabelIds: ['INBOX'] } })
     removeFromList(id)
   }
 
   async function trashMessage(id: string) {
-    await $fetch(`/api/integrations/gmail/messages/${id}/trash`, { method: 'POST' })
+    await fetchUntyped<unknown>(`/api/integrations/gmail/messages/${id}/trash`, { method: 'POST' })
     removeFromList(id)
   }
 
   async function markAsUnread(id: string) {
-    await $fetch(`/api/integrations/gmail/messages/${id}/modify`, { method: 'POST', body: { addLabelIds: ['UNREAD'] } })
+    await fetchUntyped<unknown>(`/api/integrations/gmail/messages/${id}/modify`, { method: 'POST', body: { addLabelIds: ['UNREAD'] } })
     const message = messages.value.find(m => m.id === id)
     if (message)
       message.read = false
   }
 
   async function toggleStar(id: string, starred: boolean) {
-    await $fetch(`/api/integrations/gmail/messages/${id}/modify`, {
+    await fetchUntyped<unknown>(`/api/integrations/gmail/messages/${id}/modify`, {
       method: 'POST',
       body: starred ? { removeLabelIds: ['STARRED'] } : { addLabelIds: ['STARRED'] },
     })

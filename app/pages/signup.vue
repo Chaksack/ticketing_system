@@ -54,7 +54,7 @@ const invites = ref<{ email: string, role: string }[]>([{ email: '', role: 'sale
 
 onMounted(async () => {
   try {
-    const { draft } = await $fetch<{ draft: { firstName: string, lastName: string, email: string, org: { name: string, slug: string, country?: string, size?: string, sector?: string } | null, apps: OrgApp[] | null } | null }>('/api/signup')
+    const { draft } = await fetchUntyped<{ draft: { firstName: string, lastName: string, email: string, org: { name: string, slug: string, country?: string, size?: string, sector?: string } | null, apps: OrgApp[] | null } | null }>('/api/signup')
     if (!draft)
       return
     firstName.value = draft.firstName
@@ -92,7 +92,7 @@ watch(slug, (value) => {
     return
   slugTimer = setTimeout(async () => {
     try {
-      slugStatus.value = await $fetch<{ available: boolean, reason?: string, slug: string }>('/api/signup/slug', { query: { value } })
+      slugStatus.value = await fetchUntyped<{ available: boolean, reason?: string, slug: string }>('/api/signup/slug', { query: { value } })
     }
     catch {}
   }, 350)
@@ -120,7 +120,7 @@ async function submitAccount() {
 async function submitOrganization() {
   busy.value = true
   try {
-    const result = await $fetch<{ slug: string }>('/api/signup/organization', { method: 'POST', body: { name: orgName.value, slug: slug.value, country: country.value, size: size.value, sector: sector.value } })
+    const result = await fetchUntyped<{ slug: string }>('/api/signup/organization', { method: 'POST', body: { name: orgName.value, slug: slug.value, country: country.value, size: size.value, sector: sector.value } })
     slug.value = result.slug
     step.value = 2
   }
@@ -155,7 +155,7 @@ const { currentUser, authReady, homePath } = useAuth()
 async function complete(withInvites: boolean) {
   provisioning.value = true
   try {
-    const result = await $fetch<{ user: any, invites: { email: string, sent: boolean, error?: string }[] }>('/api/signup/complete', {
+    const result = await fetchUntyped<{ user: any, invites: { email: string, sent: boolean, error?: string }[] }>('/api/signup/complete', {
       method: 'POST',
       body: { invites: withInvites ? invites.value.filter(invite => invite.email.trim()) : [] },
     })

@@ -20,7 +20,7 @@ function leadNameFor(email: string) {
  * from the same company is logged on the existing lead rather than creating a duplicate.
  */
 export default defineEventHandler(async (event) => {
-  const body = await readBody<{ email?: string, sector?: string, website?: string }>(event)
+  const body = await readBody<{ email?: string, sector?: string, website?: string, interest?: 'software' | 'care', volume?: string }>(event)
 
   // Honeypot: the field is hidden from people, so anything in it came from a bot. Look successful.
   if (body?.website)
@@ -39,7 +39,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 429, statusMessage: 'Too many requests. Please try again later.' })
 
     const name = leadNameFor(email)
-    const note = `Requested a demo from the website (sector: ${sector}, contact: ${email}).`
+    const isCare = body?.interest === 'care'
+    const volume = body?.volume?.slice(0, 40)
+    const note = isCare
+      ? `Requested a Canopy Care staffing plan from the website (about ${volume ?? 'unknown'} contacts a month, contact: ${email}).`
+      : `Requested a demo from the website (sector: ${sector}, contact: ${email}).`
 
     const existingByEmail = (await findDuplicates('leads', { email })).find(match => match.entity === 'leads')
     const existingId = existingByEmail?.id ?? (await findSameNameRecord('leads', name))?.id
@@ -54,12 +58,15 @@ export default defineEventHandler(async (event) => {
     await db.prepare(`
       INSERT INTO leads (id, name, contact_email, source, stage, notes, next_step, next_step_reminder_sent, created_at, updated_at)
       VALUES (?, ?, ?, ?, 'new', ?, ?, 0, ?, ?)
-    `).run(id, name, email, 'Website demo request', note, 'Reply to book the demo', now, now)
+    `).run(id, name, email, isCare ? 'Canopy Care enquiry' : 'Website demo request', note, isCare ? 'Send a staffing plan within 48 hours' : 'Reply to book the demo', now, now)
 
     let lead = await loadFullLead(id)
     lead = await applyBdCreationRules('lead', lead)
     if (!lead.assignees.length)
       await autoAssignLead(lead)
+    // Any active "Website demo request" journeys pick the new contact up.
+    if (!isCare)
+      await enrollDemoRequest({ id, email, name: undefined }).catch(error => console.error('[journeys] demo enrolment failed', error))
 
     setResponseStatus(event, 201)
     return { ok: true }

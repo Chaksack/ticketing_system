@@ -40,7 +40,7 @@ export function useClients() {
   }
 
   async function fetchUpcomingRenewals() {
-    const { renewals } = await $fetch<{ renewals: UpcomingRenewal[] }>('/api/clients/upcoming-renewals')
+    const { renewals } = await fetchUntyped<{ renewals: UpcomingRenewal[] }>('/api/clients/upcoming-renewals')
     upcomingRenewals.value = renewals
   }
 
@@ -57,7 +57,7 @@ export function useClients() {
   // /api/clients/[id] routes, so TS can't rule out `${id}` equaling "upcoming-renewals" and
   // would otherwise union both routes' response types together.
   async function fetchClient(id: string) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}`)
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}`)
     replaceClient(client)
     return client
   }
@@ -69,48 +69,48 @@ export function useClients() {
   }
 
   async function updateClient(id: string, patch: ClientPatch) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}`, { method: 'PATCH', body: patch })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}`, { method: 'PATCH', body: patch })
     replaceClient(client)
     return client
   }
 
   async function removeClient(id: string) {
-    await $fetch<{ success: true }>(`/api/clients/${id}`, { method: 'DELETE' })
+    await fetchUntyped<{ success: true }>(`/api/clients/${id}`, { method: 'DELETE' })
     clients.value = clients.value.filter(c => c.id !== id)
   }
 
   async function addContactEmail(id: string, payload: { email: string, label?: string }) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contact-emails`, { method: 'POST', body: payload })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}/contact-emails`, { method: 'POST', body: payload })
     replaceClient(client)
     return client
   }
 
   async function removeContactEmail(id: string, emailId: string) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contact-emails/${emailId}`, { method: 'DELETE' })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}/contact-emails/${emailId}`, { method: 'DELETE' })
     replaceClient(client)
     return client
   }
 
   async function addContactPhone(id: string, payload: { phone: string, label?: string }) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contact-phones`, { method: 'POST', body: payload })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}/contact-phones`, { method: 'POST', body: payload })
     replaceClient(client)
     return client
   }
 
   async function removeContactPhone(id: string, phoneId: string) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contact-phones/${phoneId}`, { method: 'DELETE' })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}/contact-phones/${phoneId}`, { method: 'DELETE' })
     replaceClient(client)
     return client
   }
 
   async function addContact(id: string, payload: { name: string, title?: string, email?: string, phone?: string, isPrimary?: boolean }) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contacts`, { method: 'POST', body: payload })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}/contacts`, { method: 'POST', body: payload })
     replaceClient(client)
     return client
   }
 
   async function removeContact(id: string, contactId: string) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/contacts/${contactId}`, { method: 'DELETE' })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}/contacts/${contactId}`, { method: 'DELETE' })
     replaceClient(client)
     return client
   }
@@ -119,13 +119,13 @@ export function useClients() {
     const formData = new FormData()
     formData.append('document', file)
 
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/documents`, { method: 'POST', body: formData })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}/documents`, { method: 'POST', body: formData })
     replaceClient(client)
     return client
   }
 
   async function removeDocument(id: string, docId: string) {
-    const { client } = await $fetch<{ client: Client }>(`/api/clients/${id}/documents/${docId}`, { method: 'DELETE' })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/clients/${id}/documents/${docId}`, { method: 'DELETE' })
     replaceClient(client)
     return client
   }

@@ -5,14 +5,14 @@ export function useConversionModel() {
   const isTraining = useState('conversion-model-training', () => false)
 
   async function fetchStatus() {
-    const { status: result } = await $fetch<{ status: ConversionModelStatus }>('/api/ml/conversion-model/status')
+    const { status: result } = await fetchUntyped<{ status: ConversionModelStatus }>('/api/ml/conversion-model/status')
     status.value = result
   }
 
   async function retrain() {
     isTraining.value = true
     try {
-      const { status: result } = await $fetch<{ status: ConversionModelStatus }>('/api/ml/conversion-model/train', { method: 'POST' })
+      const { status: result } = await fetchUntyped<{ status: ConversionModelStatus }>('/api/ml/conversion-model/train', { method: 'POST' })
       status.value = result
       return result
     }

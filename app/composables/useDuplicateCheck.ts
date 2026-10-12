@@ -25,7 +25,7 @@ export function useDuplicateCheck(entity: DuplicateCheckEntity, options: { exclu
       return
     }
 
-    const { matches: rows } = await $fetch<{ matches: DuplicateMatch[] }>(`/api/${entity}/check-duplicate`, {
+    const { matches: rows } = await fetchUntyped<{ matches: DuplicateMatch[] }>(`/api/${entity}/check-duplicate`, {
       query: {
         name: params.name || undefined,
         email: params.email || undefined,

@@ -89,11 +89,12 @@ async function migrateControl() {
   await db.exec('CREATE INDEX IF NOT EXISTS idx_cp_audit_org ON cp_audit_log (org_id, at)')
 
   // The original data is Canopy's own workspace — register it, and its existing staff, once.
+  // Canopy's own workspace always has every app, including ones added after it was registered.
   const now = new Date().toISOString()
   await db.prepare(`
     INSERT INTO cp_organizations (id, slug, name, sector, plan, apps, status, source, created_at, updated_at)
     VALUES (?, ?, 'Canopy', 'Other', 'enterprise', ?, 'active', 'home', ?, ?)
-    ON CONFLICT (id) DO NOTHING
+    ON CONFLICT (id) DO UPDATE SET apps = EXCLUDED.apps
   `).run(HOME_ORG_ID, HOME_ORG_ID, JSON.stringify(ORG_APPS.map(app => app.id)), now, now)
 
   await runWithTenant(HOME_ORG_ID, () => ensureDb())

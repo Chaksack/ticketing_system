@@ -48,7 +48,7 @@ export function useTenders() {
   }
 
   async function fetchTender(id: string) {
-    const { tender } = await $fetch<{ tender: Tender }>(`/api/tenders/${id}`)
+    const { tender } = await fetchUntyped<{ tender: Tender }>(`/api/tenders/${id}`)
     replaceTender(tender)
     return tender
   }
@@ -60,19 +60,19 @@ export function useTenders() {
   }
 
   async function updateTender(id: string, patch: TenderPatch) {
-    const { tender } = await $fetch<{ tender: Tender }>(`/api/tenders/${id}`, { method: 'PATCH', body: patch })
+    const { tender } = await fetchUntyped<{ tender: Tender }>(`/api/tenders/${id}`, { method: 'PATCH', body: patch })
     replaceTender(tender)
     return tender
   }
 
   async function convertTender(id: string) {
-    const { client } = await $fetch<{ client: Client }>(`/api/tenders/${id}/convert`, { method: 'POST' })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/tenders/${id}/convert`, { method: 'POST' })
     await fetchTender(id)
     return client
   }
 
   async function removeTender(id: string) {
-    await $fetch<{ success: true }>(`/api/tenders/${id}`, { method: 'DELETE' })
+    await fetchUntyped<{ success: true }>(`/api/tenders/${id}`, { method: 'DELETE' })
     tenders.value = tenders.value.filter(t => t.id !== id)
   }
 
@@ -80,13 +80,13 @@ export function useTenders() {
     const formData = new FormData()
     formData.append('document', file)
 
-    const { tender } = await $fetch<{ tender: Tender }>(`/api/tenders/${id}/documents`, { method: 'POST', body: formData })
+    const { tender } = await fetchUntyped<{ tender: Tender }>(`/api/tenders/${id}/documents`, { method: 'POST', body: formData })
     replaceTender(tender)
     return tender
   }
 
   async function removeDocument(id: string, docId: string) {
-    const { tender } = await $fetch<{ tender: Tender }>(`/api/tenders/${id}/documents/${docId}`, { method: 'DELETE' })
+    const { tender } = await fetchUntyped<{ tender: Tender }>(`/api/tenders/${id}/documents/${docId}`, { method: 'DELETE' })
     replaceTender(tender)
     return tender
   }

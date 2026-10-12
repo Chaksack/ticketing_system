@@ -25,6 +25,8 @@ export type TicketActivityType
     | 'auto_assigned'
     | 'automation_applied'
     | 'escalated'
+    | 'created_from_chat'
+    | 'work_order'
 
 export interface TicketActivity {
   id: string

@@ -14,23 +14,23 @@ export function useChat() {
   }
 
   async function fetchChannels() {
-    const { channels: rows } = await $fetch<{ channels: ChatChannel[] }>('/api/chat/channels')
+    const { channels: rows } = await fetchUntyped<{ channels: ChatChannel[] }>('/api/chat/channels')
     channels.value = rows
   }
 
   async function fetchBrowsableChannels() {
-    const { channels: rows } = await $fetch<{ channels: BrowsableChatChannel[] }>('/api/chat/channels/browsable')
+    const { channels: rows } = await fetchUntyped<{ channels: BrowsableChatChannel[] }>('/api/chat/channels/browsable')
     return rows
   }
 
   async function createProjectChannel(projectId: string, name?: string) {
-    const { channel } = await $fetch<{ channel: ChatChannel }>('/api/chat/channels', { method: 'POST', body: { type: 'project', projectId, name } })
+    const { channel } = await fetchUntyped<{ channel: ChatChannel }>('/api/chat/channels', { method: 'POST', body: { type: 'project', projectId, name } })
     upsertChannel(channel)
     return channel
   }
 
   async function joinChannel(channelId: string) {
-    const { channel } = await $fetch<{ channel: ChatChannel }>(`/api/chat/channels/${channelId}/join`, { method: 'POST' })
+    const { channel } = await fetchUntyped<{ channel: ChatChannel }>(`/api/chat/channels/${channelId}/join`, { method: 'POST' })
     upsertChannel(channel)
     return channel
   }
@@ -41,30 +41,30 @@ export function useChat() {
   }
 
   async function fetchUnreadCount() {
-    const { unreadCount: count } = await $fetch<{ unreadCount: number }>('/api/chat/unread-count')
+    const { unreadCount: count } = await fetchUntyped<{ unreadCount: number }>('/api/chat/unread-count')
     unreadCount.value = count
   }
 
   async function openDirectChannel(staffId: string) {
-    const { channel } = await $fetch<{ channel: ChatChannel }>('/api/chat/channels', { method: 'POST', body: { type: 'direct', staffId } })
+    const { channel } = await fetchUntyped<{ channel: ChatChannel }>('/api/chat/channels', { method: 'POST', body: { type: 'direct', staffId } })
     upsertChannel(channel)
     return channel
   }
 
   async function createGroupChannel(name: string, memberIds: string[]) {
-    const { channel } = await $fetch<{ channel: ChatChannel }>('/api/chat/channels', { method: 'POST', body: { type: 'group', name, memberIds } })
+    const { channel } = await fetchUntyped<{ channel: ChatChannel }>('/api/chat/channels', { method: 'POST', body: { type: 'group', name, memberIds } })
     upsertChannel(channel)
     return channel
   }
 
   async function updateChannel(channelId: string, patch: { name?: string, memberIds?: string[] }) {
-    const { channel } = await $fetch<{ channel: ChatChannel }>(`/api/chat/channels/${channelId}`, { method: 'PATCH', body: patch })
+    const { channel } = await fetchUntyped<{ channel: ChatChannel }>(`/api/chat/channels/${channelId}`, { method: 'PATCH', body: patch })
     upsertChannel(channel)
     return channel
   }
 
   async function fetchMessages(channelId: string) {
-    const { messages } = await $fetch<{ messages: ChatMessage[] }>(`/api/chat/channels/${channelId}/messages`)
+    const { messages } = await fetchUntyped<{ messages: ChatMessage[] }>(`/api/chat/channels/${channelId}/messages`)
     messagesByChannel.value = { ...messagesByChannel.value, [channelId]: messages }
   }
 
@@ -74,13 +74,13 @@ export function useChat() {
     if (file)
       formData.append('attachment', file)
 
-    const { message } = await $fetch<{ message: ChatMessage }>(`/api/chat/channels/${channelId}/messages`, { method: 'POST', body: formData })
+    const { message } = await fetchUntyped<{ message: ChatMessage }>(`/api/chat/channels/${channelId}/messages`, { method: 'POST', body: formData })
     messagesByChannel.value = { ...messagesByChannel.value, [channelId]: [...(messagesByChannel.value[channelId] ?? []), message] }
     return message
   }
 
   async function toggleReaction(channelId: string, messageId: string, emoji: string) {
-    const { message } = await $fetch<{ message: ChatMessage }>(`/api/chat/messages/${messageId}/reactions`, { method: 'POST', body: { emoji } })
+    const { message } = await fetchUntyped<{ message: ChatMessage }>(`/api/chat/messages/${messageId}/reactions`, { method: 'POST', body: { emoji } })
     const current = messagesByChannel.value[channelId] ?? []
     messagesByChannel.value = {
       ...messagesByChannel.value,

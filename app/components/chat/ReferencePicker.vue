@@ -26,7 +26,7 @@ const runSearch = useDebounceFn(async (q: string) => {
 
   isLoading.value = true
   try {
-    const data = await $fetch<{
+    const data = await fetchUntyped<{
       tickets: { id: string, subject: string }[]
       leads: { id: string, name: string }[]
       clients: { id: string, name: string }[]

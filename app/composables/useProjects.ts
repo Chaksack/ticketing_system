@@ -47,7 +47,7 @@ export function useProjects() {
   }
 
   async function fetchProject(id: string) {
-    const { project } = await $fetch<{ project: Project }>(`/api/projects/${id}`)
+    const { project } = await fetchUntyped<{ project: Project }>(`/api/projects/${id}`)
     replaceProject(project)
     return project
   }
@@ -59,30 +59,30 @@ export function useProjects() {
   }
 
   async function updateProject(id: string, patch: ProjectPatch) {
-    const { project } = await $fetch<{ project: Project }>(`/api/projects/${id}`, { method: 'PATCH', body: patch })
+    const { project } = await fetchUntyped<{ project: Project }>(`/api/projects/${id}`, { method: 'PATCH', body: patch })
     replaceProject(project)
     return project
   }
 
   async function removeProject(id: string) {
-    await $fetch<{ success: true }>(`/api/projects/${id}`, { method: 'DELETE' })
+    await fetchUntyped<{ success: true }>(`/api/projects/${id}`, { method: 'DELETE' })
     projects.value = projects.value.filter(p => p.id !== id)
   }
 
   async function assignAmc(projectId: string, payload: { planId: string, startDate: string, endDate: string, status?: AmcContractStatus }) {
-    const { project } = await $fetch<{ project: Project }>(`/api/projects/${projectId}/amc-contracts`, { method: 'POST', body: payload })
+    const { project } = await fetchUntyped<{ project: Project }>(`/api/projects/${projectId}/amc-contracts`, { method: 'POST', body: payload })
     replaceProject(project)
     return project
   }
 
   async function addFinancialEntry(projectId: string, payload: NewProjectFinancialEntry) {
-    const { project } = await $fetch<{ project: Project }>(`/api/projects/${projectId}/financial-entries`, { method: 'POST', body: payload })
+    const { project } = await fetchUntyped<{ project: Project }>(`/api/projects/${projectId}/financial-entries`, { method: 'POST', body: payload })
     replaceProject(project)
     return project
   }
 
   async function removeFinancialEntry(projectId: string, entryId: string) {
-    const { project } = await $fetch<{ project: Project }>(`/api/projects/${projectId}/financial-entries/${entryId}`, { method: 'DELETE' })
+    const { project } = await fetchUntyped<{ project: Project }>(`/api/projects/${projectId}/financial-entries/${entryId}`, { method: 'DELETE' })
     replaceProject(project)
     return project
   }

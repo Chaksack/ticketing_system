@@ -78,7 +78,7 @@ watch(() => draft.value?.slug, (value) => {
   if (!value?.trim() || locked.value)
     return
   slugTimer = setTimeout(async () => {
-    slugStatus.value = await $fetch<{ available: boolean, reason?: string, slug: string }>('/api/signup/slug', { query: { value } })
+    slugStatus.value = await fetchUntyped<{ available: boolean, reason?: string, slug: string }>('/api/signup/slug', { query: { value } })
   }, 350)
 })
 

@@ -8,6 +8,8 @@ import { navMenu } from '~/constants/menus'
  */
 const APP_BY_PATH: [prefix: string, app: OrgApp][] = [
   ['/tickets', 'service'],
+  ['/inbox', 'service'],
+  ['/knowledge', 'service'],
   ['/reports', 'service'],
   ['/admin/automations', 'service'],
   ['/admin/sla', 'service'],
@@ -27,6 +29,8 @@ const APP_BY_PATH: [prefix: string, app: OrgApp][] = [
   ['/timesheets', 'projects'],
   ['/resource-utilization', 'projects'],
   ['/executive-dashboard', 'insights'],
+  ['/field', 'field'],
+  ['/marketing', 'marketing'],
 ]
 
 export function appForPath(path: string): OrgApp | undefined {
@@ -37,10 +41,15 @@ export interface NavVisibilityContext {
   /** The company's enabled apps; undefined = no company loaded yet (show everything). */
   apps?: OrgApp[]
   isPlatformStaff?: boolean
+  /** Signed in to Canopy's own workspace (any role). */
+  isHomeOrg?: boolean
 }
 
 export function isNavItemVisible(item: NavLink | NavGroup | NavSectionTitle, isAdmin: boolean, userRoles: string[], context: NavVisibilityContext = {}) {
   if ('platformOnly' in item && item.platformOnly && !context.isPlatformStaff)
+    return false
+
+  if ('homeOnly' in item && item.homeOnly && !context.isHomeOrg)
     return false
 
   if ('adminOnly' in item && item.adminOnly && !isAdmin)
@@ -66,7 +75,7 @@ export function useVisibleNavLinks() {
 
   return computed<NavLink[]>(() => {
     const userRoles = currentUser.value?.roles ?? []
-    const context = { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value }
+    const context = { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: !!currentOrg.value?.isHome }
 
     return (navMenu as NavMenu[])
       .flatMap(group => group.items)

@@ -20,19 +20,19 @@ export function useQuotes() {
   const quotes = useState<Quote[]>('quotes-list', () => [])
 
   async function fetchQuotes(regardingType: RegardingType, regardingId: string) {
-    const { quotes: rows } = await $fetch<{ quotes: Quote[] }>('/api/quotes', { query: { regardingType, regardingId } })
+    const { quotes: rows } = await fetchUntyped<{ quotes: Quote[] }>('/api/quotes', { query: { regardingType, regardingId } })
     quotes.value = rows
     return rows
   }
 
   async function addQuote(payload: NewQuote) {
-    const { quote } = await $fetch<{ quote: Quote }>('/api/quotes', { method: 'POST', body: payload })
+    const { quote } = await fetchUntyped<{ quote: Quote }>('/api/quotes', { method: 'POST', body: payload })
     quotes.value.unshift(quote)
     return quote
   }
 
   async function removeQuote(id: string) {
-    await $fetch(`/api/quotes/${id}`, { method: 'DELETE' })
+    await fetchUntyped<{ ok: boolean }>(`/api/quotes/${id}`, { method: 'DELETE' })
     quotes.value = quotes.value.filter(q => q.id !== id)
   }
 

@@ -41,7 +41,7 @@ function isItemOrGroupVisible(item: NavLink | NavGroup | NavSectionTitle, admin:
 const visibleNavMenu = computed(() => navMenu
   .map(group => ({
     ...group,
-    items: group.items.filter(item => isItemOrGroupVisible(item, isAdmin.value, currentUser.value?.roles ?? [], { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value })),
+    items: group.items.filter(item => isItemOrGroupVisible(item, isAdmin.value, currentUser.value?.roles ?? [], { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: !!currentOrg.value?.isHome })),
   }))
   .filter(group => group.items.length > 0))
 

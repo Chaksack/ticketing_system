@@ -39,7 +39,7 @@ export function useSprints() {
   }
 
   async function updateSprint(id: string, patch: SprintPatch) {
-    const { sprint } = await $fetch<{ sprint: Sprint }>(`/api/sprints/${id}`, { method: 'PATCH', body: patch })
+    const { sprint } = await fetchUntyped<{ sprint: Sprint }>(`/api/sprints/${id}`, { method: 'PATCH', body: patch })
     // A PATCH that starts this sprint may have auto-completed another one server-side —
     // refetch the full list so that demotion is reflected instead of only patching locally.
     if (patch.status === 'active')
@@ -50,7 +50,7 @@ export function useSprints() {
   }
 
   async function removeSprint(id: string) {
-    await $fetch<{ success: true }>(`/api/sprints/${id}`, { method: 'DELETE' })
+    await fetchUntyped<{ success: true }>(`/api/sprints/${id}`, { method: 'DELETE' })
     sprints.value = sprints.value.filter(s => s.id !== id)
   }
 

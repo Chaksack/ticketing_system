@@ -20,7 +20,7 @@ const onSubmit = handleSubmit(async (values) => {
   isLoading.value = true
 
   try {
-    await $fetch('/api/auth/forgot-password', {
+    await fetchUntyped<{ ok: boolean }>('/api/auth/forgot-password', {
       method: 'POST',
       body: { email: values.email },
     })

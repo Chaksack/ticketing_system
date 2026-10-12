@@ -77,7 +77,7 @@ export function useAuth() {
   })
 
   async function login(email: string, password: string) {
-    const { user } = await $fetch('/api/auth/login', {
+    const { user } = await fetchUntyped<{ user: AuthUser }>('/api/auth/login', {
       method: 'POST',
       body: { email, password },
     })

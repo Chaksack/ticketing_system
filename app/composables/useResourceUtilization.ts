@@ -6,7 +6,7 @@ export function useResourceUtilization() {
   const to = useState<string>('resource-utilization-to', () => '')
 
   async function fetchUtilization(range?: { from?: string, to?: string }) {
-    const result = await $fetch<{ from: string, to: string, rows: ResourceUtilizationRow[] }>('/api/reports/resource-utilization', { query: range ?? {} })
+    const result = await fetchUntyped<{ from: string, to: string, rows: ResourceUtilizationRow[] }>('/api/reports/resource-utilization', { query: range ?? {} })
     rows.value = result.rows
     from.value = result.from
     to.value = result.to

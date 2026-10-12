@@ -56,3 +56,20 @@ export async function sendPasswordResetEmail(params: { to: string, name: string,
     `,
   })
 }
+
+export async function sendSurveyEmail(params: { to: string, name: string, ticketId: string, subject: string, token: string }) {
+  const org = await getOrganization(currentOrgId())
+  const slug = org?.slug ?? HOME_ORG_ID
+  const link = `${trimTrailingSlash(useRuntimeConfig().siteUrl)}/survey/${slug}/${params.token}`
+  await sendGmailMessage({
+    to: params.to,
+    subject: `How did we do? [${params.ticketId}] ${params.subject}`,
+    html: `
+      <p>Hi ${params.name},</p>
+      <p>We've marked your request <strong>${params.ticketId}</strong> — "${params.subject}" — as resolved.</p>
+      <p>Could you tell us how we did? It's one question and takes a few seconds:</p>
+      <p><a href="${link}">${link}</a></p>
+      <p>If it isn't actually fixed, just reply to this email and we'll pick it straight back up.</p>
+    `,
+  })
+}

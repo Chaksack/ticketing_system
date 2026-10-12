@@ -19,7 +19,7 @@ export function useTaskStatuses() {
   }
 
   async function renameStatus(id: string, label: string) {
-    const { status } = await $fetch<{ status: TaskStatusColumn }>(`/api/task-statuses/${id}`, { method: 'PATCH', body: { label } })
+    const { status } = await fetchUntyped<{ status: TaskStatusColumn }>(`/api/task-statuses/${id}`, { method: 'PATCH', body: { label } })
     const index = statuses.value.findIndex(s => s.id === id)
     if (index !== -1)
       statuses.value[index] = status
@@ -27,12 +27,12 @@ export function useTaskStatuses() {
   }
 
   async function removeStatus(id: string) {
-    await $fetch<{ success: true }>(`/api/task-statuses/${id}`, { method: 'DELETE' })
+    await fetchUntyped<{ success: true }>(`/api/task-statuses/${id}`, { method: 'DELETE' })
     statuses.value = statuses.value.filter(s => s.id !== id)
   }
 
   async function reorderStatuses(ids: string[]) {
-    const { statuses: rows } = await $fetch<{ statuses: TaskStatusColumn[] }>('/api/task-statuses/reorder', { method: 'POST', body: { ids } })
+    const { statuses: rows } = await fetchUntyped<{ statuses: TaskStatusColumn[] }>('/api/task-statuses/reorder', { method: 'POST', body: { ids } })
     statuses.value = rows
   }
 

@@ -49,7 +49,7 @@ async function loadDashboard() {
   const todayFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const todayTo = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, -1)
   try {
-    dashboard.value = await $fetch<SalesDashboard>('/api/bd-reports/pipeline', {
+    dashboard.value = await fetchUntyped<SalesDashboard>('/api/bd-reports/pipeline', {
       query: {
         from: from.toISOString(),
         to: to.toISOString(),

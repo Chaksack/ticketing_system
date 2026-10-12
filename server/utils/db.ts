@@ -1132,6 +1132,8 @@ async function migrate() {
     )
   `)
   await db.exec('CREATE INDEX IF NOT EXISTS idx_project_financial_entries_project ON project_financial_entries (project_id)')
+
+  await migrateModuleTables()
 }
 
 export async function nextSequence(name: string): Promise<number> {

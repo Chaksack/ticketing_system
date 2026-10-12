@@ -11,7 +11,7 @@ export function useApiKeys() {
   const keys = useState<ApiKey[]>('api-keys-list', () => [])
 
   async function fetchApiKeys() {
-    const { keys: rows } = await $fetch<{ keys: ApiKey[] }>('/api/admin/api-keys')
+    const { keys: rows } = await fetchUntyped<{ keys: ApiKey[] }>('/api/admin/api-keys')
     keys.value = rows
   }
 
@@ -24,19 +24,19 @@ export function useApiKeys() {
   }
 
   async function createApiKey(payload: NewApiKey) {
-    const { apiKey, key } = await $fetch<{ apiKey: ApiKey, key: string }>('/api/admin/api-keys', { method: 'POST', body: payload })
+    const { apiKey, key } = await fetchUntyped<{ apiKey: ApiKey, key: string }>('/api/admin/api-keys', { method: 'POST', body: payload })
     replaceKey(apiKey)
     return { apiKey, key }
   }
 
   async function updateApiKey(id: string, payload: ApiKeyUpdate) {
-    const { apiKey } = await $fetch<{ apiKey: ApiKey }>(`/api/admin/api-keys/${id}`, { method: 'PATCH', body: payload })
+    const { apiKey } = await fetchUntyped<{ apiKey: ApiKey }>(`/api/admin/api-keys/${id}`, { method: 'PATCH', body: payload })
     replaceKey(apiKey)
     return apiKey
   }
 
   async function revokeApiKey(id: string) {
-    const { apiKey } = await $fetch<{ apiKey: ApiKey }>(`/api/admin/api-keys/${id}/revoke`, { method: 'POST' })
+    const { apiKey } = await fetchUntyped<{ apiKey: ApiKey }>(`/api/admin/api-keys/${id}/revoke`, { method: 'POST' })
     replaceKey(apiKey)
     return apiKey
   }

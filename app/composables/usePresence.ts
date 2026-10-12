@@ -12,7 +12,7 @@ export function usePresence() {
   const myOverride = useState<PresenceState | 'auto'>('my-presence-override', () => 'auto')
 
   async function fetchPresences() {
-    const { presences: rows } = await $fetch<{ presences: StaffPresence[] }>('/api/presence')
+    const { presences: rows } = await fetchUntyped<{ presences: StaffPresence[] }>('/api/presence')
     presences.value = new Map(rows.map(p => [p.staffId, p]))
   }
 
@@ -21,7 +21,7 @@ export function usePresence() {
   }
 
   async function updateMyPresence(patch: PresencePatch) {
-    const { presence } = await $fetch<{ presence: StaffPresence }>('/api/presence/me', { method: 'PATCH', body: patch })
+    const { presence } = await fetchUntyped<{ presence: StaffPresence }>('/api/presence/me', { method: 'PATCH', body: patch })
     presences.value.set(presence.staffId, presence)
     if (patch.override)
       myOverride.value = patch.override

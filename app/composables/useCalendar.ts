@@ -25,18 +25,18 @@ export function useCalendar() {
   }
 
   async function fetchEvents(range: { from: string, to: string }) {
-    const { events: rows } = await $fetch<{ events: CalendarEvent[] }>('/api/calendar/events', { query: range })
+    const { events: rows } = await fetchUntyped<{ events: CalendarEvent[] }>('/api/calendar/events', { query: range })
     events.value = rows
   }
 
   async function addEvent(payload: CalendarEventPayload) {
-    const { event } = await $fetch<{ event: CalendarEvent }>('/api/calendar/events', { method: 'POST', body: payload })
+    const { event } = await fetchUntyped<{ event: CalendarEvent }>('/api/calendar/events', { method: 'POST', body: payload })
     replaceEvent(event)
     return event
   }
 
   async function updateEvent(id: string, patch: Partial<CalendarEventPayload>) {
-    const { event } = await $fetch<{ event: CalendarEvent }>(`/api/calendar/events/${id}`, { method: 'PATCH', body: patch })
+    const { event } = await fetchUntyped<{ event: CalendarEvent }>(`/api/calendar/events/${id}`, { method: 'PATCH', body: patch })
     replaceEvent(event)
     return event
   }

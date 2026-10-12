@@ -15,7 +15,7 @@ export function useErpConnections() {
   const records = useState<ErpImportRecord[]>('erp-connection-records', () => [])
 
   async function fetchConnections() {
-    const { connections: rows } = await $fetch<{ connections: ErpConnection[] }>('/api/erp-connections')
+    const { connections: rows } = await fetchUntyped<{ connections: ErpConnection[] }>('/api/erp-connections')
     connections.value = rows
   }
 
@@ -28,13 +28,13 @@ export function useErpConnections() {
   }
 
   async function addConnection(payload: NewErpConnection) {
-    const { connection } = await $fetch<{ connection: ErpConnection }>('/api/erp-connections', { method: 'POST', body: payload })
+    const { connection } = await fetchUntyped<{ connection: ErpConnection }>('/api/erp-connections', { method: 'POST', body: payload })
     replaceConnection(connection)
     return connection
   }
 
   async function updateConnection(id: string, patch: Partial<NewErpConnection>) {
-    const { connection } = await $fetch<{ connection: ErpConnection }>(`/api/erp-connections/${id}`, { method: 'PATCH', body: patch })
+    const { connection } = await fetchUntyped<{ connection: ErpConnection }>(`/api/erp-connections/${id}`, { method: 'PATCH', body: patch })
     replaceConnection(connection)
     return connection
   }
@@ -45,23 +45,23 @@ export function useErpConnections() {
   }
 
   async function testConnection(id: string) {
-    return await $fetch<{ ok: boolean, status: number }>(`/api/erp-connections/${id}/test`, { method: 'POST' })
+    return await fetchUntyped<{ ok: boolean, status: number }>(`/api/erp-connections/${id}/test`, { method: 'POST' })
   }
 
   async function fetchFromConnection(id: string, path: string) {
-    const result = await $fetch<{ data: unknown }>(`/api/erp-connections/${id}/fetch`, { method: 'POST', body: { path } })
+    const result = await fetchUntyped<{ data: unknown }>(`/api/erp-connections/${id}/fetch`, { method: 'POST', body: { path } })
     await fetchRecords(id)
     return result.data
   }
 
   async function syncConnection(id: string) {
-    const { connection, summary } = await $fetch<{ connection: ErpConnection, summary: ErpSyncSummary }>(`/api/erp-connections/${id}/sync`, { method: 'POST' })
+    const { connection, summary } = await fetchUntyped<{ connection: ErpConnection, summary: ErpSyncSummary }>(`/api/erp-connections/${id}/sync`, { method: 'POST' })
     replaceConnection(connection)
     return summary
   }
 
   async function fetchRecords(id: string) {
-    const { records: rows } = await $fetch<{ records: ErpImportRecord[] }>(`/api/erp-connections/${id}/records`)
+    const { records: rows } = await fetchUntyped<{ records: ErpImportRecord[] }>(`/api/erp-connections/${id}/records`)
     records.value = rows
   }
 

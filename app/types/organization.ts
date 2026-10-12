@@ -1,9 +1,11 @@
 /** The apps a company can switch on; each controls which sidebar sections its staff see. */
 export const ORG_APPS = [
-  { id: 'service', label: 'Customer Service', description: 'Tickets, SLAs, queues, automations and macros.' },
+  { id: 'service', label: 'Customer Service', description: 'Tickets, live chat, knowledge base, SLAs, automations and macros.' },
   { id: 'sales', label: 'Sales', description: 'Leads, tenders, clients, quotes, products and quotas.' },
   { id: 'projects', label: 'Projects & Delivery', description: 'Projects, AMC contracts, tasks, sprints and timesheets.' },
   { id: 'insights', label: 'Insights', description: 'BD & SM, support and executive reports.' },
+  { id: 'marketing', label: 'Marketing', description: 'Segments of your leads and clients, and email journeys that nurture them.' },
+  { id: 'field', label: 'Field Service', description: 'Work orders, a technician schedule board, assets and an on-site checklist.' },
 ] as const
 
 export type OrgApp = typeof ORG_APPS[number]['id']

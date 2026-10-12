@@ -39,6 +39,9 @@ const TYPE_ICON: Record<NotificationType, string> = {
   ticket_escalated: 'i-lucide-arrow-up-circle',
   tender_reminder: 'i-lucide-gavel',
   bd_automation: 'i-lucide-workflow',
+  kb_review: 'i-lucide-book-open-check',
+  work_order_assigned: 'i-lucide-wrench',
+  live_chat: 'i-lucide-messages-square',
 }
 
 async function onSelect(notification: AppNotification) {

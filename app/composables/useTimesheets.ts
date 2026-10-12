@@ -20,18 +20,18 @@ export function useTimesheets() {
   const entries = useState<TimesheetEntry[]>('timesheets-list', () => [])
 
   async function fetchTimesheets(filter: TimesheetFilter = {}) {
-    const { entries: rows } = await $fetch<{ entries: TimesheetEntry[] }>('/api/timesheets', { query: filter })
+    const { entries: rows } = await fetchUntyped<{ entries: TimesheetEntry[] }>('/api/timesheets', { query: { ...filter } })
     entries.value = rows
   }
 
   async function addTimesheet(payload: NewTimesheet) {
-    const { entry } = await $fetch<{ entry: TimesheetEntry }>('/api/timesheets', { method: 'POST', body: payload })
+    const { entry } = await fetchUntyped<{ entry: TimesheetEntry }>('/api/timesheets', { method: 'POST', body: payload })
     entries.value.unshift(entry)
     return entry
   }
 
   async function updateTimesheet(id: string, patch: { workDate?: string, hours?: number, billable?: boolean, notes?: string | null }) {
-    const { entry } = await $fetch<{ entry: TimesheetEntry }>(`/api/timesheets/${id}`, { method: 'PATCH', body: patch })
+    const { entry } = await fetchUntyped<{ entry: TimesheetEntry }>(`/api/timesheets/${id}`, { method: 'PATCH', body: patch })
     const index = entries.value.findIndex(e => e.id === id)
     if (index !== -1)
       entries.value[index] = entry

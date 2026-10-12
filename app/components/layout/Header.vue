@@ -9,7 +9,7 @@ const currentUser = useState<AuthUser | null>('current-user')
 
 // Roles/profile can change (e.g. an admin grants a role) — pick that up on refresh as well.
 onAppRefresh(async () => {
-  const { user } = await $fetch<{ user: AuthUser | null }>('/api/auth/me')
+  const { user } = await fetchUntyped<{ user: AuthUser | null }>('/api/auth/me')
   currentUser.value = user
 })
 

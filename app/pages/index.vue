@@ -21,15 +21,16 @@ const NAV_LINKS = [
   { href: '#sectors', label: 'Sectors' },
   { href: '#platform', label: 'Platform' },
   { href: '#pricing', label: 'Pricing' },
+  { href: '/care-service', label: 'Canopy Care' },
 ] as const
 
 const MODULES = [
-  { title: 'Support desk', tone: 'forest', copy: 'Tickets from the portal, email and staff, with SLA timers, automatic assignment, escalation and on-call paging.' },
-  { title: 'Sales pipeline', tone: 'mist', copy: 'Leads, tenders and clients with win probability, quotes and orders, and duplicate detection built in.' },
-  { title: 'Projects & delivery', tone: 'fog', copy: 'Projects, AMC contracts, tasks and sprints, plus each project\'s value, costs, payments and amount due.' },
-  { title: 'Calendar & chat', tone: 'fog', copy: 'Meetings and site visits linked to the deal or client they\'re for, direct messages and project channels.' },
-  { title: 'Reports', tone: 'mist', copy: 'BD & SM, support and executive dashboards, rep scorecards and quota progress, exportable to PDF.' },
-  { title: 'Ask AI & integrations', tone: 'lime', copy: 'An assistant that answers from live data, plus Slack, Gmail, ERP sync and an open API.' },
+  { title: 'Sales', tone: 'forest', copy: 'Leads, tenders and clients with win probability, quotes from your product catalogue, quotas and duplicate detection.' },
+  { title: 'Customer Service', tone: 'mist', copy: 'Tickets with SLA timers, live chat on your portal, a knowledge base customers can search, and satisfaction surveys.' },
+  { title: 'Marketing', tone: 'fog', copy: 'Segments of your leads and clients, and email journeys with waits, branches and a hand-off to Sales.' },
+  { title: 'Field Service', tone: 'fog', copy: 'Work orders, a technician schedule board with auto-scheduling, asset history and an on-site checklist with signature.' },
+  { title: 'Projects & Delivery', tone: 'mist', copy: 'Projects, AMC contracts, tasks and timesheets, plus each project\'s value, costs, payments and amount due.' },
+  { title: 'Insights & Assist', tone: 'lime', copy: 'Live dashboards and reports, plus an assistant that answers from your data and drafts replies, articles and emails.' },
 ] as const
 
 const TONE_CLASS: Record<(typeof MODULES)[number]['tone'], { card: string, title: string, copy: string }> = {
@@ -104,11 +105,10 @@ function bookForSector(name: DemoSector) {
   nextTick(() => document.getElementById('demo-email')?.focus({ preventScroll: true }))
 }
 
-// No list prices are published yet, so each plan leads with what it's for instead of a figure.
 const PLANS = [
-  { name: 'Essentials', headline: 'Start small', copy: 'One app — Service, Sales or Projects — with the customer portal and shared client records.', cta: { label: 'Choose Essentials', to: '/signup' }, featured: false },
-  { name: 'Professional', headline: 'Every app', copy: 'Service, Sales, Projects and Insights, with automation rules, SLA policies and Ask AI.', cta: { label: 'Choose Professional', to: '/signup' }, featured: true },
-  { name: 'Enterprise', headline: 'Let\'s talk', copy: 'Staff-led onboarding with a signed service agreement and SLA, ERP sync and a named support contact.', cta: { label: 'Contact sales', to: '#demo' }, featured: false },
+  { name: 'Essentials', price: '$2', unit: 'per user / month', copy: 'One app of your choice, with the customer portal and shared client records.', cta: { label: 'Choose Essentials', to: '/signup' }, featured: false },
+  { name: 'Professional', price: '$4', unit: 'per user / month', copy: 'Every app — Sales, Service, Marketing, Field Service, Projects and Insights — with automation, live chat and Ask AI.', cta: { label: 'Choose Professional', to: '/signup' }, featured: true },
+  { name: 'Enterprise', price: 'Let\'s talk', unit: 'Volume pricing', copy: 'Staff-led onboarding with a signed service agreement and SLA, ERP sync and a named support contact.', cta: { label: 'Contact sales', to: '#demo' }, featured: false },
 ] as const
 
 async function submitDemo() {
@@ -168,7 +168,7 @@ const PLATFORM = [
       <!-- Hero -->
       <section class="mx-auto flex max-w-6xl flex-col gap-7 px-6 pb-16 pt-16 md:pt-20">
         <span class="self-start rounded-full bg-brand-mist px-3.5 py-2 text-[13px] font-semibold text-brand-forest">
-          Support · Sales · Projects · Reporting
+          Sales · Service · Marketing · Field · Projects
         </span>
         <h1 class="m-0 max-w-4xl text-[clamp(3.25rem,9vw,7rem)] font-black leading-[0.88] tracking-[-0.05em] text-brand-obsidian">
           Every customer.<br>Every team.<br>One canopy.
@@ -364,8 +364,13 @@ const PLATFORM = [
                 </h3>
                 <span v-if="plan.featured" class="rounded-full bg-brand-lime px-3 py-1.5 text-xs font-semibold text-brand-forest">Most teams</span>
               </div>
-              <div class="text-[44px] font-black leading-none tracking-[-0.04em]" :class="plan.featured ? 'text-white' : 'text-brand-obsidian'">
-                {{ plan.headline }}
+              <div>
+                <div class="text-[48px] font-black leading-none tracking-[-0.04em]" :class="plan.featured ? 'text-white' : 'text-brand-obsidian'">
+                  {{ plan.price }}
+                </div>
+                <div class="mt-1 text-sm" :class="plan.featured ? 'text-brand-mist' : 'text-[#5d605d]'">
+                  {{ plan.unit }}
+                </div>
               </div>
               <p class="m-0 flex-1 text-[15px] leading-normal" :class="plan.featured ? 'text-brand-mist' : ''">
                 {{ plan.copy }}

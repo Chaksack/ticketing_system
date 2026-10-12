@@ -27,7 +27,7 @@ const sourceFilter = ref('all')
 async function fetchActivity() {
   isLoading.value = true
   try {
-    const { activity: rows } = await $fetch<{ activity: ActivityLogEntry[] }>('/api/admin/activity', {
+    const { activity: rows } = await fetchUntyped<{ activity: ActivityLogEntry[] }>('/api/admin/activity', {
       query: staffFilter.value !== 'all' ? { staffId: staffFilter.value } : {},
     })
     activity.value = rows

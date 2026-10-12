@@ -130,6 +130,19 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-03-13',
 
   nitro: {
+    hooks: {
+      // Typed $fetch infers response types by matching the URL against every API route; past a
+      // couple of hundred routes TypeScript gives up ("type instantiation is excessively deep").
+      // Routes only ever called from outside the app — schedulers, OAuth redirects, Slack — don't
+      // need typing, so they're left out of the generated route types.
+      'types:extend': (types) => {
+        const untyped = ['/api/cron/', '/api/integrations/', '/api/slack/']
+        for (const path of Object.keys(types.routes)) {
+          if (untyped.some(prefix => path.startsWith(prefix)))
+            delete types.routes[path]
+        }
+      },
+    },
     experimental: {
       database: true,
       // Lets any server code find the current request (useEvent) — used to pick the signed-in

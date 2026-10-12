@@ -21,7 +21,7 @@ const inviteUrl: string = `/api/staff/invite/${token}`
 
 onMounted(async () => {
   try {
-    invite.value = await $fetch<{ name: string, email: string }>(inviteUrl)
+    invite.value = await fetchUntyped<{ name: string, email: string }>(inviteUrl)
   }
   catch (error: any) {
     loadError.value = error?.data?.statusMessage ?? 'This invite link is invalid or has expired.'

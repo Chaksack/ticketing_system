@@ -7,8 +7,12 @@ definePageMeta({
 
 const { summary, fetchSummary } = useReports()
 
-onMounted(() => {
-  fetchSummary()
+interface Satisfaction { sent: number, responses: number, average: number | null, distribution: { score: string, count: number }[], recentComments: { ticketId: string, subject: string, rating: number, comment: string, at: string }[] }
+const satisfaction = ref<Satisfaction | null>(null)
+
+onMounted(async () => {
+  await fetchSummary()
+  satisfaction.value = await fetchUntyped<Satisfaction>('/api/reports/satisfaction').catch(() => null)
 })
 
 function formatMins(mins: number | null) {
@@ -97,6 +101,33 @@ const priorityData = computed(() => Object.entries(summary.value?.byPriority ?? 
         </CardHeader>
         <CardContent>
           <AreaChart :data="summary?.volume ?? []" :categories="['created', 'resolved']" index="date" />
+        </CardContent>
+      </Card>
+
+      <Card class="@container/card">
+        <CardHeader>
+          <CardTitle>Customer satisfaction</CardTitle>
+          <CardDescription>Survey sent when a ticket is resolved · last 30 days</CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-6 md:grid-cols-[220px_1fr]">
+          <div>
+            <div class="text-5xl font-black tracking-[-0.04em] text-foreground">
+              {{ satisfaction?.average ?? '—' }}<span class="text-xl font-bold text-muted-foreground"> / 5</span>
+            </div>
+            <p class="m-0 mt-1 text-sm text-muted-foreground">
+              {{ satisfaction?.responses ?? 0 }} of {{ satisfaction?.sent ?? 0 }} surveys answered
+            </p>
+            <BarChart v-if="satisfaction?.responses" class="mt-4 h-32" :data="satisfaction.distribution" :categories="['count']" index="score" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <p v-if="!satisfaction?.recentComments.length" class="m-0 text-sm text-muted-foreground">
+              No written feedback yet. Tick "Send a satisfaction survey" when you resolve a case.
+            </p>
+            <NuxtLink v-for="item in satisfaction?.recentComments ?? []" :key="item.ticketId + item.at" :to="`/tickets/${item.ticketId}`" class="rounded-2xl bg-muted/50 p-3 text-sm hover:bg-muted">
+              <span class="font-bold" :class="item.rating <= 2 ? 'text-destructive' : 'text-foreground'">{{ item.rating }}/5</span> · {{ item.subject }}
+              <span class="mt-1 block text-muted-foreground">"{{ item.comment }}"</span>
+            </NuxtLink>
+          </div>
         </CardContent>
       </Card>
 

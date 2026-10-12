@@ -8,6 +8,8 @@ export interface NavLink {
   adminOnly?: boolean
   /** Canopy staff only (admins of the home workspace) — the staff console. */
   platformOnly?: boolean
+  /** Anyone signed in to Canopy's own workspace (e.g. Canopy Care agents). */
+  homeOnly?: boolean
   roles?: StaffRole[]
 }
 

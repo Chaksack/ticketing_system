@@ -39,12 +39,12 @@ export function useInteractions() {
   }
 
   async function addInteraction(payload: NewInteraction) {
-    const result = await $fetch<InteractionParentResponse>('/api/interactions', { method: 'POST', body: payload })
+    const result = await fetchUntyped<InteractionParentResponse>('/api/interactions', { method: 'POST', body: payload })
     return applyParent(result)
   }
 
   async function removeInteraction(id: string) {
-    const result = await $fetch<InteractionParentResponse>(`/api/interactions/${id}`, { method: 'DELETE' })
+    const result = await fetchUntyped<InteractionParentResponse>(`/api/interactions/${id}`, { method: 'DELETE' })
     return applyParent(result)
   }
 

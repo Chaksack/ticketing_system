@@ -12,7 +12,7 @@ const busy = ref(false)
 const origin = useRequestURL().origin
 
 onMounted(async () => {
-  const result = await $fetch<{ organization: Organization }>('/api/organization')
+  const result = await fetchUntyped<{ organization: Organization }>('/api/organization')
   organization.value = result.organization
   name.value = result.organization.name
 })
@@ -20,7 +20,7 @@ onMounted(async () => {
 async function save(patch: { name?: string, apps?: OrgApp[] }, message: string) {
   busy.value = true
   try {
-    const result = await $fetch<{ organization: Organization }>('/api/organization', { method: 'PATCH', body: patch })
+    const result = await fetchUntyped<{ organization: Organization }>('/api/organization', { method: 'PATCH', body: patch })
     organization.value = result.organization
     name.value = result.organization.name
     // Keep the sidebar and header in step with the new name and apps.

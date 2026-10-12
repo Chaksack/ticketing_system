@@ -18,7 +18,7 @@ export function useReports() {
   async function fetchSummary() {
     pending.value = true
     try {
-      summary.value = await $fetch<ReportSummary>('/api/reports/summary')
+      summary.value = await fetchUntyped<ReportSummary>('/api/reports/summary')
     }
     finally {
       pending.value = false

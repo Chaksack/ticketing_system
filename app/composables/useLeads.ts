@@ -46,7 +46,7 @@ export function useLeads() {
   }
 
   async function fetchLead(id: string) {
-    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}`)
+    const { lead } = await fetchUntyped<{ lead: Lead }>(`/api/leads/${id}`)
     replaceLead(lead)
     return lead
   }
@@ -58,42 +58,42 @@ export function useLeads() {
   }
 
   async function updateLead(id: string, patch: LeadPatch) {
-    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}`, { method: 'PATCH', body: patch })
+    const { lead } = await fetchUntyped<{ lead: Lead }>(`/api/leads/${id}`, { method: 'PATCH', body: patch })
     replaceLead(lead)
     return lead
   }
 
   async function convertLead(id: string) {
-    const { client } = await $fetch<{ client: Client }>(`/api/leads/${id}/convert`, { method: 'POST' })
+    const { client } = await fetchUntyped<{ client: Client }>(`/api/leads/${id}/convert`, { method: 'POST' })
     await fetchLead(id)
     return client
   }
 
   async function removeLead(id: string) {
-    await $fetch<{ success: true }>(`/api/leads/${id}`, { method: 'DELETE' })
+    await fetchUntyped<{ success: true }>(`/api/leads/${id}`, { method: 'DELETE' })
     leads.value = leads.value.filter(l => l.id !== id)
   }
 
   async function addContactEmail(id: string, payload: { email: string, label?: string }) {
-    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/contact-emails`, { method: 'POST', body: payload })
+    const { lead } = await fetchUntyped<{ lead: Lead }>(`/api/leads/${id}/contact-emails`, { method: 'POST', body: payload })
     replaceLead(lead)
     return lead
   }
 
   async function removeContactEmail(id: string, emailId: string) {
-    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/contact-emails/${emailId}`, { method: 'DELETE' })
+    const { lead } = await fetchUntyped<{ lead: Lead }>(`/api/leads/${id}/contact-emails/${emailId}`, { method: 'DELETE' })
     replaceLead(lead)
     return lead
   }
 
   async function addContactPhone(id: string, payload: { phone: string, label?: string }) {
-    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/contact-phones`, { method: 'POST', body: payload })
+    const { lead } = await fetchUntyped<{ lead: Lead }>(`/api/leads/${id}/contact-phones`, { method: 'POST', body: payload })
     replaceLead(lead)
     return lead
   }
 
   async function removeContactPhone(id: string, phoneId: string) {
-    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/contact-phones/${phoneId}`, { method: 'DELETE' })
+    const { lead } = await fetchUntyped<{ lead: Lead }>(`/api/leads/${id}/contact-phones/${phoneId}`, { method: 'DELETE' })
     replaceLead(lead)
     return lead
   }
@@ -102,13 +102,13 @@ export function useLeads() {
     const formData = new FormData()
     formData.append('document', file)
 
-    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/documents`, { method: 'POST', body: formData })
+    const { lead } = await fetchUntyped<{ lead: Lead }>(`/api/leads/${id}/documents`, { method: 'POST', body: formData })
     replaceLead(lead)
     return lead
   }
 
   async function removeDocument(id: string, docId: string) {
-    const { lead } = await $fetch<{ lead: Lead }>(`/api/leads/${id}/documents/${docId}`, { method: 'DELETE' })
+    const { lead } = await fetchUntyped<{ lead: Lead }>(`/api/leads/${id}/documents/${docId}`, { method: 'DELETE' })
     replaceLead(lead)
     return lead
   }

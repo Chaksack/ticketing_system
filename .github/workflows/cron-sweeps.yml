@@ -48,3 +48,8 @@ jobs:
         continue-on-error: true
         run: >-
           curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/prune-notifications"
+
+      - name: Marketing journeys
+        continue-on-error: true
+        run: >-
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.SITE_URL }}/api/cron/journeys"

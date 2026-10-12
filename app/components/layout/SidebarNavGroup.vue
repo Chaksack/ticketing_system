@@ -14,7 +14,7 @@ const { setOpenMobile } = useSidebar()
 const { currentUser, currentOrg, isAdmin, isPlatformStaff } = useAuth()
 const route = useRoute()
 
-const visibleChildren = computed(() => props.item.children.filter(child => isNavItemVisible(child, isAdmin.value, currentUser.value?.roles ?? [], { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value })))
+const visibleChildren = computed(() => props.item.children.filter(child => isNavItemVisible(child, isAdmin.value, currentUser.value?.roles ?? [], { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: !!currentOrg.value?.isHome })))
 
 const openCollapsible = ref(visibleChildren.value.some(child => child.link === route.path))
 </script>

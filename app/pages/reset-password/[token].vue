@@ -21,7 +21,7 @@ const resetUrl: string = `/api/auth/reset-password/${token}`
 
 onMounted(async () => {
   try {
-    reset.value = await $fetch<{ name: string, email: string }>(resetUrl)
+    reset.value = await fetchUntyped<{ name: string, email: string }>(resetUrl)
   }
   catch (error: any) {
     loadError.value = error?.data?.statusMessage ?? 'This reset link is invalid or has expired.'

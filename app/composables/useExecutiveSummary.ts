@@ -4,7 +4,7 @@ export function useExecutiveSummary() {
   const summary = useState<ExecutiveSummary | null>('executive-summary', () => null)
 
   async function fetchSummary() {
-    summary.value = await $fetch<ExecutiveSummary>('/api/reports/executive-summary')
+    summary.value = await fetchUntyped<ExecutiveSummary>('/api/reports/executive-summary')
   }
 
   return { summary, fetchSummary }

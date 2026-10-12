@@ -19,6 +19,11 @@ export const navMenu: NavMenu[] = [
         icon: 'i-lucide-clock',
         link: '/timesheets',
       },
+      {
+        title: 'Process map',
+        icon: 'i-lucide-git-fork',
+        link: '/process-map',
+      },
     ],
   },
   {
@@ -99,12 +104,41 @@ export const navMenu: NavMenu[] = [
     ],
   },
   {
+    heading: 'Marketing',
+    items: [
+      {
+        title: 'Journeys',
+        icon: 'i-lucide-route',
+        link: '/marketing/journeys',
+        roles: ['bd', 'sm'],
+      },
+      {
+        title: 'Segments',
+        icon: 'i-lucide-users-round',
+        link: '/marketing/segments',
+        roles: ['bd', 'sm'],
+      },
+    ],
+  },
+  {
     heading: 'Support',
     items: [
       {
         title: 'Tickets',
         icon: 'i-lucide-calendar-check-2',
         link: '/tickets',
+        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
+      },
+      {
+        title: 'Live chat',
+        icon: 'i-lucide-messages-square',
+        link: '/inbox',
+        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
+      },
+      {
+        title: 'Knowledge base',
+        icon: 'i-lucide-book-open',
+        link: '/knowledge',
         roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
       },
       {
@@ -118,6 +152,29 @@ export const navMenu: NavMenu[] = [
         icon: 'i-lucide-gauge',
         link: '/resource-utilization',
         roles: ['engineering_lead', 'engineering_coordinator', 'finance'],
+      },
+    ],
+  },
+  {
+    heading: 'Field Service',
+    items: [
+      {
+        title: 'Schedule board',
+        icon: 'i-lucide-calendar-range',
+        link: '/field',
+        roles: ['agent', 'engineering_coordinator', 'engineering_lead'],
+      },
+      {
+        title: 'Work orders',
+        icon: 'i-lucide-wrench',
+        link: '/field/work-orders',
+        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
+      },
+      {
+        title: 'Assets',
+        icon: 'i-lucide-hard-drive',
+        link: '/field/assets',
+        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
       },
     ],
   },
@@ -142,6 +199,18 @@ export const navMenu: NavMenu[] = [
         link: '/console/onboarding',
         platformOnly: true,
       },
+      {
+        title: 'Canopy Care',
+        icon: 'i-lucide-headset',
+        link: '/care',
+        platformOnly: true,
+      },
+      {
+        title: 'Care desktop',
+        icon: 'i-lucide-messages-square',
+        link: '/care/desktop',
+        homeOnly: true,
+      },
     ],
   },
   {
@@ -151,6 +220,12 @@ export const navMenu: NavMenu[] = [
         title: 'Organisation',
         icon: 'i-lucide-building',
         link: '/admin/organization',
+        adminOnly: true,
+      },
+      {
+        title: 'Canopy Care results',
+        icon: 'i-lucide-headset',
+        link: '/admin/care-results',
         adminOnly: true,
       },
       {

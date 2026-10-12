@@ -13,7 +13,7 @@ const isLoading = ref(false)
 async function load() {
   isLoading.value = true
   try {
-    const { suggestion: result } = await $fetch<{ suggestion: OpportunitySuggestion }>('/api/ml/suggestion', {
+    const { suggestion: result } = await fetchUntyped<{ suggestion: OpportunitySuggestion }>('/api/ml/suggestion', {
       query: { regardingType: props.regardingType, regardingId: props.regardingId },
     })
     suggestion.value = result

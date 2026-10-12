@@ -86,6 +86,33 @@ const { handleSubmit, resetForm, values, setFieldValue } = useForm({
   },
 })
 
+// Published help articles that match what the customer has typed so far (debounced).
+interface SuggestedArticle { id: string, title: string, body: string }
+const suggestedArticles = ref<SuggestedArticle[]>([])
+const openArticleId = ref<string | null>(null)
+let suggestTimer: ReturnType<typeof setTimeout> | undefined
+watch(() => `${values.subject ?? ''} ${values.description ?? ''}`.trim(), (text) => {
+  clearTimeout(suggestTimer)
+  if (text.length < 6) {
+    suggestedArticles.value = []
+    return
+  }
+  suggestTimer = setTimeout(async () => {
+    try {
+      suggestedArticles.value = (await fetchUntyped<{ articles: SuggestedArticle[] }>('/api/public/articles', { query: { q: text, workspace: workspaceSlug.value } })).articles
+    }
+    catch {
+      suggestedArticles.value = []
+    }
+  }, 400)
+})
+
+function toggleArticle(id: string) {
+  openArticleId.value = openArticleId.value === id ? null : id
+  if (openArticleId.value)
+    $fetch(`/api/public/articles/${id}`, { method: 'POST', query: { workspace: workspaceSlug.value }, body: { action: 'view' } }).catch(() => {})
+}
+
 const ALLOWED_ATTACHMENT_TYPES = new Set([
   'image/png',
   'image/jpeg',
@@ -135,7 +162,7 @@ async function uploadFile(file: File) {
   try {
     const formData = new FormData()
     formData.append('file', file)
-    const { attachment } = await $fetch<{ attachment: TicketAttachment }>('/api/tickets/attachments', { method: 'POST', body: formData, query: { workspace: workspaceSlug.value } })
+    const { attachment } = await fetchUntyped<{ attachment: TicketAttachment }>('/api/tickets/attachments', { method: 'POST', body: formData, query: { workspace: workspaceSlug.value } })
     pending.status = 'done'
     pending.attachment = attachment
   }
@@ -268,6 +295,27 @@ const inputClass = 'min-h-12 w-full rounded-[10px] border border-[#868685] bg-wh
                 <FormMessage />
               </FormItem>
             </FormField>
+
+            <section v-if="suggestedArticles.length" aria-labelledby="suggested-heading" class="flex flex-col gap-2 rounded-2xl bg-brand-mist p-4">
+              <h2 id="suggested-heading" class="m-0 text-sm font-semibold text-brand-forest">
+                These articles might answer it straight away
+              </h2>
+              <div v-for="article in suggestedArticles" :key="article.id" class="rounded-xl bg-white ring-1 ring-black/5">
+                <button type="button" class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left font-semibold text-brand-obsidian" :aria-expanded="openArticleId === article.id" @click="toggleArticle(article.id)">
+                  {{ article.title }}
+                  <Icon :name="openArticleId === article.id ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-4 shrink-0 text-brand-forest" />
+                </button>
+                <div v-if="openArticleId === article.id" class="border-t border-brand-fog px-4 py-3">
+                  <!-- renderMarkdown escapes everything and only emits a fixed set of tags (app/lib/markdown.ts). -->
+                  <!-- eslint-disable-next-line vue/no-v-html -->
+                  <div class="kb-prose text-[15px] [--color-foreground:#0e0f0c]" v-html="renderMarkdown(article.body)" />
+                  <a :href="`/kb/${workspaceSlug}/${article.id}`" target="_blank" class="mt-3 inline-block text-sm font-semibold text-brand-forest underline">Open the full article</a>
+                </div>
+              </div>
+              <p class="m-0 text-xs text-brand-spruce">
+                Still stuck? Carry on below and we'll pick it up.
+              </p>
+            </section>
 
             <fieldset class="m-0 flex flex-col gap-4 border-0 p-0">
               <legend class="mb-3 text-sm font-semibold text-brand-forest">
@@ -447,5 +495,9 @@ const inputClass = 'min-h-12 w-full rounded-[10px] border border-[#868685] bg-wh
         canopy
       </NuxtLink>
     </footer>
+
+    <ClientOnly>
+      <PortalChatWidget v-if="portalData" :workspace="workspaceSlug" :company-name="workspaceName" />
+    </ClientOnly>
   </div>
 </template>

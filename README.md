@@ -301,6 +301,33 @@ the `setInterval` plugin does (`server/utils/sweeps.ts`, `server/utils/gmail.ts`
 one implementation either way — set `NUXT_CRON_SECRET` (and the matching `CRON_SECRET` env var
 in your Vercel project settings) so only Vercel's own cron requests can trigger them.
 
+## Service, Marketing, Field Service and Canopy Care
+
+- **Knowledge base** (`/knowledge`) — Markdown articles with review → publish. Public articles show
+  in the support portal as customers type, at `/kb/<workspace>/<id>`, and as suggestions on tickets
+  and live chats. "Draft article" on a ticket writes one with the person's AI (or a template).
+- **Live chat** (`/inbox`) — customers start chats from the portal's "Chat with us" button; agents
+  answer, use macros (`/`), get suggested replies, and turn a chat into a ticket.
+- **Ticket workspace** (`/tickets/<id>`) — queue, case and customer side by side; *Resolve case*
+  can send a one-question satisfaction survey (`/survey/<workspace>/<token>`). A 1–2 rating reopens
+  the ticket. Results are under Support → Reports.
+- **Field Service** (`/field`) — work orders (also from a ticket), a technician schedule board with
+  drag-and-drop and auto-schedule by skill, assets, and a phone-first work-order page with
+  checklist, photos and customer signature. Technicians are staff with an Engineer role.
+- **Marketing** (`/marketing`) — segments over leads, clients and client contacts, and email
+  journeys (waits, branches, hand-off to Sales, quiet hours). Every email carries an unsubscribe
+  link and an open-tracking pixel. Journeys advance on `/api/cron/journeys` (every 5 minutes in
+  `.github/workflows/cron-sweeps.yml`, and in-process locally). SMS/WhatsApp steps need a
+  messaging provider and aren't available yet.
+- **Canopy Care** (`/care`, Canopy's own workspace) — engagements per client company, a
+  multi-client agent desktop (replies are labelled "· Canopy Care" inside the client's workspace),
+  quality scoring, and workforce planning. Clients see their results under Admin → Canopy Care
+  results. The public service page is `/care-service`. Voice and WhatsApp channels need a
+  telephony/messaging provider.
+
+All AI features use the person's own connected AI or `NUXT_ANTHROPIC_API_KEY`, and fall back
+gracefully (with a clear message) when neither works.
+
 ## Integrations (Settings → Integrations)
 
 Staff can connect their own third-party accounts from Settings → Integrations. The framework is

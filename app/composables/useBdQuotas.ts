@@ -5,12 +5,12 @@ export function useBdQuotas() {
   const progress = useState<BdQuotaProgress[]>('bd-quotas-progress', () => [])
 
   async function fetchQuotas(period: string) {
-    const { quotas: rows } = await $fetch<{ quotas: BdQuota[] }>('/api/bd-quotas', { query: { period } })
+    const { quotas: rows } = await fetchUntyped<{ quotas: BdQuota[] }>('/api/bd-quotas', { query: { period } })
     quotas.value = rows
   }
 
   async function upsertQuota(payload: { staffId: string, period: string, targetValue: number }) {
-    const { quota } = await $fetch<{ quota: BdQuota }>('/api/bd-quotas', { method: 'POST', body: payload })
+    const { quota } = await fetchUntyped<{ quota: BdQuota }>('/api/bd-quotas', { method: 'POST', body: payload })
     const index = quotas.value.findIndex(q => q.staffId === quota.staffId && q.period === quota.period)
     if (index === -1)
       quotas.value.push(quota)
@@ -25,7 +25,7 @@ export function useBdQuotas() {
   }
 
   async function fetchProgress(period: string) {
-    const { progress: rows } = await $fetch<{ progress: BdQuotaProgress[] }>('/api/bd-quotas/progress', { query: { period } })
+    const { progress: rows } = await fetchUntyped<{ progress: BdQuotaProgress[] }>('/api/bd-quotas/progress', { query: { period } })
     progress.value = rows
   }
 

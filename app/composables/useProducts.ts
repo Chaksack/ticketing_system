@@ -22,7 +22,7 @@ export function useProducts() {
   }
 
   async function updateProduct(id: string, patch: Partial<NewProduct>) {
-    const { product } = await $fetch<{ product: Product }>(`/api/products/${id}`, { method: 'PATCH', body: patch })
+    const { product } = await fetchUntyped<{ product: Product }>(`/api/products/${id}`, { method: 'PATCH', body: patch })
     const index = products.value.findIndex(p => p.id === id)
     if (index !== -1)
       products.value[index] = product
