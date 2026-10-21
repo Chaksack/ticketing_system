@@ -80,4 +80,12 @@ export interface Ticket {
   closedAt?: string
   slaEscalated: boolean
   escalationLevel?: EscalationLevel
+  /** The client (account) this ticket is for, and the project it's about. */
+  clientId?: string
+  clientName?: string
+  projectId?: string
+  projectName?: string
+  /** The AMC contract whose SLA applies (set from the project's active contract). */
+  contractId?: string
+  entitlement?: string
 }

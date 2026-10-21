@@ -24,5 +24,9 @@ export default defineEventHandler(async (event) => {
 
   const assigneesByLead = await getAllLeadAssignees()
 
-  return { leads: rows.map(row => mapLeadRow(row, [], assigneesByLead.get(row.id) ?? [])) }
+  // When each record last changed stage, for "days in stage" on the pipeline board.
+  const moves = await db.prepare('SELECT lead_id AS id, MAX(created_at) AS at FROM lead_activity WHERE type = \'stage_changed\' GROUP BY lead_id').all() as { id: string, at: string }[]
+  const movedAt = new Map(moves.map(m => [m.id, m.at]))
+
+  return { leads: rows.map(row => ({ ...mapLeadRow(row, [], assigneesByLead.get(row.id) ?? []), stageChangedAt: movedAt.get(row.id) ?? row.created_at })) }
 })

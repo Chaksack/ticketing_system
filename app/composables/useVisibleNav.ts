@@ -1,6 +1,6 @@
 import type { NavGroup, NavLink, NavMenu, NavSectionTitle } from '~/types/nav'
 import type { OrgApp } from '~/types/organization'
-import { navMenu } from '~/constants/menus'
+import { hqMenu, navMenu } from '~/constants/menus'
 
 /**
  * Which app (chosen per company at sign-up, editable under Admin → Organisation) each page
@@ -15,6 +15,7 @@ const APP_BY_PATH: [prefix: string, app: OrgApp][] = [
   ['/admin/sla', 'service'],
   ['/admin/macros', 'service'],
   ['/overview', 'sales'],
+  ['/pipeline', 'sales'],
   ['/leads', 'sales'],
   ['/tenders', 'sales'],
   ['/clients', 'sales'],
@@ -77,7 +78,7 @@ export function useVisibleNavLinks() {
     const userRoles = currentUser.value?.roles ?? []
     const context = { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: !!currentOrg.value?.isHome }
 
-    return (navMenu as NavMenu[])
+    return ([...navMenu, ...hqMenu] as NavMenu[])
       .flatMap(group => group.items)
       .filter((item): item is NavLink => 'link' in item)
       .filter(item => isNavItemVisible(item, isAdmin.value, userRoles, context))

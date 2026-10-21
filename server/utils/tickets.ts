@@ -1,12 +1,18 @@
 import type { Ticket, TicketActivityType } from '../../app/types/ticket'
 import type { ActivityRow, ReplyRow, TagRow, TicketRow } from './mappers'
 
-const TICKET_SELECT = `
-  SELECT tickets.*, staff.name AS assignee_name
+/** Tickets with their assignee, client, project and the AMC plan whose SLA applies. */
+export const TICKET_LIST_SELECT = `
+  SELECT tickets.*, staff.name AS assignee_name, clients.name AS client_name, projects.name AS project_name, amc_plans.name AS plan_name
   FROM tickets
   LEFT JOIN staff ON staff.id = tickets.assignee_id
-  WHERE tickets.id = ?
+  LEFT JOIN clients ON clients.id = tickets.client_id
+  LEFT JOIN projects ON projects.id = tickets.project_id
+  LEFT JOIN client_amc_contracts ON client_amc_contracts.id = tickets.contract_id
+  LEFT JOIN amc_plans ON amc_plans.id = client_amc_contracts.plan_id
 `
+
+const TICKET_SELECT = `${TICKET_LIST_SELECT} WHERE tickets.id = ?`
 
 export async function loadFullTicket(id: string): Promise<Ticket> {
   const db = useTenantDb()

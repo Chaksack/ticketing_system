@@ -38,6 +38,8 @@ export interface TenderDocument {
 }
 
 export interface Tender {
+  /** When it last moved stage (list endpoint only; falls back to creation). */
+  stageChangedAt?: string
   id: string
   title: string
   issuingAuthority?: string

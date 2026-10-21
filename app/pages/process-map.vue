@@ -43,7 +43,7 @@ const LANES: { title: string, subtitle: string, steps: Step[] }[] = [
       { title: 'Sign up', copy: 'An admin creates the organisation', to: '/signup' },
       { title: 'Set up', copy: 'Apps, team and data', to: '/admin/organization' },
       { title: 'Go live', copy: 'Teams work in Canopy daily', to: '/overview' },
-      { title: 'Supported', copy: 'Staff console tracks SLA & health', to: '/console', platform: true },
+      { title: 'Supported', copy: 'Staff console tracks SLA & health', to: '/hq', platform: true },
       { title: 'Renew', copy: 'AMC renewals open a new deal', to: '/amc-plans', app: 'projects' },
     ],
   },

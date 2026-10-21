@@ -15,7 +15,15 @@ definePageMeta({
 
 const { tickets, fetchTickets, addTicket } = useTickets()
 const { staff, fetchStaff } = useStaff()
+const { clients, fetchClients } = useClients()
+const { projects, fetchProjects } = useProjects()
 const route = useRoute()
+
+// Who the new ticket is for (optional). Left blank, it's matched by the requester's email.
+const newClientId = ref('none')
+const newProjectId = ref('none')
+const newClientProjects = computed(() => projects.value.filter(p => p.clientId === newClientId.value))
+watch(newClientId, () => newProjectId.value = 'none')
 
 onMounted(async () => {
   await Promise.all([fetchTickets(), fetchStaff()])
@@ -94,9 +102,24 @@ const { handleSubmit, resetForm, setFieldValue } = useForm({
   initialValues: { subject: '', description: '', requester: '', requesterEmail: '', requesterPhone: '', category: '', priority: 'medium', assigneeId: undefined },
 })
 
-onMounted(() => {
+watch(() => isReportOpen.value, async (open) => {
+  if (open && !clients.value.length) {
+    await fetchClients().catch(() => {})
+    await fetchProjects().catch(() => {})
+  }
+})
+
+onMounted(async () => {
   if (route.query.new !== '1')
     return
+  if (typeof route.query.clientId === 'string') {
+    await fetchClients().catch(() => {})
+    await fetchProjects().catch(() => {})
+    newClientId.value = route.query.clientId
+    await nextTick()
+    if (typeof route.query.projectId === 'string')
+      newProjectId.value = route.query.projectId
+  }
   if (typeof route.query.requester === 'string')
     setFieldValue('requester', route.query.requester)
   if (typeof route.query.email === 'string')
@@ -106,8 +129,9 @@ onMounted(() => {
 
 const onReportSubmit = handleSubmit(async (values) => {
   try {
-    const ticket = await addTicket({ ...values, requesterPhone: values.requesterPhone?.trim() || undefined, assigneeId: values.assigneeId || undefined })
+    const ticket = await addTicket({ ...values, requesterPhone: values.requesterPhone?.trim() || undefined, assigneeId: values.assigneeId || undefined, clientId: newClientId.value === 'none' ? undefined : newClientId.value, projectId: newProjectId.value === 'none' ? undefined : newProjectId.value })
     resetForm()
+    newClientId.value = 'none'
     isReportOpen.value = false
     toast('Ticket reported', {
       description: `${ticket.id} was created and on-call staff have been paged.`,
@@ -147,7 +171,7 @@ const onReportSubmit = handleSubmit(async (values) => {
     </PageTitle>
 
     <Dialog v-model:open="isReportOpen">
-      <DialogContent>
+      <DialogContent class="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Report a Ticket</DialogTitle>
           <DialogDescription>
@@ -234,6 +258,41 @@ const onReportSubmit = handleSubmit(async (values) => {
               <FormMessage />
             </FormItem>
           </FormField>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="flex flex-col gap-2">
+              <Label for="new-ticket-client">Client (optional)</Label>
+              <Select v-model="newClientId">
+                <SelectTrigger id="new-ticket-client" class="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    Match by email
+                  </SelectItem>
+                  <SelectItem v-for="c in clients" :key="c.id" :value="c.id">
+                    {{ c.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div class="flex flex-col gap-2">
+              <Label for="new-ticket-project">Project (optional)</Label>
+              <Select v-model="newProjectId" :disabled="newClientId === 'none'">
+                <SelectTrigger id="new-ticket-project" class="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    {{ newClientProjects.length ? 'Pick automatically' : 'No projects' }}
+                  </SelectItem>
+                  <SelectItem v-for="p in newClientProjects" :key="p.id" :value="p.id">
+                    {{ p.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           <FormField v-slot="{ componentField }" name="assigneeId">
             <FormItem>

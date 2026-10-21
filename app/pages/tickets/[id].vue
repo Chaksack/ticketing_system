@@ -16,6 +16,7 @@ const { staff, fetchStaff } = useStaff()
 const { tags, fetchTags, createTag } = useTags()
 const { macros, fetchMacros } = useMacros()
 const { clients, fetchClients } = useClients()
+const { projects, fetchProjects } = useProjects()
 
 const ticket = computed(() => tickets.value.find(t => t.id === id.value) ?? null)
 const notFound = ref(false)
@@ -27,7 +28,8 @@ const similar = ref<{ id: string, subject: string, resolvedAt?: string, resoluti
 async function loadTicket() {
   try {
     await fetchTicket(id.value)
-    similar.value = (await fetchUntyped<{ similar: typeof similar.value }>(`/api/tickets/${id.value}/assist`).catch(() => ({ similar: [] }))).similar
+    // Similar cases are a nicety — fetched without holding up the rest of the page.
+    fetchUntyped<{ similar: typeof similar.value }>(`/api/tickets/${id.value}/assist`).then(r => similar.value = r.similar).catch(() => {})
   }
   catch (error: any) {
     if (error?.statusCode === 404)
@@ -37,15 +39,19 @@ async function loadTicket() {
 
 onMounted(async () => {
   await loadTicket()
-  await fetchTickets()
+  // What the case and customer panels show first; the queue and pickers' extras after.
+  // (Sequential on purpose — see the note in overview.vue about overlapping queries.)
   if (!staff.value.length)
     await fetchStaff()
+  if (hasApp('sales') && !clients.value.length)
+    await fetchClients().catch(() => {})
+  if (!projects.value.length)
+    await fetchProjects().catch(() => {})
+  await fetchTickets()
   if (!tags.value.length)
     await fetchTags()
   if (!macros.value.length)
     await fetchMacros()
-  if (hasApp('sales'))
-    await fetchClients().catch(() => {})
 })
 watch(id, () => {
   draft.value = ''
@@ -243,12 +249,37 @@ async function draftWithAssist() {
 
 // ── Customer ──────────────────────────────────────────────────────────────
 const customer = computed(() => {
+  if (ticket.value?.clientId)
+    return clients.value.find(c => c.id === ticket.value!.clientId) ?? null
   const email = ticket.value?.requesterEmail.toLowerCase()
   if (!email)
     return null
   return clients.value.find(c => c.contactEmail?.toLowerCase() === email || c.additionalEmails.some(e => e.email.toLowerCase() === email) || c.contacts.some(p => p.email?.toLowerCase() === email)) ?? null
 })
 const customerContact = computed(() => customer.value?.contacts.find(p => p.email?.toLowerCase() === ticket.value?.requesterEmail.toLowerCase()))
+const clientProjects = computed(() => projects.value.filter(p => p.clientId === (ticket.value?.clientId ?? customer.value?.id)))
+async function setClient(value: string) {
+  if (!ticket.value)
+    return
+  try {
+    await updateTicket(ticket.value.id, { clientId: value === 'none' ? null : value, projectId: null })
+    toast(value === 'none' ? 'Client removed' : `Linked to ${clients.value.find(c => c.id === value)?.name}`)
+  }
+  catch (error: any) {
+    toast.error('Could not link the client', { description: error?.data?.statusMessage })
+  }
+}
+async function setProject(value: string) {
+  if (!ticket.value)
+    return
+  try {
+    const updated = await updateTicket(ticket.value.id, { clientId: ticket.value.clientId ?? customer.value?.id ?? null, projectId: value === 'none' ? null : value })
+    toast(updated.entitlement ? `Covered by ${updated.entitlement}` : 'Project updated', { description: updated.entitlement ? 'The contract\'s SLA now applies to this ticket.' : undefined })
+  }
+  catch (error: any) {
+    toast.error('Could not link the project', { description: error?.data?.statusMessage })
+  }
+}
 const openCasesForRequester = computed(() => tickets.value.filter(t => t.requesterEmail.toLowerCase() === ticket.value?.requesterEmail.toLowerCase() && isActive(t)).length)
 
 // ── Resolve (the design's "Resolve case & customer survey") ───────────────
@@ -284,9 +315,9 @@ async function resolve() {
 </script>
 
 <template>
-  <div class="flex w-full flex-wrap items-start gap-4">
+  <div class="grid w-full items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_340px]">
     <!-- Queue -->
-    <section aria-label="My queue" class="flex max-h-[calc(100vh-8rem)] flex-[1_1_280px] flex-col gap-2.5 overflow-y-auto rounded-[28px] bg-card p-4 ring-1 ring-black/10 lg:sticky lg:top-4 lg:max-w-[340px] dark:ring-white/10">
+    <section aria-label="My queue" class="flex max-h-[calc(100vh-8rem)] flex-col gap-2.5 overflow-y-auto rounded-[28px] bg-card p-4 ring-1 ring-black/10 lg:sticky lg:top-4 dark:ring-white/10">
       <div class="flex items-center justify-between">
         <h2 class="m-0 text-base font-bold text-foreground">
           My queue
@@ -317,7 +348,7 @@ async function resolve() {
     </section>
 
     <!-- Case -->
-    <section aria-label="Case" class="flex min-w-0 flex-[999_1_480px] flex-col gap-3.5">
+    <section aria-label="Case" class="flex min-w-0 flex-col gap-3.5">
       <p v-if="notFound" class="rounded-[28px] bg-card p-6 text-muted-foreground ring-1 ring-black/10">
         This ticket doesn't exist or was deleted.
       </p>
@@ -348,7 +379,7 @@ async function resolve() {
             </div>
           </div>
 
-          <div class="grid gap-2.5 sm:grid-cols-3">
+          <div class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl p-3.5" :class="firstResponse.ok ? 'bg-brand-mist text-brand-forest' : 'bg-destructive/10 text-destructive'">
               <div class="text-[13px]">
                 First response
@@ -363,6 +394,14 @@ async function resolve() {
               </div>
               <div class="mt-1 font-bold">
                 {{ resolveBy.value }} <span class="font-medium">{{ resolveBy.note }}</span>
+              </div>
+            </div>
+            <div class="rounded-2xl bg-brand-fog p-3.5 text-brand-forest dark:bg-muted dark:text-foreground">
+              <div class="text-[13px]">
+                Coverage
+              </div>
+              <div class="mt-1 truncate font-bold" :title="ticket.entitlement ? `${ticket.entitlement} contract SLA` : 'Company SLA policy'">
+                {{ ticket.entitlement ?? 'Company SLA' }}<span v-if="ticket.projectName" class="font-medium"> · {{ ticket.projectName }}</span>
               </div>
             </div>
             <div class="rounded-2xl bg-brand-fog p-3.5 text-brand-forest dark:bg-muted dark:text-foreground">
@@ -536,7 +575,7 @@ async function resolve() {
     </section>
 
     <!-- Customer & knowledge -->
-    <aside v-if="ticket" aria-label="Customer and knowledge" class="flex flex-[1_1_280px] flex-col gap-3.5 lg:max-w-[360px]">
+    <aside v-if="ticket" aria-label="Customer and knowledge" class="grid items-start gap-3.5 md:grid-cols-3 lg:col-span-2 2xl:col-span-1 2xl:grid-cols-1">
       <RecordCard tone="forest">
         <span class="self-start rounded-full bg-brand-lime px-3 py-1 text-xs font-bold text-brand-forest">Canopy Assist</span>
         <template v-if="similar.length">
@@ -557,7 +596,35 @@ async function resolve() {
 
       <RecordCard title="Customer">
         <div class="font-semibold text-foreground">
-          {{ customer?.name ?? ticket.requester }}
+          {{ customer?.name ?? ticket.clientName ?? ticket.requester }}
+        </div>
+        <div class="grid gap-2">
+          <Select :model-value="ticket.clientId ?? 'none'" @update:model-value="(v) => setClient(String(v))">
+            <SelectTrigger class="w-full" aria-label="Client">
+              <SelectValue :placeholder="ticket.clientName ?? 'Client'" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">
+                {{ customer && !ticket.clientId ? `Not linked (email matches ${customer.name})` : 'No client' }}
+              </SelectItem>
+              <SelectItem v-for="c in clients" :key="c.id" :value="c.id">
+                {{ c.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Select :model-value="ticket.projectId ?? 'none'" :disabled="!ticket.clientId && !customer" @update:model-value="(v) => setProject(String(v))">
+            <SelectTrigger class="w-full" aria-label="Project">
+              <SelectValue :placeholder="ticket.projectName ?? 'Project'" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">
+                {{ clientProjects.length ? 'No project' : 'This client has no projects' }}
+              </SelectItem>
+              <SelectItem v-for="p in clientProjects" :key="p.id" :value="p.id">
+                {{ p.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div class="text-sm text-muted-foreground">
           Contact: {{ customerContact?.name ?? ticket.requester }}<template v-if="customerContact?.title">
@@ -574,9 +641,14 @@ async function resolve() {
             · Ref {{ ticket.referenceNumber }}
           </template>
         </div>
-        <NuxtLink v-if="customer" :to="`/clients/${customer.id}`" class="text-sm font-semibold text-primary underline-offset-2 hover:underline dark:text-brand-lime">
-          Open client record
-        </NuxtLink>
+        <div class="flex flex-wrap gap-x-4 gap-y-1">
+          <NuxtLink v-if="customer || ticket.clientId" :to="`/clients/${customer?.id ?? ticket.clientId}`" class="text-sm font-semibold text-primary underline-offset-2 hover:underline dark:text-brand-lime">
+            Open client record
+          </NuxtLink>
+          <NuxtLink v-if="ticket.projectId" :to="`/projects/${ticket.projectId}`" class="text-sm font-semibold text-primary underline-offset-2 hover:underline dark:text-brand-lime">
+            Open project
+          </NuxtLink>
+        </div>
       </RecordCard>
 
       <TicketsKnowledgeSuggestions :ticket="ticket" @insert="insert" />

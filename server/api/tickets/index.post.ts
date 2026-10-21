@@ -13,6 +13,9 @@ interface NewTicketBody {
   referenceNumber?: string
   attachments?: TicketAttachment[]
   assigneeId?: string
+  /** Staff only: who the ticket is for. Portal tickets are matched by the requester's email. */
+  clientId?: string
+  projectId?: string
 }
 
 const TICKETS_PER_IP_PER_HOUR = 5
@@ -68,14 +71,21 @@ export default defineEventHandler(async (event) => {
   const now = new Date().toISOString()
   const validAttachments = (body.attachments ?? []).filter(a => a?.name && (!a.url || isTrustedAttachmentUrl(a.url)))
   const attachments = validAttachments.length ? JSON.stringify(validAttachments) : null
-  const { dueAt, firstResponseDueAt } = await computeSlaDeadlines(body.priority, now)
+  const staffUser = await getSessionUser(event)
+  const customer = await resolveTicketCustomer({
+    email: body.requesterEmail,
+    clientId: staffUser ? body.clientId : undefined,
+    projectId: staffUser ? body.projectId : undefined,
+  })
+  const { dueAt, firstResponseDueAt } = await computeSlaDeadlines(body.priority, now, customer.contractId)
 
   await db.prepare(`
     INSERT INTO tickets (
       id, subject, description, requester, requester_email, requester_phone, category, status, priority,
-      reference_number, attachments, created_at, updated_at, assignee_id, due_at, first_response_due_at
+      reference_number, attachments, created_at, updated_at, assignee_id, due_at, first_response_due_at,
+      client_id, project_id, contract_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     body.subject,
@@ -92,6 +102,9 @@ export default defineEventHandler(async (event) => {
     body.assigneeId ?? null,
     dueAt ?? null,
     firstResponseDueAt ?? null,
+    customer.clientId,
+    customer.projectId,
+    customer.contractId,
   )
 
   let ticket = await loadFullTicket(id)

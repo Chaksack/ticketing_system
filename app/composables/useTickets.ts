@@ -11,6 +11,8 @@ export interface NewTicket {
   referenceNumber?: string
   attachments?: TicketAttachment[]
   assigneeId?: string
+  clientId?: string
+  projectId?: string
 }
 
 export interface TicketPatch {
@@ -18,6 +20,8 @@ export interface TicketPatch {
   priority?: TicketPriority
   category?: string
   assigneeId?: string | null
+  clientId?: string | null
+  projectId?: string | null
 }
 
 export function useTickets() {

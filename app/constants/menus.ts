@@ -40,6 +40,12 @@ export const navMenu: NavMenu[] = [
         icon: 'i-lucide-trending-up',
         children: [
           {
+            title: 'Board',
+            icon: 'i-lucide-kanban',
+            link: '/pipeline',
+            roles: ['bd', 'sm'],
+          },
+          {
             title: 'Leads',
             icon: 'i-lucide-target',
             link: '/leads',
@@ -178,41 +184,7 @@ export const navMenu: NavMenu[] = [
       },
     ],
   },
-  {
-    heading: 'Canopy Console',
-    items: [
-      {
-        title: 'Console Overview',
-        icon: 'i-lucide-radar',
-        link: '/console',
-        platformOnly: true,
-      },
-      {
-        title: 'Tenants',
-        icon: 'i-lucide-building-2',
-        link: '/console/tenants',
-        platformOnly: true,
-      },
-      {
-        title: 'Client Onboarding',
-        icon: 'i-lucide-file-signature',
-        link: '/console/onboarding',
-        platformOnly: true,
-      },
-      {
-        title: 'Canopy Care',
-        icon: 'i-lucide-headset',
-        link: '/care',
-        platformOnly: true,
-      },
-      {
-        title: 'Care desktop',
-        icon: 'i-lucide-messages-square',
-        link: '/care/desktop',
-        homeOnly: true,
-      },
-    ],
-  },
+
   {
     heading: 'Administration',
     items: [
@@ -338,3 +310,30 @@ export const navMenuBottom: NavMenuItems = [
   //   link: '',
   // },
 ]
+
+/**
+ * Canopy HQ — Canopy's own internal space for running the platform: client companies, onboarding
+ * and Canopy Care. Shown instead of the workspace menu on HQ pages (see AppSidebar).
+ */
+export const hqMenu: NavMenu[] = [
+  {
+    heading: 'Canopy HQ',
+    items: [
+      { title: 'HQ home', icon: 'i-lucide-radar', link: '/hq', homeOnly: true },
+      { title: 'Client companies', icon: 'i-lucide-building-2', link: '/console/tenants', platformOnly: true },
+      { title: 'Onboarding', icon: 'i-lucide-file-signature', link: '/console/onboarding', platformOnly: true },
+    ],
+  },
+  {
+    heading: 'Canopy Care',
+    items: [
+      { title: 'Engagements', icon: 'i-lucide-headset', link: '/care', platformOnly: true },
+      { title: 'Agent desktop', icon: 'i-lucide-messages-square', link: '/care/desktop', homeOnly: true },
+      { title: 'Quality', icon: 'i-lucide-badge-check', link: '/care/quality', platformOnly: true },
+      { title: 'Workforce', icon: 'i-lucide-calendar-clock', link: '/care/workforce', platformOnly: true },
+    ],
+  },
+]
+
+/** Pages that belong to Canopy HQ rather than a company workspace. */
+export const HQ_PREFIXES = ['/hq', '/console', '/care']

@@ -145,8 +145,8 @@ async function copyPortal() {
         </CardContent>
       </Card>
       <p v-else class="text-sm text-muted-foreground">
-        This is Canopy's own workspace. Its admins manage every company from the <NuxtLink to="/console" class="underline">
-          staff console
+        This is Canopy's own workspace. Its admins manage every company from <NuxtLink to="/hq" class="underline">
+          Canopy HQ
         </NuxtLink>.
       </p>
     </template>

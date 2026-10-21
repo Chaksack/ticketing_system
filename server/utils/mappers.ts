@@ -74,6 +74,12 @@ export interface TicketRow {
   closed_at: string | null
   sla_escalated: number
   escalation_level: string | null
+  client_id?: string | null
+  client_name?: string | null
+  project_id?: string | null
+  project_name?: string | null
+  contract_id?: string | null
+  plan_name?: string | null
 }
 
 export function mapTicketRow(
@@ -112,6 +118,12 @@ export function mapTicketRow(
     closedAt: row.closed_at ?? undefined,
     slaEscalated: !!row.sla_escalated,
     escalationLevel: (row.escalation_level as Ticket['escalationLevel']) ?? undefined,
+    clientId: row.client_id ?? undefined,
+    clientName: row.client_name ?? undefined,
+    projectId: row.project_id ?? undefined,
+    projectName: row.project_name ?? undefined,
+    contractId: row.contract_id ?? undefined,
+    entitlement: row.plan_name ?? undefined,
   }
 }
 
@@ -421,6 +433,7 @@ export interface AmcPlanRow {
   default_duration_months: number
   price: number | string | null
   currency: string
+  sla_targets?: string | null
   created_at: string
 }
 
@@ -432,8 +445,24 @@ export function mapAmcPlanRow(row: AmcPlanRow): AmcPlan {
     defaultDurationMonths: row.default_duration_months,
     price: row.price === null ? undefined : Number(row.price),
     currency: row.currency,
+    slaTargets: row.sla_targets ? JSON.parse(row.sla_targets) : undefined,
     createdAt: row.created_at,
   }
+}
+
+/** Keeps only sensible per-priority targets (minutes, response before resolution); empty → null. */
+export function cleanSlaTargets(input: unknown): string | null {
+  if (!input || typeof input !== 'object')
+    return null
+  const out: Record<string, { firstResponseMins: number, resolutionMins: number }> = {}
+  for (const priority of ['low', 'medium', 'high', 'urgent']) {
+    const t = (input as Record<string, any>)[priority]
+    const first = Math.round(Number(t?.firstResponseMins))
+    const resolve = Math.round(Number(t?.resolutionMins))
+    if (first > 0 && resolve >= first)
+      out[priority] = { firstResponseMins: first, resolutionMins: resolve }
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null
 }
 
 export interface ContractRow {

@@ -50,7 +50,8 @@ const clientTickets = computed(() => {
   if (!client.value)
     return []
   const emails = new Set([client.value.contactEmail, ...client.value.additionalEmails.map(e => e.email), ...client.value.contacts.map(c => c.email)].filter(Boolean).map(e => e!.toLowerCase()))
-  return tickets.value.filter(t => emails.has(t.requesterEmail.toLowerCase()))
+  // Linked to this client, or (older/unlinked tickets) sent from one of its email addresses.
+  return tickets.value.filter(t => t.clientId === client.value!.id || (!t.clientId && emails.has(t.requesterEmail.toLowerCase())))
 })
 
 const stageLabel = computed(() => stages.find(s => s.value === client.value?.stage)?.label ?? client.value?.stage)
@@ -288,6 +289,11 @@ const projectStatus = (status: ProjectStatus) => projectStatuses.find(s => s.val
             </Button>
           </PopoverContent>
         </Popover>
+        <Button v-if="hasApp('service')" variant="ghost" as-child>
+          <NuxtLink :to="{ path: '/tickets', query: { new: '1', clientId: client.id, requester: client.contactName ?? client.name, email: client.contactEmail ?? '' } }">
+            New ticket
+          </NuxtLink>
+        </Button>
         <Button v-if="client.stage !== 'lost'" variant="ghost" @click="moveStage('lost')">
           Mark as lost
         </Button>
@@ -427,7 +433,7 @@ const projectStatus = (status: ProjectStatus) => projectStatuses.find(s => s.val
         <RecordCard title="Tickets">
           <NuxtLink v-for="ticket in clientTickets" :key="ticket.id" :to="`/tickets/${ticket.id}`" class="flex flex-wrap justify-between gap-2 border-b border-border py-3 text-sm last:border-0 hover:underline">
             <span class="font-semibold text-foreground">{{ ticket.id }} · {{ ticket.subject }}</span>
-            <span class="text-muted-foreground">{{ ticket.status }} · {{ ticket.priority }} · {{ when(ticket.createdAt) }}</span>
+            <span class="text-muted-foreground">{{ ticket.projectName ? `${ticket.projectName} · ` : '' }}{{ ticket.status }} · {{ ticket.priority }} · {{ when(ticket.createdAt) }}</span>
           </NuxtLink>
           <p v-if="!clientTickets.length" class="m-0 text-sm text-muted-foreground">
             No tickets from this client's email addresses.

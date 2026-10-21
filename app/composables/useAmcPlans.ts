@@ -6,6 +6,7 @@ export interface NewAmcPlan {
   defaultDurationMonths?: number
   price?: number
   currency?: string
+  slaTargets?: AmcPlan['slaTargets'] | null
 }
 
 export function useAmcPlans() {

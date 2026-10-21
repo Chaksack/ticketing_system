@@ -9,8 +9,8 @@ definePageMeta({
 })
 
 useSeoMeta({
-  title: 'Canopy: every customer, every team, one canopy',
-  description: 'Canopy brings support, sales, projects and reporting together on one record.',
+  title: 'Canopy: the customer service platform for companies that serve clients',
+  description: 'Customer service for every client and project — tickets, live chat and SLAs — with the sales pipeline, leads and tenders that bring those clients in.',
 })
 
 const year = new Date().getFullYear()
@@ -25,12 +25,12 @@ const NAV_LINKS = [
 ] as const
 
 const MODULES = [
-  { title: 'Sales', tone: 'forest', copy: 'Leads, tenders and clients with win probability, quotes from your product catalogue, quotas and duplicate detection.' },
-  { title: 'Customer Service', tone: 'mist', copy: 'Tickets with SLA timers, live chat on your portal, a knowledge base customers can search, and satisfaction surveys.' },
-  { title: 'Marketing', tone: 'fog', copy: 'Segments of your leads and clients, and email journeys with waits, branches and a hand-off to Sales.' },
-  { title: 'Field Service', tone: 'fog', copy: 'Work orders, a technician schedule board with auto-scheduling, asset history and an on-site checklist with signature.' },
-  { title: 'Projects & Delivery', tone: 'mist', copy: 'Projects, AMC contracts, tasks and timesheets, plus each project\'s value, costs, payments and amount due.' },
-  { title: 'Insights & Assist', tone: 'lime', copy: 'Live dashboards and reports, plus an assistant that answers from your data and drafts replies, articles and emails.' },
+  { title: 'Customer Service', tone: 'forest', copy: 'Tickets per client and project with SLAs from their contracts, live chat on your portal, a knowledge base and satisfaction surveys.' },
+  { title: 'Sales & Tenders', tone: 'mist', copy: 'Leads and tenders on a drag-and-drop pipeline, clients, quotes from your catalogue, quotas and duplicate detection.' },
+  { title: 'Projects & Contracts', tone: 'fog', copy: 'Projects with value, costs and payments, and the AMC contracts that set each project\'s support level.' },
+  { title: 'Field Service', tone: 'fog', copy: 'Work orders from tickets, a technician schedule board, asset history and an on-site checklist with signature.' },
+  { title: 'Marketing', tone: 'mist', copy: 'Segments of your leads and clients, and email journeys that hand warm contacts to Sales.' },
+  { title: 'Insights & Assist', tone: 'lime', copy: 'Live dashboards and reports, plus an assistant that answers from your data and drafts replies and articles.' },
 ] as const
 
 const TONE_CLASS: Record<(typeof MODULES)[number]['tone'], { card: string, title: string, copy: string }> = {
@@ -168,14 +168,15 @@ const PLATFORM = [
       <!-- Hero -->
       <section class="mx-auto flex max-w-6xl flex-col gap-7 px-6 pb-16 pt-16 md:pt-20">
         <span class="self-start rounded-full bg-brand-mist px-3.5 py-2 text-[13px] font-semibold text-brand-forest">
-          Sales · Service · Marketing · Field · Projects
+          Customer service · Sales · Leads · Tenders · Projects
         </span>
         <h1 class="m-0 max-w-4xl text-[clamp(3.25rem,9vw,7rem)] font-black leading-[0.88] tracking-[-0.05em] text-brand-obsidian">
           Every customer.<br>Every team.<br>One canopy.
         </h1>
         <p class="m-0 max-w-2xl text-lg leading-relaxed md:text-[22px] md:leading-[1.45]">
-          Canopy brings your support desk, sales pipeline, projects and reporting together on one record,
-          so every customer request is tracked from the first message to the final sign-off.
+          Canopy is the customer service platform for companies that serve clients: tickets, live chat
+          and SLAs for every client and project — plus the sales pipeline, leads and tenders that win them.
+          Want us to run the service desk too? <a href="/care-service" class="font-semibold text-brand-forest underline underline-offset-2">Canopy Care</a> does it inside your own workspace.
         </p>
         <div class="flex flex-wrap gap-3">
           <NuxtLink to="/signup" class="inline-flex min-h-12 items-center rounded-full bg-brand-lime px-7 text-lg font-semibold text-brand-forest hover:bg-brand-lime/85">
@@ -257,7 +258,7 @@ const PLATFORM = [
       <!-- Apps -->
       <section id="apps" class="mx-auto flex max-w-6xl scroll-mt-6 flex-col gap-8 px-6 py-16">
         <h2 class="m-0 max-w-3xl text-[clamp(2.5rem,6vw,4rem)] font-black leading-[0.95] tracking-[-0.045em] text-brand-obsidian">
-          Start with one app. Grow into the whole suite.
+          Customer service first. Everything that wins clients, alongside.
         </h2>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div v-for="module in MODULES" :key="module.title" class="flex flex-col gap-2.5 rounded-[28px] p-7" :class="TONE_CLASS[module.tone].card">

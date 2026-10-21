@@ -301,6 +301,22 @@ the `setInterval` plugin does (`server/utils/sweeps.ts`, `server/utils/gmail.ts`
 one implementation either way — set `NUXT_CRON_SECRET` (and the matching `CRON_SECRET` env var
 in your Vercel project settings) so only Vercel's own cron requests can trigger them.
 
+## Canopy HQ and customer service per client and project
+
+Canopy is a customer service platform for companies that serve clients. Each company works in its
+own workspace; Canopy runs the platform from **Canopy HQ**.
+
+- **Tickets per client and project** — every ticket can be linked to a client and one of their
+  projects. Portal, email and chat tickets are matched to the client by the requester's email, and
+  to the project when the client has exactly one project under an active AMC contract. Each AMC
+  plan can set its own first-response and resolution targets per priority (AMC Plans → edit →
+  Support SLA); tickets covered by that plan use them, everything else uses Admin → SLA Policies.
+  Linking a ticket to a different project re-applies the SLA while it's still open.
+- **Canopy HQ** (`/hq`, Canopy's own workspace) — client companies and their SLA health,
+  onboarding, and Canopy Care (engagements, agent desktop, quality, workforce), with its own
+  sidebar. Canopy admins land here after signing in; the switcher at the top of the sidebar (or
+  "Go to Canopy workspace") opens Canopy's own CRM. `/console` redirects to `/hq`.
+
 ## Service, Marketing, Field Service and Canopy Care
 
 - **Knowledge base** (`/knowledge`) — Markdown articles with review → publish. Public articles show

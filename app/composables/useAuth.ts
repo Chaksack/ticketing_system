@@ -60,11 +60,8 @@ export function useAuth() {
     return currentUser.value
   }
 
-  /**
-   * Where this person's work starts — used after sign-in and when a signed-in person opens the
-   * public landing page at "/". Mirrors which sidebar sections their roles can see.
-   */
-  const homePath = computed(() => {
+  /** Start page inside the company workspace (customer service first), from the person's roles. */
+  const workspacePath = computed(() => {
     const roles = currentUser.value?.roles ?? []
     const admin = roles.includes('admin')
     if (hasApp('service') && (admin || roles.some(role => role === 'agent' || role === 'engineer' || role === 'engineering_coordinator' || role === 'engineering_lead')))
@@ -75,6 +72,13 @@ export function useAuth() {
       return admin ? '/projects' : '/resource-utilization'
     return '/calendar'
   })
+
+  /**
+   * Where this person's work starts — used after sign-in and when a signed-in person opens the
+   * public landing page at "/". Canopy's own admins start in Canopy HQ; everyone else in their
+   * company workspace.
+   */
+  const homePath = computed(() => currentUser.value?.roles.includes('admin') && currentOrg.value?.isHome ? '/hq' : workspacePath.value)
 
   async function login(email: string, password: string) {
     const { user } = await fetchUntyped<{ user: AuthUser }>('/api/auth/login', {
@@ -93,5 +97,5 @@ export function useAuth() {
     currentUser.value = null
   }
 
-  return { currentUser, currentOrg, authReady, isAdmin, isAgent, isBd, isSm, isFinance, isEngineer, isEngineeringCoordinator, isEngineeringLead, isLoggedIn, isPlatformStaff, hasApp, homePath, ensureAuth, login, logout }
+  return { currentUser, currentOrg, authReady, isAdmin, isAgent, isBd, isSm, isFinance, isEngineer, isEngineeringCoordinator, isEngineeringLead, isLoggedIn, isPlatformStaff, hasApp, homePath, workspacePath, ensureAuth, login, logout }
 }

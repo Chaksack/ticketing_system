@@ -1,76 +1,64 @@
 <script setup lang="ts">
 import { useSidebar } from '~/components/ui/sidebar'
 
-const props = defineProps<{
-  teams: {
-    name: string
-    logo: string
-    role: string
-  }[]
+/**
+ * Name of the space you're in, on the forest band. Canopy staff can switch between Canopy HQ
+ * (clients, onboarding, Canopy Care) and Canopy's own CRM workspace from here.
+ */
+defineProps<{
+  name: string
+  role: string
+  spaces: { label: string, description: string, to: string, icon: string, active: boolean }[]
 }>()
 
 const { isMobile } = useSidebar()
-
-const activeTeam = ref(props.teams[0])
 </script>
 
 <template>
   <SidebarMenu>
     <SidebarMenuItem>
-      <DropdownMenu>
+      <DropdownMenu v-if="spaces.length > 1">
         <DropdownMenuTrigger as-child>
-          <SidebarMenuButton
-            size="lg"
-            class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-          >
-            <div class="aspect-square size-8 flex items-center justify-center">
-              <img :src="activeTeam!.logo" alt="" class="size-full object-contain">
+          <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+            <div class="flex aspect-square size-8 items-center justify-center">
+              <img src="/brand/canopy-app-icon.svg" alt="" class="size-full object-contain">
             </div>
             <div class="grid flex-1 text-left text-sm leading-tight">
-              <!-- Sits on the forest band (see AppSidebar), so the name uses the brand lime. -->
-              <span class="truncate font-black tracking-[-0.03em] text-brand-lime">
-                {{ activeTeam!.name }}
-              </span>
-              <span class="truncate text-xs text-brand-mist">{{ activeTeam!.role }}</span>
+              <span class="truncate font-black tracking-[-0.03em] text-brand-lime">{{ name }}</span>
+              <span class="truncate text-xs text-brand-mist">{{ role }}</span>
             </div>
             <Icon name="i-lucide-chevrons-up-down" class="ml-auto" />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          class="min-w-56 w-[--radix-dropdown-menu-trigger-width] rounded-lg"
-          align="start"
-          :side="isMobile ? 'bottom' : 'right'"
-        >
+        <DropdownMenuContent class="w-[--radix-dropdown-menu-trigger-width] min-w-64 rounded-xl" align="start" :side="isMobile ? 'bottom' : 'right'">
           <DropdownMenuLabel class="text-xs text-muted-foreground">
-            Teams
+            Switch to
           </DropdownMenuLabel>
-          <DropdownMenuItem
-            v-for="(team, index) in teams"
-            :key="team.name"
-            class="gap-2 p-2"
-            @click="activeTeam = team"
-          >
-            <div class="size-6 flex items-center justify-center border rounded-sm bg-white p-0.5">
-              <img :src="team.logo" alt="" class="size-full shrink-0 object-contain">
-            </div>
-            {{ team.name }}
-            <DropdownMenuShortcut>⌘{{ index + 1 }}</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem class="gap-2 p-2">
-            <div class="size-6 flex items-center justify-center border rounded-md bg-background">
-              <Icon name="i-lucide-plus" class="size-4" />
-            </div>
-            <div class="text-muted-foreground font-medium">
-              Add team
-            </div>
+          <DropdownMenuItem v-for="space in spaces" :key="space.to" as-child class="gap-2.5 p-2">
+            <NuxtLink :to="space.to">
+              <span class="flex size-8 shrink-0 items-center justify-center rounded-lg" :class="space.active ? 'bg-brand-lime text-brand-forest' : 'bg-muted'">
+                <Icon :name="space.icon" class="size-4" />
+              </span>
+              <span class="flex min-w-0 flex-col">
+                <span class="font-semibold">{{ space.label }}</span>
+                <span class="truncate text-xs text-muted-foreground">{{ space.description }}</span>
+              </span>
+              <Icon v-if="space.active" name="i-lucide-check" class="ml-auto size-4" />
+            </NuxtLink>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <SidebarMenuButton v-else size="lg" as-child>
+        <div>
+          <div class="flex aspect-square size-8 items-center justify-center">
+            <img src="/brand/canopy-app-icon.svg" alt="" class="size-full object-contain">
+          </div>
+          <div class="grid flex-1 text-left text-sm leading-tight">
+            <span class="truncate font-black tracking-[-0.03em] text-brand-lime">{{ name }}</span>
+            <span class="truncate text-xs text-brand-mist">{{ role }}</span>
+          </div>
+        </div>
+      </SidebarMenuButton>
     </SidebarMenuItem>
   </SidebarMenu>
 </template>
-
-<style scoped>
-
-</style>

@@ -121,6 +121,8 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/settings': { redirect: '/settings/profile' },
+    // The old staff-console overview is now the Canopy HQ home.
+    '/console': { redirect: '/hq' },
   },
 
   imports: {

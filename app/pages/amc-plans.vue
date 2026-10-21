@@ -59,6 +59,18 @@ const onSubmit = handleSubmit(async (values) => {
 const isEditOpen = ref(false)
 const editingPlan = ref<AmcPlan | null>(null)
 const editDraft = reactive({ name: '', description: '', defaultDurationMonths: 12, price: undefined as number | undefined, currency: 'GHS' })
+const SLA_PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const
+type SlaPriority = typeof SLA_PRIORITIES[number]
+/** Hours, as strings for the inputs; blank = use the company SLA policy for that priority. */
+const slaDraft = reactive<Record<SlaPriority, { first: string, resolve: string }>>({ urgent: { first: '', resolve: '' }, high: { first: '', resolve: '' }, medium: { first: '', resolve: '' }, low: { first: '', resolve: '' } })
+const hours = (mins?: number) => mins === undefined ? '' : String(Math.round((mins / 60) * 100) / 100)
+function slaSummary(plan: AmcPlan) {
+  const t = plan.slaTargets
+  if (!t || !Object.keys(t).length)
+    return 'Company default'
+  const top = SLA_PRIORITIES.find(p => t[p])!
+  return `${top[0]!.toUpperCase()}${top.slice(1)}: ${hours(t[top]!.firstResponseMins)}h / ${hours(t[top]!.resolutionMins)}h`
+}
 
 function openEdit(plan: AmcPlan) {
   editingPlan.value = plan
@@ -67,6 +79,8 @@ function openEdit(plan: AmcPlan) {
   editDraft.defaultDurationMonths = plan.defaultDurationMonths
   editDraft.price = plan.price
   editDraft.currency = plan.currency
+  for (const p of SLA_PRIORITIES)
+    Object.assign(slaDraft[p], { first: hours(plan.slaTargets?.[p]?.firstResponseMins), resolve: hours(plan.slaTargets?.[p]?.resolutionMins) })
   isEditOpen.value = true
 }
 
@@ -81,6 +95,7 @@ async function onSaveEdit() {
       defaultDurationMonths: editDraft.defaultDurationMonths,
       price: editDraft.price,
       currency: editDraft.currency,
+      slaTargets: Object.fromEntries(SLA_PRIORITIES.filter(p => Number(slaDraft[p].first) > 0 && Number(slaDraft[p].resolve) > 0).map(p => [p, { firstResponseMins: Math.round(Number(slaDraft[p].first) * 60), resolutionMins: Math.round(Number(slaDraft[p].resolve) * 60) }])),
     })
     isEditOpen.value = false
     toast('Plan updated')
@@ -218,6 +233,7 @@ function formatPrice(price: number | undefined, currency: string) {
             <TableHead>Description</TableHead>
             <TableHead>Default Duration</TableHead>
             <TableHead>Price</TableHead>
+            <TableHead>Support SLA</TableHead>
             <TableHead class="w-24" />
           </TableRow>
         </TableHeader>
@@ -232,6 +248,9 @@ function formatPrice(price: number | undefined, currency: string) {
               </TableCell>
               <TableCell>{{ plan.defaultDurationMonths }} mo</TableCell>
               <TableCell>{{ formatPrice(plan.price, plan.currency) }}</TableCell>
+              <TableCell class="text-muted-foreground">
+                {{ slaSummary(plan) }}
+              </TableCell>
               <TableCell class="flex items-center gap-0.5 justify-end">
                 <Button size="icon-sm" variant="ghost" @click="openEdit(plan)">
                   <Icon name="i-lucide-pencil" class="h-4 w-4" />
@@ -243,7 +262,7 @@ function formatPrice(price: number | undefined, currency: string) {
             </TableRow>
           </template>
           <TableRow v-else>
-            <TableCell :colspan="5" class="h-24 text-center">
+            <TableCell :colspan="6" class="h-24 text-center">
               No AMC plans match your search.
             </TableCell>
           </TableRow>
@@ -292,6 +311,22 @@ function formatPrice(price: number | undefined, currency: string) {
               <Input v-model.number="editDraft.price" type="number" min="0" step="0.01" placeholder="0.00" />
             </div>
           </div>
+          <fieldset class="m-0 flex flex-col gap-2 rounded-2xl border p-4">
+            <legend class="px-1 text-sm font-semibold">
+              Support SLA for tickets under this plan
+            </legend>
+            <p class="m-0 text-xs text-muted-foreground">
+              Hours to first response and to resolution. Tickets on a project with an active contract on this plan use these; blank rows use your company SLA policies.
+            </p>
+            <div class="grid grid-cols-[80px_1fr_1fr] items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <span>Priority</span><span>First response (h)</span><span>Resolution (h)</span>
+            </div>
+            <div v-for="priority in SLA_PRIORITIES" :key="priority" class="grid grid-cols-[80px_1fr_1fr] items-center gap-2">
+              <span class="text-sm capitalize">{{ priority }}</span>
+              <Input v-model="slaDraft[priority].first" inputmode="decimal" placeholder="Default" :aria-label="`${priority} first response hours`" />
+              <Input v-model="slaDraft[priority].resolve" inputmode="decimal" placeholder="Default" :aria-label="`${priority} resolution hours`" />
+            </div>
+          </fieldset>
         </div>
 
         <SheetFooter class="p-0">

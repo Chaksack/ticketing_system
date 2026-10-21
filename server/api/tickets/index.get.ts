@@ -5,12 +5,19 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
 
   const db = useTenantDb()
-  const rows = await db.prepare(`
-    SELECT tickets.*, staff.name AS assignee_name
-    FROM tickets
-    LEFT JOIN staff ON staff.id = tickets.assignee_id
-    ORDER BY tickets.created_at DESC
-  `).all() as TicketRow[]
+  // ?clientId= / ?projectId= narrow the list (client and project records show their tickets).
+  const query = getQuery(event)
+  const where: string[] = []
+  const params: string[] = []
+  if (typeof query.clientId === 'string' && query.clientId) {
+    where.push('tickets.client_id = ?')
+    params.push(query.clientId)
+  }
+  if (typeof query.projectId === 'string' && query.projectId) {
+    where.push('tickets.project_id = ?')
+    params.push(query.projectId)
+  }
+  const rows = await db.prepare(`${TICKET_LIST_SELECT}${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY tickets.created_at DESC`).all(...params) as TicketRow[]
 
   const tagRows = await db.prepare(`
     SELECT ticket_tags.ticket_id AS ticket_id, tags.*

@@ -81,6 +81,15 @@ export async function migrateModuleTables() {
   `)
   await db.exec('CREATE INDEX IF NOT EXISTS idx_ticket_surveys_ticket ON ticket_surveys (ticket_id)')
 
+  // Customer service per client and project: the project's active AMC contract sets the SLA.
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS client_id TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS project_id TEXT')
+  await db.exec('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS contract_id TEXT')
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_tickets_client ON tickets (client_id)')
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_tickets_project ON tickets (project_id)')
+  // Per-plan SLA targets: { [priority]: { firstResponseMins, resolutionMins } }; empty = company default.
+  await db.exec('ALTER TABLE amc_plans ADD COLUMN IF NOT EXISTS sla_targets TEXT')
+
   // ── Field Service ────────────────────────────────────────────────────────
   await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS skills TEXT')
   await db.exec(`

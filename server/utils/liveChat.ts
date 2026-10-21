@@ -142,12 +142,13 @@ export async function createTicketFromChat(chatId: string, actor: { id: string, 
   const id = await nextTicketId()
   const now = new Date().toISOString()
   const priority = options.priority ?? 'medium'
-  const { dueAt, firstResponseDueAt } = await computeSlaDeadlines(priority, now)
+  const customer = await resolveTicketCustomer({ email: chat.visitorEmail, clientId: chat.clientId ?? chat.identified?.clientId })
+  const { dueAt, firstResponseDueAt } = await computeSlaDeadlines(priority, now, customer.contractId)
 
   await db.prepare(`
-    INSERT INTO tickets (id, subject, description, requester, requester_email, category, status, priority, created_at, updated_at, assignee_id, due_at, first_response_due_at, first_response_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, (chat.subject ?? `Live chat with ${chat.visitorName}`).slice(0, 200), `From live chat ${chat.id}:\n\n${transcript}`, chat.visitorName, chat.visitorEmail, options.category ?? 'Live chat', priority, now, now, chat.assigneeId ?? actor.id, dueAt ?? null, firstResponseDueAt ?? null, chat.firstResponseAt ?? null)
+    INSERT INTO tickets (id, subject, description, requester, requester_email, category, status, priority, created_at, updated_at, assignee_id, due_at, first_response_due_at, first_response_at, client_id, project_id, contract_id)
+    VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, (chat.subject ?? `Live chat with ${chat.visitorName}`).slice(0, 200), `From live chat ${chat.id}:\n\n${transcript}`, chat.visitorName, chat.visitorEmail, options.category ?? 'Live chat', priority, now, now, chat.assigneeId ?? actor.id, dueAt ?? null, firstResponseDueAt ?? null, chat.firstResponseAt ?? null, customer.clientId, customer.projectId, customer.contractId)
   await logTicketActivity({ ticketId: id, type: 'created_from_chat', actorId: actor.id, actorName: actor.name, message: `${actor.name} created this ticket from live chat ${chat.id}` })
   await db.prepare('UPDATE live_chats SET ticket_id = ? WHERE id = ?').run(id, chatId)
   await addChatMessage(chatId, { authorType: 'system', authorName: 'System', body: `We've opened case ${id} for this. You'll get updates by email.` })

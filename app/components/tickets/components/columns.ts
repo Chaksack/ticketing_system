@@ -64,6 +64,17 @@ export const columns: ColumnDef<Ticket>[] = [
     cell: ({ row }) => h('span', { class: 'text-sm' }, row.getValue('requester')),
   },
   {
+    id: 'client',
+    accessorFn: row => [row.clientName, row.projectName].filter(Boolean).join(' · '),
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Client · project' }),
+    cell: ({ row }) => row.original.clientName
+      ? h('span', { class: 'flex flex-col text-sm' }, [
+          h('span', { class: 'font-medium' }, row.original.clientName),
+          row.original.projectName ? h('span', { class: 'text-xs text-muted-foreground' }, row.original.projectName + (row.original.entitlement ? ` · ${row.original.entitlement}` : '')) : null,
+        ])
+      : h('span', { class: 'text-sm text-muted-foreground' }, '—'),
+  },
+  {
     id: 'assigneeId',
     accessorFn: row => row.assigneeId ?? 'unassigned',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Assignee' }),

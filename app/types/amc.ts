@@ -7,6 +7,8 @@ export interface AmcPlan {
   defaultDurationMonths: number
   price?: number
   currency: string
+  /** Support targets this plan promises, per priority. Missing priorities use the company's SLA policies. */
+  slaTargets?: Partial<Record<'low' | 'medium' | 'high' | 'urgent', { firstResponseMins: number, resolutionMins: number }>>
   createdAt: string
 }
 

@@ -49,6 +49,8 @@ export interface LeadDocument {
 }
 
 export interface Lead {
+  /** When it last moved stage (list endpoint only; falls back to creation). */
+  stageChangedAt?: string
   id: string
   name: string
   contactName?: string
