@@ -1,4 +1,4 @@
-import type { StaffRole } from '../../app/types/staff'
+import type { HqRole, StaffRole } from '../../app/types/staff'
 import type { StaffRow } from './mappers'
 
 /**
@@ -6,7 +6,11 @@ import type { StaffRow } from './mappers'
  * (org-scoped token, so the link opens the right workspace). Shared by Admin → Staff and the
  * self-serve sign-up's "Invite your team" step.
  */
-export async function inviteStaffMember(input: { name: string, email: string, roles: StaffRole[], invitedByOrgName?: string }) {
+export async function inviteStaffMember(input: { name: string, email: string, roles: StaffRole[], hqRole?: HqRole, invitedByOrgName?: string }) {
+  // HQ-only people (e.g. Care agents) may have no workspace roles; everyone else needs one.
+  const hqRole = currentOrgId() === HOME_ORG_ID ? input.hqRole : undefined
+  if (!input.roles.length && !hqRole)
+    throw createError({ statusCode: 400, statusMessage: 'Pick at least one role' })
   await ensureDb()
   const db = useTenantDb()
   const email = input.email.trim()
@@ -24,9 +28,9 @@ export async function inviteStaffMember(input: { name: string, email: string, ro
 
   try {
     await db.prepare(`
-      INSERT INTO staff (id, name, email, role, roles, status, on_call, password_hash, invite_token, invite_expires_at, created_at)
-      VALUES (?, ?, ?, ?, ?, 'pending', 0, NULL, ?, ?, ?)
-    `).run(id, input.name.trim(), email, input.roles[0], JSON.stringify(input.roles), inviteToken, inviteExpiresAt, now)
+      INSERT INTO staff (id, name, email, role, roles, hq_role, status, on_call, password_hash, invite_token, invite_expires_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, NULL, ?, ?, ?)
+    `).run(id, input.name.trim(), email, input.roles[0] ?? 'none', JSON.stringify(input.roles), hqRole ?? null, inviteToken, inviteExpiresAt, now)
   }
   catch (error) {
     await unregisterDirectoryEmail(email, currentOrgId())
@@ -44,4 +48,16 @@ export async function inviteStaffMember(input: { name: string, email: string, ro
 
   const row = await db.prepare('SELECT * FROM staff WHERE id = ?').get(id) as StaffRow
   return { staff: mapStaffRow(row), emailSent }
+}
+
+const STAFF_ROLES: StaffRole[] = ['admin', 'agent', 'bd', 'sm', 'finance', 'engineer', 'engineering_coordinator', 'engineering_lead']
+
+/** Known workspace roles only, each once. */
+export function cleanStaffRoles(roles: unknown): StaffRole[] {
+  return Array.isArray(roles) ? [...new Set(roles.filter((role): role is StaffRole => STAFF_ROLES.includes(role)))] : []
+}
+
+/** 'admin' | 'agent', or undefined for "workspace only". */
+export function cleanHqRole(value: unknown): HqRole | undefined {
+  return value === 'admin' || value === 'agent' ? value : undefined
 }

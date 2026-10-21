@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const kind = getRouterParam(event, 'kind')
   const id = getRouterParam(event, 'id') ?? ''
   const engagement = await engagementForOrg(orgId)
-  if (!engagement || (!user.roles.includes('admin') && !engagement.agentIds.includes(user.id)))
+  if (!engagement || !canWorkEngagement(user, engagement))
     throw createError({ statusCode: 404, statusMessage: 'Conversation not found' })
 
   return runWithTenant(orgId, async () => {

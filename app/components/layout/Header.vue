@@ -18,6 +18,9 @@ async function onRefresh() {
   toast('Data refreshed')
 }
 
+/** Path segments whose title isn't just the word capitalised. */
+const SEGMENT_TITLES: Record<string, string> = { hq: 'Canopy HQ', team: 'Team & access' }
+
 function setLinks() {
   if (route.fullPath === homePath.value) {
     return [{ title: 'Home', href: homePath.value }]
@@ -27,7 +30,7 @@ function setLinks() {
 
   const breadcrumbs = segments.map((item, index) => {
     const str = item.replace(/-/g, ' ')
-    const title = str
+    const title = SEGMENT_TITLES[item] ?? str
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ')

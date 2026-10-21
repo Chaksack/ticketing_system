@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const kind = getRouterParam(event, 'kind')
   const id = getRouterParam(event, 'id') ?? ''
   const engagement = await engagementForOrg(orgId)
-  if (!engagement || !['pilot', 'live'].includes(engagement.stage) || (!user.roles.includes('admin') && !engagement.agentIds.includes(user.id)))
+  if (!engagement || !['pilot', 'live'].includes(engagement.stage) || !canWorkEngagement(user, engagement))
     throw createError({ statusCode: 403, statusMessage: 'You are not certified for this client' })
   const body = await readBody<{ action?: 'reply' | 'create_case' | 'transfer', message?: string }>(event) ?? {}
   const author = careAuthorName(user.name)

@@ -214,6 +214,7 @@ export const hqMenu: NavMenu[] = [
       { title: 'HQ home', icon: 'i-lucide-radar', link: '/hq', homeOnly: true },
       { title: 'Client companies', icon: 'i-lucide-building-2', link: '/console/tenants', platformOnly: true },
       { title: 'Onboarding', icon: 'i-lucide-file-signature', link: '/console/onboarding', platformOnly: true },
+      { title: 'Team & access', icon: 'i-lucide-users-round', link: '/hq/team', platformOnly: true },
     ],
   },
   {

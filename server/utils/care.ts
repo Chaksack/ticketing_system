@@ -132,17 +132,17 @@ export async function runningEngagements() {
   return (await listEngagements()).filter(e => e.stage === 'pilot' || e.stage === 'live')
 }
 
-/** Canopy staff who may use the Care screens: admins of Canopy's own workspace, or assigned Care agents. */
+/** Canopy staff who may use the Care screens: HQ admins and Care agents (Canopy HQ → Team). */
 export async function requireCareStaff(event: Parameters<typeof requireSessionUser>[0]) {
   const user = await requireSessionUser(event)
-  if (currentOrgId() !== HOME_ORG_ID)
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  if (user.roles.includes('admin'))
-    return user
-  const assigned = (await listEngagements()).some(e => e.agentIds.includes(user.id))
-  if (!assigned)
-    throw createError({ statusCode: 403, statusMessage: 'You are not assigned to any Canopy Care client' })
+  if (currentOrgId() !== HOME_ORG_ID || !user.hqRole)
+    throw createError({ statusCode: 403, statusMessage: 'You don\'t have Canopy HQ access' })
   return user
+}
+
+/** Care agents see only the clients they're assigned to; HQ admins see every client. */
+export function canWorkEngagement(user: { id: string, hqRole?: string }, engagement: Pick<CareEngagement, 'agentIds'>) {
+  return user.hqRole === 'admin' || engagement.agentIds.includes(user.id)
 }
 
 export function mapEvaluationRow(row: Record<string, any>): CareEvaluation {
@@ -170,3 +170,16 @@ export function mapShiftRow(row: Record<string, any>): CareShift {
 
 /** The author line Care agents reply under, so the client can always see who answered. */
 export const careAuthorName = (name: string) => `${name} · Canopy Care`
+
+/** Assigns a Care agent to exactly these engagements (adds or removes them from each one's agents). */
+export async function setAgentEngagements(staffId: string, engagementIds: string[]) {
+  const wanted = new Set(engagementIds)
+  const db = useControlDb()
+  for (const engagement of await listEngagements()) {
+    const has = engagement.agentIds.includes(staffId)
+    if (has === wanted.has(engagement.id))
+      continue
+    const agentIds = has ? engagement.agentIds.filter(id => id !== staffId) : [...engagement.agentIds, staffId]
+    await db.prepare('UPDATE cp_care_engagements SET agent_ids = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(agentIds), new Date().toISOString(), engagement.id)
+  }
+}

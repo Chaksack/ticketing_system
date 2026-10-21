@@ -11,7 +11,7 @@ definePageMeta({
 const route = useRoute()
 const token = route.params.token as string
 
-const { currentUser } = useAuth()
+const { currentUser, homePath } = useAuth()
 
 const invite = ref<{ name: string, email: string } | null>(null)
 const loadError = ref<string | null>(null)
@@ -55,7 +55,7 @@ const onSubmit = handleSubmit(async (values) => {
     })
     currentUser.value = user
     toast('Welcome aboard!', { description: 'Your password has been set.' })
-    await navigateTo('/tickets')
+    await navigateTo(homePath.value)
   }
   catch (error: any) {
     toast.error('Could not set your password', {

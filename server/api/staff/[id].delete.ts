@@ -9,7 +9,13 @@ export default defineEventHandler(async (event) => {
   await ensureDb()
   const db = useTenantDb()
 
-  const row = await db.prepare('SELECT email FROM staff WHERE id = ?').get(id) as { email: string } | undefined
+  const row = await db.prepare('SELECT email, hq_role FROM staff WHERE id = ?').get(id) as { email: string, hq_role: string | null } | undefined
+
+  if (row && staffHqRole(row) === 'admin') {
+    const admins = await db.prepare(`SELECT COUNT(*) AS count FROM staff WHERE hq_role = 'admin' AND status <> 'disabled'`).get() as { count: string | number }
+    if (Number(admins.count) <= 1)
+      throw createError({ statusCode: 400, statusMessage: 'Canopy HQ needs at least one HQ admin' })
+  }
 
   await db.prepare('DELETE FROM push_subscriptions WHERE staff_id = ?').run(id)
   await db.prepare('DELETE FROM staff WHERE id = ?').run(id)

@@ -44,7 +44,8 @@ async function onToggleRole(value: StaffRole, checked: boolean) {
   const current = props.staff.roles
   const next = checked ? [...current, value] : current.filter(r => r !== value)
 
-  if (next.length === 0) {
+  // HQ admins and Care agents can be HQ-only, without a workspace role.
+  if (next.length === 0 && !props.staff.hqRole) {
     toast.error('Cannot remove last role', {
       description: 'A staff member needs at least one role.',
     })
@@ -53,7 +54,7 @@ async function onToggleRole(value: StaffRole, checked: boolean) {
 
   await updateRoles(props.staff.id, next)
   toast('Roles updated', {
-    description: `${props.staff.name} is now ${next.join(', ')}.`,
+    description: next.length ? `${props.staff.name} is now ${next.join(', ')}.` : `${props.staff.name} now has Canopy HQ access only.`,
   })
 }
 

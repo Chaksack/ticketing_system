@@ -1,4 +1,4 @@
-// Canopy staff console — admins of Canopy's own (home) workspace only.
+// Canopy HQ admin pages — people given HQ admin access in Canopy HQ → Team.
 export default defineNuxtRouteMiddleware(() => {
   const { isPlatformStaff } = useAuth()
   if (!isPlatformStaff.value)

@@ -7,7 +7,7 @@ import type { CareConversation } from '../../../../app/types/care'
  */
 export default defineEventHandler(async (event) => {
   const user = await requireCareStaff(event)
-  const engagements = (await runningEngagements()).filter(e => user.roles.includes('admin') || e.agentIds.includes(user.id))
+  const engagements = (await runningEngagements()).filter(e => canWorkEngagement(user, e))
   const conversations: CareConversation[] = []
   let handledToday = 0
   const todayStart = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString()

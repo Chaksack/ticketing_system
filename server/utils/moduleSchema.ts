@@ -214,6 +214,21 @@ export async function migrateModuleTables() {
       created_at TEXT NOT NULL
     )
   `)
+
+  // ── Canopy HQ access (only read in Canopy's own workspace) ──────────────
+  // 'admin' = runs HQ (clients, onboarding, Care); 'agent' = Care agent desktop; NULL = workspace only.
+  const hqColumn = await db.prepare(`SELECT 1 FROM information_schema.columns WHERE table_name = 'staff' AND column_name = 'hq_role'`).get()
+  if (!hqColumn) {
+    await db.exec('ALTER TABLE staff ADD COLUMN IF NOT EXISTS hq_role TEXT')
+    // HQ used to mean "admin of Canopy's workspace" — keep those people in.
+    if (currentOrgId() === HOME_ORG_ID) {
+      await db.exec(`UPDATE staff SET hq_role = 'admin' WHERE roles LIKE '%"admin"%' OR role = 'admin'`)
+      // …and anyone already assigned to a Care client keeps the agent desktop.
+      const engagements = await useControlDb().prepare('SELECT agent_ids FROM cp_care_engagements').all().catch(() => []) as { agent_ids: string }[]
+      for (const agentId of new Set(engagements.flatMap(row => JSON.parse(row.agent_ids) as string[])))
+        await db.prepare(`UPDATE staff SET hq_role = 'agent' WHERE id = ? AND hq_role IS NULL`).run(agentId)
+    }
+  }
 }
 
 /** Next id like "KB-0007" from a named counter. */

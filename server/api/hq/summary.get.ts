@@ -13,14 +13,12 @@ interface ClientHealth {
 }
 
 /**
- * Canopy HQ home: the whole platform at a glance. Admins of Canopy's workspace see every client
+ * Canopy HQ home: the whole platform at a glance. HQ admins see every client
  * company, onboarding and SLA health; Care agents see the Care queues they're assigned to.
  */
 export default defineEventHandler(async (event) => {
-  const user = await requireSessionUser(event)
-  if (currentOrgId() !== HOME_ORG_ID)
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  const isPlatform = user.roles.includes('admin')
+  const user = await requireCareStaff(event)
+  const isPlatform = user.hqRole === 'admin'
 
   await ensureCareTables()
   const engagements = await listEngagements()

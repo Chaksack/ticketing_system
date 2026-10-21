@@ -41,10 +41,11 @@ export default defineEventHandler(async (event) => {
     name: row.name,
     email: row.email,
     roles: parseStaffRoles(row),
+    hqRole: staffHqRole(row),
     avatarUrl: row.avatar_url ?? undefined,
   }
 
   await startUserSession(event, user)
 
-  return { user }
+  return { user: { ...user, org: await sessionOrgSummary() } }
 })

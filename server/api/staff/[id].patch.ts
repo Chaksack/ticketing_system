@@ -19,7 +19,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Staff member not found' })
   }
 
-  if (body.roles?.length === 0) {
+  // HQ-only people (Canopy HQ → Team) may have no workspace roles.
+  if (body.roles?.length === 0 && !staffHqRole(existing)) {
     throw createError({ statusCode: 400, statusMessage: 'A staff member needs at least one role' })
   }
 
@@ -34,7 +35,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await db.prepare('UPDATE staff SET status = ?, on_call = ?, role = ?, roles = ?, manager_id = ?, hourly_rate = ? WHERE id = ?')
-    .run(status, onCall, roles[0], JSON.stringify(roles), managerId ?? null, hourlyRate ?? null, id)
+    .run(status, onCall, roles[0] ?? 'none', JSON.stringify(roles), managerId ?? null, hourlyRate ?? null, id)
 
   if (body.onCall === true && !existing.on_call) {
     const title = 'You\'re on call'

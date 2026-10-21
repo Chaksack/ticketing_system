@@ -23,16 +23,23 @@ const ROLE_LABELS: Record<StaffRole, string> = {
   engineering_lead: 'Engineering Lead',
 }
 
-const { currentUser, currentOrg, isAdmin, isPlatformStaff, workspacePath } = useAuth()
+const { currentUser, currentOrg, isAdmin, isPlatformStaff, hasHq, hasWorkspace, workspacePath } = useAuth()
 const route = useRoute()
 
 /** Canopy staff on an HQ page see the HQ menu; everywhere else, the company workspace menu. */
 const inHq = computed(() => !!currentOrg.value?.isHome && HQ_PREFIXES.some(prefix => route.path === prefix || route.path.startsWith(`${prefix}/`)))
-const role = computed(() => currentUser.value?.roles.map(r => ROLE_LABELS[r]).join(', ') ?? '')
+const HQ_ROLE_LABELS = { admin: 'HQ admin', agent: 'Care agent' } as const
+const role = computed(() => {
+  const user = currentUser.value
+  if (!user)
+    return ''
+  return [...(hasHq.value && user.hqRole ? [HQ_ROLE_LABELS[user.hqRole]] : []), ...user.roles.map(r => ROLE_LABELS[r])].join(', ')
+})
+/** Both spaces only for people who have both: HQ access and a workspace role. */
 const spaces = computed(() => currentOrg.value?.isHome
   ? [
-      { label: 'Canopy HQ', description: 'Clients, onboarding and Canopy Care', to: '/hq', icon: 'i-lucide-radar', active: inHq.value },
-      { label: 'Canopy workspace', description: 'Canopy\'s own sales, leads and support', to: workspacePath.value, icon: 'i-lucide-briefcase-business', active: !inHq.value },
+      ...(hasHq.value ? [{ label: 'Canopy HQ', description: isPlatformStaff.value ? 'Clients, onboarding and Canopy Care' : 'Canopy Care agent desktop', to: '/hq', icon: 'i-lucide-radar', active: inHq.value }] : []),
+      ...(hasWorkspace.value ? [{ label: 'Canopy workspace', description: 'Canopy\'s own sales, leads and support', to: workspacePath.value, icon: 'i-lucide-briefcase-business', active: !inHq.value }] : []),
     ]
   : [])
 
@@ -42,7 +49,7 @@ function isItemOrGroupVisible(item: NavLink | NavGroup | NavSectionTitle, admin:
   return isNavItemVisible(item, admin, roles, context)
 }
 
-const navContext = computed(() => ({ apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: !!currentOrg.value?.isHome }))
+const navContext = computed(() => ({ apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: hasHq.value }))
 function visibleGroups(menu: NavArea['menu']) {
   return menu
     .map(group => ({ ...group, items: group.items.filter(item => isItemOrGroupVisible(item, isAdmin.value, currentUser.value?.roles ?? [], navContext.value)) }))
@@ -128,7 +135,7 @@ const { sidebar } = useAppSettings()
             </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarMenu v-if="currentOrg?.isHome">
+        <SidebarMenu v-if="spaces.length > 1">
           <SidebarMenuItem>
             <SidebarMenuButton as-child size="sm" class="bg-brand-mist font-semibold text-brand-forest hover:bg-brand-lime dark:bg-brand-spruce dark:text-brand-mist">
               <NuxtLink :to="inHq ? workspacePath : '/hq'">

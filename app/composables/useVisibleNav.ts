@@ -42,7 +42,7 @@ export interface NavVisibilityContext {
   /** The company's enabled apps; undefined = no company loaded yet (show everything). */
   apps?: OrgApp[]
   isPlatformStaff?: boolean
-  /** Signed in to Canopy's own workspace (any role). */
+  /** Has Canopy HQ access (HQ admin or Care agent). */
   isHomeOrg?: boolean
 }
 
@@ -72,11 +72,11 @@ export function isNavItemVisible(item: NavLink | NavGroup | NavSectionTitle, isA
 
 /** Flat list of every nav link (across all headings) the current user can actually see. */
 export function useVisibleNavLinks() {
-  const { currentUser, currentOrg, isAdmin, isPlatformStaff } = useAuth()
+  const { currentUser, currentOrg, isAdmin, isPlatformStaff, hasHq } = useAuth()
 
   return computed<NavLink[]>(() => {
     const userRoles = currentUser.value?.roles ?? []
-    const context = { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: !!currentOrg.value?.isHome }
+    const context = { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: hasHq.value }
 
     const seen = new Set<string>()
     return ([...navMenu, ...hqMenu] as NavMenu[])

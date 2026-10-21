@@ -1,4 +1,5 @@
 import type { AmcContract } from './amc'
+import { APP_LOCALE } from '../lib/locale'
 
 export type ProjectStatus = 'planned' | 'active' | 'on_hold' | 'completed' | 'cancelled'
 

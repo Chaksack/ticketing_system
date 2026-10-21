@@ -1,5 +1,5 @@
 import type { OrgApp, OrgPlan } from '~/types/organization'
-import type { StaffRole } from '~/types/staff'
+import type { HqRole, StaffRole } from '~/types/staff'
 
 export interface AuthOrg {
   id: string
@@ -17,6 +17,8 @@ export interface AuthUser {
   name: string
   email: string
   roles: StaffRole[]
+  /** Canopy HQ access (Canopy's own workspace only). */
+  hqRole?: HqRole
   avatarUrl?: string
   org?: AuthOrg | null
 }
@@ -36,8 +38,12 @@ export function useAuth() {
   const isEngineeringLead = computed(() => currentUser.value?.roles.includes('engineering_lead') ?? false)
   const isLoggedIn = computed(() => !!currentUser.value)
   const currentOrg = computed(() => currentUser.value?.org ?? null)
-  /** Canopy staff: admins of the home workspace. */
-  const isPlatformStaff = computed(() => !!currentOrg.value?.isHome && isAdmin.value)
+  /** Canopy HQ admins: run client companies, onboarding and Canopy Care. */
+  const isPlatformStaff = computed(() => !!currentOrg.value?.isHome && currentUser.value?.hqRole === 'admin')
+  /** Anyone with Canopy HQ access — HQ admins and Care agents. */
+  const hasHq = computed(() => !!currentOrg.value?.isHome && !!currentUser.value?.hqRole)
+  /** Has a role in the company workspace (HQ-only Care agents don't). */
+  const hasWorkspace = computed(() => (currentUser.value?.roles.length ?? 0) > 0)
   function hasApp(app: OrgApp) {
     return currentOrg.value ? currentOrg.value.apps.includes(app) : true
   }
@@ -75,10 +81,16 @@ export function useAuth() {
 
   /**
    * Where this person's work starts — used after sign-in and when a signed-in person opens the
-   * public landing page at "/". Canopy's own admins start in Canopy HQ; everyone else in their
-   * company workspace.
+   * public landing page at "/". HQ admins start in Canopy HQ, Care agents at the agent desktop,
+   * everyone else in their company workspace.
    */
-  const homePath = computed(() => currentUser.value?.roles.includes('admin') && currentOrg.value?.isHome ? '/hq' : workspacePath.value)
+  const homePath = computed(() => {
+    if (isPlatformStaff.value)
+      return '/hq'
+    if (hasHq.value)
+      return '/care/desktop'
+    return workspacePath.value
+  })
 
   async function login(email: string, password: string) {
     const { user } = await fetchUntyped<{ user: AuthUser }>('/api/auth/login', {
@@ -97,5 +109,5 @@ export function useAuth() {
     currentUser.value = null
   }
 
-  return { currentUser, currentOrg, authReady, isAdmin, isAgent, isBd, isSm, isFinance, isEngineer, isEngineeringCoordinator, isEngineeringLead, isLoggedIn, isPlatformStaff, hasApp, homePath, workspacePath, ensureAuth, login, logout }
+  return { currentUser, currentOrg, authReady, isAdmin, isAgent, isBd, isSm, isFinance, isEngineer, isEngineeringCoordinator, isEngineeringLead, isLoggedIn, isPlatformStaff, hasHq, hasWorkspace, hasApp, homePath, workspacePath, ensureAuth, login, logout }
 }

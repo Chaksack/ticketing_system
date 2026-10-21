@@ -264,7 +264,10 @@ const nextStage = computed(() => CARE_STAGES[stageIndex.value + 1])
 
           <RecordCard title="Care agents">
             <p class="m-0 text-xs text-muted-foreground">
-              Canopy staff who answer for {{ engagement.orgName }} in the agent desktop.
+              Canopy staff who answer for {{ engagement.orgName }} in the agent desktop. Add Care agents in
+              <NuxtLink to="/hq/team" class="font-semibold underline">
+                Team &amp; access
+              </NuxtLink>.
             </p>
             <label v-for="member in staff" :key="member.id" class="flex items-center gap-2 text-sm">
               <Checkbox :model-value="engagement.agentIds.includes(member.id)" @update:model-value="toggleAgent(member.id)" /> {{ member.name }}

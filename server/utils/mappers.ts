@@ -7,7 +7,7 @@ import type { Lead, LeadActivity, LeadContactEmail, LeadContactPhone, LeadDocume
 import type { LineItem } from '../../app/types/product'
 import type { Project, ProjectFinancialEntry } from '../../app/types/project'
 import type { Sprint } from '../../app/types/sprint'
-import type { StaffMember, StaffRole } from '../../app/types/staff'
+import type { HqRole, StaffMember, StaffRole } from '../../app/types/staff'
 import type { Task } from '../../app/types/task'
 import type { Tender, TenderActivity, TenderDocument } from '../../app/types/tender'
 import type { Ticket, TicketActivity, TicketAttachment, TicketReply, TicketTag } from '../../app/types/ticket'
@@ -29,11 +29,17 @@ export interface StaffRow {
   avatar_url: string | null
   manager_id?: string | null
   hourly_rate?: number | string | null
+  hq_role?: string | null
   created_at: string
 }
 
 export function parseStaffRoles(row: Pick<StaffRow, 'role' | 'roles'>): StaffRole[] {
   return (row.roles ? JSON.parse(row.roles) : [row.role]) as StaffRole[]
+}
+
+/** Canopy HQ access — only meaningful in Canopy's own workspace. */
+export function staffHqRole(row: Pick<StaffRow, 'hq_role'>): HqRole | undefined {
+  return currentOrgId() === HOME_ORG_ID && (row.hq_role === 'admin' || row.hq_role === 'agent') ? row.hq_role : undefined
 }
 
 export function mapStaffRow(row: StaffRow): StaffMember {
@@ -42,6 +48,7 @@ export function mapStaffRow(row: StaffRow): StaffMember {
     name: row.name,
     email: row.email,
     roles: parseStaffRoles(row),
+    hqRole: staffHqRole(row),
     status: row.status as StaffMember['status'],
     onCall: !!row.on_call,
     avatarUrl: row.avatar_url ?? undefined,

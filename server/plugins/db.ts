@@ -19,9 +19,9 @@ export default defineNitroPlugin(async () => {
 
     for (const member of seedStaff) {
       await db.prepare(`
-        INSERT INTO staff (id, name, email, role, roles, status, on_call, password_hash, created_at)
-        VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
-      `).run(member.id, member.name, member.email, member.roles[0], JSON.stringify(member.roles), member.onCall, defaultPasswordHash, now)
+        INSERT INTO staff (id, name, email, role, roles, hq_role, status, on_call, password_hash, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
+      `).run(member.id, member.name, member.email, member.roles[0], JSON.stringify(member.roles), member.roles.includes('admin') && currentOrgId() === HOME_ORG_ID ? 'admin' : null, member.onCall, defaultPasswordHash, now)
     }
 
     await db.prepare('INSERT INTO counters (name, value) VALUES (\'staff\', ?)').run(seedStaff.length)

@@ -11,6 +11,7 @@ definePageMeta({
 })
 
 const { staff, fetchStaff, addStaff } = useStaff()
+const { isPlatformStaff } = useAuth()
 const { getPresence, fetchPresences } = usePresence()
 const route = useRoute()
 
@@ -120,6 +121,11 @@ function formatDate(value: string) {
         </h1>
         <p class="text-muted-foreground">
           Manage staff members who have access to the platform.
+          <template v-if="isPlatformStaff">
+            Canopy HQ admins and Care agents are added in <NuxtLink to="/hq/team" class="font-semibold text-foreground underline">
+              Canopy HQ → Team &amp; access
+            </NuxtLink>.
+          </template>
         </p>
       </div>
 
@@ -264,6 +270,9 @@ function formatDate(value: string) {
               </TableCell>
               <TableCell>
                 <div class="flex flex-wrap gap-1">
+                  <Badge v-if="member.hqRole" variant="outline" class="border-brand-forest/30 bg-brand-mist text-brand-forest dark:bg-brand-spruce dark:text-brand-mist">
+                    {{ member.hqRole === 'admin' ? 'HQ admin' : 'Care agent' }}
+                  </Badge>
                   <Badge v-for="role in member.roles" :key="role" variant="outline" class="capitalize" :class="roleBadgeClass[role]">
                     {{ role }}
                   </Badge>

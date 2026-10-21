@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import type { StaffRole } from '../../app/types/staff'
+import type { HqRole, StaffRole } from '../../app/types/staff'
 import type { StaffRow } from './mappers'
 
 export interface SessionUser {
@@ -7,6 +7,8 @@ export interface SessionUser {
   name: string
   email: string
   roles: StaffRole[]
+  /** Canopy HQ access — only ever set in Canopy's own workspace. */
+  hqRole?: HqRole
   avatarUrl?: string
 }
 
@@ -66,6 +68,7 @@ export async function getSessionUser(event: H3Event): Promise<SessionUser | null
     name: row.name,
     email: row.email,
     roles: parseStaffRoles(row),
+    hqRole: staffHqRole(row),
     avatarUrl: row.avatar_url ?? undefined,
   }
 }
@@ -109,10 +112,10 @@ export async function requireSessionUser(event: H3Event): Promise<SessionUser> {
   return user
 }
 
-/** Canopy staff: admins of the home workspace, who run the staff console across all companies. */
+/** Canopy HQ admins: people in Canopy's own workspace given HQ admin access (Canopy HQ → Team). */
 export async function requirePlatformStaff(event: H3Event): Promise<SessionUser> {
-  const user = await requireAdmin(event)
-  if (currentOrgId() !== HOME_ORG_ID)
+  const user = await requireSessionUser(event)
+  if (currentOrgId() !== HOME_ORG_ID || user.hqRole !== 'admin')
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   return user
 }

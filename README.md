@@ -316,6 +316,15 @@ own workspace; Canopy runs the platform from **Canopy HQ**.
   onboarding, and Canopy Care (engagements, agent desktop, quality, workforce), with its own
   sidebar. Canopy admins land here after signing in; the switcher at the top of the sidebar (or
   "Go to Canopy workspace") opens Canopy's own CRM. `/console` redirects to `/hq`.
+- **Team & access** (`/hq/team`) — add Canopy's own people and choose what each one gets:
+  - **HQ admin**: client companies, onboarding, Canopy Care and this page.
+  - **Care agent**: the agent desktop, for the Care clients you assign them to.
+  - **Workspace only**: Canopy's own CRM, with no HQ access.
+
+  Workspace roles (sales, support and so on) are set separately and are optional for HQ admins
+  and Care agents. HQ access is stored in `staff.hq_role` and is only read in Canopy's own
+  workspace. Existing Canopy admins were given HQ admin when the column was added. You can't
+  remove your own HQ admin access or the last HQ admin.
 
 ### Navigation and record forms (Dynamics 365 style)
 
