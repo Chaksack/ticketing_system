@@ -15,7 +15,7 @@ const emit = defineEmits<{
 
 const open = defineModel<boolean>('open', { default: false })
 
-const { staff: allStaff, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, sendPasswordResetLink, removeStaff } = useStaff()
+const { staff: allStaff, updateDetails, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, sendPasswordResetLink, removeStaff } = useStaff()
 const { currentUser } = useAuth()
 
 const managerOptions = computed(() => allStaff.value.filter(s => s.status === 'active' && s.id !== props.staff?.id))
@@ -62,11 +62,40 @@ async function onStatusChange(value: AcceptableValue) {
   if (!props.staff || value === null)
     return
 
-  await updateStatus(props.staff.id, value as StaffStatus)
+  try {
+    await updateStatus(props.staff.id, value as StaffStatus)
+    toast('Status updated', {
+      description: `${props.staff.name} is now ${value}.`,
+    })
+  }
+  catch (error: any) {
+    toast.error('Status not changed', { description: error?.data?.statusMessage })
+  }
+}
 
-  toast('Status updated', {
-    description: `${props.staff.name} is now ${value}.`,
-  })
+// Name and email, saved together.
+const details = reactive({ name: '', email: '' })
+// Keyed on the values, not the object: a background refresh of the staff list mustn't wipe what's being typed.
+watch(() => [props.staff?.id, props.staff?.name, props.staff?.email] as const, ([, name, email]) => {
+  details.name = name ?? ''
+  details.email = email ?? ''
+}, { immediate: true })
+const detailsDirty = computed(() => !!props.staff && (details.name.trim() !== props.staff.name || details.email.trim() !== props.staff.email))
+const savingDetails = ref(false)
+async function saveDetails() {
+  if (!props.staff || !detailsDirty.value)
+    return
+  savingDetails.value = true
+  try {
+    await updateDetails(props.staff.id, { name: details.name, email: details.email })
+    toast('Details saved')
+  }
+  catch (error: any) {
+    toast.error('Details not saved', { description: error?.data?.statusMessage })
+  }
+  finally {
+    savingDetails.value = false
+  }
 }
 
 async function onOnCallChange(value: boolean) {
@@ -82,13 +111,16 @@ async function onOnCallChange(value: boolean) {
   })
 }
 
+// The Select can't hold an empty-string option, so "No manager" has its own value.
+const NO_MANAGER = 'none'
 async function onManagerChange(value: AcceptableValue) {
   if (!props.staff)
     return
 
-  await updateManager(props.staff.id, (value as string) || null)
+  const managerId = value && value !== NO_MANAGER ? value as string : null
+  await updateManager(props.staff.id, managerId)
 
-  const managerName = value ? allStaff.value.find(s => s.id === value)?.name : undefined
+  const managerName = managerId ? allStaff.value.find(s => s.id === managerId)?.name : undefined
   toast('Manager updated', {
     description: managerName ? `${props.staff.name} now reports to ${managerName}.` : `${props.staff.name} has no manager set.`,
   })
@@ -156,7 +188,13 @@ async function onDelete() {
     return
 
   const name = props.staff.name
-  await removeStaff(props.staff.id)
+  try {
+    await removeStaff(props.staff.id)
+  }
+  catch (error: any) {
+    toast.error('Not deleted', { description: error?.data?.statusMessage })
+    return
+  }
   open.value = false
   emit('deleted')
 
@@ -204,10 +242,19 @@ function formatDate(value: string) {
 
         <ScrollArea class="flex-1 min-h-0">
           <div class="flex flex-col gap-6 px-6 pt-4 pb-6">
-            <div class="flex flex-col gap-1">
-              <span class="text-sm text-muted-foreground">Email</span>
-              <span class="text-sm font-medium">{{ staff.email }}</span>
-            </div>
+            <form class="flex flex-col gap-3" @submit.prevent="saveDetails">
+              <div class="flex flex-col gap-1.5">
+                <Label for="staff-name" class="text-sm font-normal text-muted-foreground">Name</Label>
+                <Input id="staff-name" v-model="details.name" autocomplete="off" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <Label for="staff-email" class="text-sm font-normal text-muted-foreground">Email (used to sign in)</Label>
+                <Input id="staff-email" v-model="details.email" type="email" autocomplete="off" />
+              </div>
+              <Button v-if="detailsDirty" type="submit" size="sm" class="self-start" :disabled="savingDetails">
+                Save details
+              </Button>
+            </form>
 
             <div class="flex flex-col gap-2">
               <span class="text-sm text-muted-foreground">Roles</span>
@@ -223,12 +270,12 @@ function formatDate(value: string) {
 
             <div class="flex flex-col gap-1.5">
               <span class="text-sm text-muted-foreground">Manager</span>
-              <Select :model-value="staff.managerId ?? ''" @update:model-value="onManagerChange">
+              <Select :model-value="staff.managerId ?? NO_MANAGER" @update:model-value="onManagerChange">
                 <SelectTrigger class="w-full">
                   <SelectValue placeholder="No manager set" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">
+                  <SelectItem :value="NO_MANAGER">
                     No manager
                   </SelectItem>
                   <SelectItem v-for="option in managerOptions" :key="option.id" :value="option.id">

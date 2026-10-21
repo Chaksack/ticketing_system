@@ -20,6 +20,14 @@ export function useStaff() {
     return result
   }
 
+  async function updateDetails(id: string, details: { name?: string, email?: string }) {
+    const { staff: updated } = await fetchUntyped<{ staff: StaffMember }>(`/api/staff/${id}`, { method: 'PATCH', body: details })
+    const index = staff.value.findIndex(s => s.id === id)
+    if (index !== -1)
+      staff.value[index] = updated
+    return updated
+  }
+
   async function updateStatus(id: string, status: StaffStatus) {
     const { staff: updated } = await fetchUntyped<{ staff: StaffMember }>(`/api/staff/${id}`, { method: 'PATCH', body: { status } })
     const index = staff.value.findIndex(s => s.id === id)
@@ -65,5 +73,5 @@ export function useStaff() {
     staff.value = staff.value.filter(s => s.id !== id)
   }
 
-  return { staff, onCallStaff, fetchStaff, getStaff, addStaff, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, sendPasswordResetLink, removeStaff }
+  return { staff, onCallStaff, fetchStaff, getStaff, addStaff, updateDetails, updateStatus, setOnCall, updateRoles, updateManager, updateHourlyRate, sendPasswordResetLink, removeStaff }
 }

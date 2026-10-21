@@ -2,10 +2,10 @@ import type { StaffRole, StaffStatus } from '../../../app/types/staff'
 import type { StaffRow } from '../../utils/mappers'
 
 export default defineEventHandler(async (event) => {
-  await requireAdmin(event)
+  const user = await requireAdmin(event)
 
   const id = getRouterParam(event, 'id')
-  const body = await readBody<{ status?: StaffStatus, onCall?: boolean, roles?: StaffRole[], managerId?: string | null, hourlyRate?: number | null }>(event)
+  const body = await readBody<{ name?: string, email?: string, status?: StaffStatus, onCall?: boolean, roles?: StaffRole[], managerId?: string | null, hourlyRate?: number | null }>(event)
 
   if (!id) {
     throw createError({ statusCode: 400, statusMessage: 'Missing staff id' })
@@ -23,6 +23,15 @@ export default defineEventHandler(async (event) => {
   if (body.roles?.length === 0 && !staffHqRole(existing)) {
     throw createError({ statusCode: 400, statusMessage: 'A staff member needs at least one role' })
   }
+
+  if (body.status === 'disabled' && existing.status !== 'disabled') {
+    if (id === user.id)
+      throw createError({ statusCode: 400, statusMessage: 'You can\'t disable yourself' })
+    await assertKeepsHqAdmin(id)
+  }
+
+  if (body.name !== undefined || body.email !== undefined)
+    await updateStaffDetails(id, { name: body.name, email: body.email })
 
   const status = body.status ?? existing.status
   const onCall = body.onCall === undefined ? existing.on_call : Number(body.onCall)

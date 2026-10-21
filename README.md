@@ -323,8 +323,12 @@ own workspace; Canopy runs the platform from **Canopy HQ**.
 
   Workspace roles (sales, support and so on) are set separately and are optional for HQ admins
   and Care agents. HQ access is stored in `staff.hq_role` and is only read in Canopy's own
-  workspace. Existing Canopy admins were given HQ admin when the column was added. You can't
-  remove your own HQ admin access or the last HQ admin.
+  workspace. Existing Canopy admins were given HQ admin when the column was added.
+
+  Click a person to edit their name, sign-in email, access or Care clients, or to disable their
+  sign-in. Use the bin icon (or Delete in the dialog) to remove them completely. Admin → Staff in
+  any workspace can also edit names and emails and delete people. In both places you can't
+  disable or delete yourself, remove your own HQ admin access, or remove the last HQ admin.
 
 ### Navigation and record forms (Dynamics 365 style)
 

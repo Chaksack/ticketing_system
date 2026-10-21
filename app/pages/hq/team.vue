@@ -12,6 +12,7 @@ interface Engagement { id: string, orgName: string, stage: string, agentIds: str
 type Access = HqRole | 'none'
 
 const { currentUser } = useAuth()
+const { confirm } = useConfirm()
 const staff = ref<StaffMember[] | null>(null)
 const engagements = ref<Engagement[]>([])
 
@@ -55,20 +56,20 @@ const visible = computed(() => (staff.value ?? []).filter((member) => {
 // ── Add / edit ──────────────────────────────────────────────────────────────
 const dialogOpen = ref(false)
 const editing = ref<StaffMember | null>(null)
-const form = reactive({ name: '', email: '', access: 'agent' as Access, roles: [] as StaffRole[], engagementIds: [] as string[] })
+const form = reactive({ name: '', email: '', status: 'active' as 'active' | 'disabled', access: 'agent' as Access, roles: [] as StaffRole[], engagementIds: [] as string[] })
 const saving = ref(false)
 /** Show what's missing only after they try to save. */
 const tried = ref(false)
 
 function openAdd(access: Access = 'agent') {
   editing.value = null
-  Object.assign(form, { name: '', email: '', access, roles: access === 'none' ? ['agent'] : [], engagementIds: [] })
+  Object.assign(form, { name: '', email: '', status: 'active', access, roles: access === 'none' ? ['agent'] : [], engagementIds: [] })
   tried.value = false
   dialogOpen.value = true
 }
 function openEdit(member: StaffMember) {
   editing.value = member
-  Object.assign(form, { name: member.name, email: member.email, access: member.hqRole ?? 'none', roles: [...member.roles], engagementIds: clientsFor(member).map(e => e.id) })
+  Object.assign(form, { name: member.name, email: member.email, status: member.status === 'disabled' ? 'disabled' : 'active', access: member.hqRole ?? 'none', roles: [...member.roles], engagementIds: clientsFor(member).map(e => e.id) })
   tried.value = false
   dialogOpen.value = true
 }
@@ -81,7 +82,7 @@ function toggle<T>(list: T[], value: T) {
 }
 
 const formError = computed(() => {
-  if (!editing.value && (!form.name.trim() || !/^\S[^\s@]*@\S[^\s.]*\.\S+$/.test(form.email.trim())))
+  if (form.name.trim().length < 2 || !/^\S[^\s@]*@\S[^\s.]*\.\S+$/.test(form.email.trim()))
     return 'Enter a name and a valid email.'
   if (form.access === 'none' && !form.roles.length)
     return 'Workspace-only people need at least one workspace role.'
@@ -97,8 +98,8 @@ async function save() {
   try {
     let saved: StaffMember
     if (editing.value) {
-      saved = (await fetchUntyped<{ staff: StaffMember }>(`/api/hq/team/${editing.value.id}`, { method: 'PATCH', body })).staff
-      toast(`${editing.value.name} updated`)
+      saved = (await fetchUntyped<{ staff: StaffMember }>(`/api/hq/team/${editing.value.id}`, { method: 'PATCH', body: { ...body, name: form.name, email: form.email, status: form.status } })).staff
+      toast(`${saved.name} updated`)
     }
     else {
       const { staff: added, emailSent } = await fetchUntyped<{ staff: StaffMember, emailSent: boolean }>('/api/hq/team', { method: 'POST', body: { ...body, name: form.name, email: form.email } })
@@ -123,6 +124,29 @@ async function save() {
   }
   finally {
     saving.value = false
+  }
+}
+
+// ── Delete ──────────────────────────────────────────────────────────────────
+async function remove(member: StaffMember) {
+  const ok = await confirm({
+    title: `Delete ${member.name}?`,
+    description: 'They lose access to Canopy HQ and the Canopy workspace, and come off any Care clients. To keep their history but stop them signing in, disable them instead.',
+    confirmLabel: 'Delete',
+    destructive: true,
+  })
+  if (!ok)
+    return
+  try {
+    await fetchUntyped(`/api/hq/team/${member.id}`, { method: 'DELETE' })
+    staff.value = (staff.value ?? []).filter(m => m.id !== member.id)
+    for (const engagement of engagements.value)
+      engagement.agentIds = engagement.agentIds.filter(id => id !== member.id)
+    dialogOpen.value = false
+    toast(`${member.name} deleted`)
+  }
+  catch (error: any) {
+    toast.error('Not deleted', { description: error?.data?.statusMessage })
   }
 }
 </script>
@@ -218,9 +242,14 @@ async function save() {
               </Badge>
             </TableCell>
             <TableCell>
-              <Button variant="ghost" size="icon-sm" :aria-label="`Edit ${member.name}`" @click.stop="openEdit(member)">
-                <Icon name="i-lucide-pencil" />
-              </Button>
+              <div class="flex items-center gap-0.5">
+                <Button variant="ghost" size="icon-sm" :aria-label="`Edit ${member.name}`" @click.stop="openEdit(member)">
+                  <Icon name="i-lucide-pencil" />
+                </Button>
+                <Button v-if="member.id !== currentUser?.id" variant="ghost" size="icon-sm" class="text-destructive hover:text-destructive" :aria-label="`Delete ${member.name}`" @click.stop="remove(member)">
+                  <Icon name="i-lucide-trash-2" />
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         </TableBody>
@@ -230,14 +259,14 @@ async function save() {
     <Dialog v-model:open="dialogOpen">
       <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{{ editing ? `Access for ${editing.name}` : 'Add a person' }}</DialogTitle>
+          <DialogTitle>{{ editing ? `Edit ${editing.name}` : 'Add a person' }}</DialogTitle>
           <DialogDescription>
-            {{ editing ? editing.email : 'They get an email invite to set their password.' }}
+            {{ editing ? `${editing.id} · ${editing.status === 'pending' ? 'invite not accepted yet' : editing.status}` : 'They get an email invite to set their password.' }}
           </DialogDescription>
         </DialogHeader>
 
         <form class="flex flex-col gap-5" @submit.prevent="save">
-          <div v-if="!editing" class="grid gap-3 sm:grid-cols-2">
+          <div class="grid gap-3 sm:grid-cols-2">
             <div class="flex flex-col gap-1.5">
               <Label for="team-name">Name</Label>
               <Input id="team-name" v-model="form.name" autocomplete="off" placeholder="Jane Doe" />
@@ -247,6 +276,14 @@ async function save() {
               <Input id="team-email" v-model="form.email" type="email" autocomplete="off" placeholder="jane@canopy.com" />
             </div>
           </div>
+
+          <label v-if="editing && editing.id !== currentUser?.id" class="flex items-start gap-2.5 rounded-2xl p-3 text-sm ring-1 ring-black/10 dark:ring-white/10">
+            <Checkbox :model-value="form.status === 'disabled'" class="mt-0.5" @update:model-value="(checked) => form.status = checked ? 'disabled' : 'active'" />
+            <span>
+              <span class="font-semibold text-foreground">Disable sign-in</span>
+              <span class="block text-xs text-muted-foreground">They can't sign in to HQ or the workspace, but their history and assignments stay.</span>
+            </span>
+          </label>
 
           <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
             <legend class="mb-2 text-sm font-semibold">
@@ -302,12 +339,16 @@ async function save() {
           <p v-if="tried && formError" class="m-0 text-sm text-destructive" role="alert">
             {{ formError }}
           </p>
-          <DialogFooter>
+          <DialogFooter class="gap-2">
+            <Button v-if="editing && editing.id !== currentUser?.id" type="button" variant="ghost" class="text-destructive hover:text-destructive sm:mr-auto" @click="remove(editing)">
+              <Icon name="i-lucide-trash-2" />
+              Delete
+            </Button>
             <Button type="button" variant="ghost" @click="dialogOpen = false">
               Cancel
             </Button>
             <Button type="submit" variant="lime" :disabled="saving">
-              {{ editing ? 'Save access' : 'Add and invite' }}
+              {{ editing ? 'Save' : 'Add and invite' }}
             </Button>
           </DialogFooter>
         </form>

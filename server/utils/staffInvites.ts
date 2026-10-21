@@ -61,3 +61,63 @@ export function cleanStaffRoles(roles: unknown): StaffRole[] {
 export function cleanHqRole(value: unknown): HqRole | undefined {
   return value === 'admin' || value === 'agent' ? value : undefined
 }
+
+/** Refuses a change that would leave Canopy HQ without an active HQ admin (call before disabling, demoting or deleting `staffId`). */
+export async function assertKeepsHqAdmin(staffId: string) {
+  const db = useTenantDb()
+  const row = await db.prepare('SELECT hq_role, status FROM staff WHERE id = ?').get(staffId) as { hq_role: string | null, status: string } | undefined
+  if (!row || staffHqRole(row) !== 'admin' || row.status === 'disabled')
+    return
+  const others = await db.prepare(`SELECT COUNT(*) AS count FROM staff WHERE hq_role = 'admin' AND status <> 'disabled' AND id <> ?`).get(staffId) as { count: string | number }
+  if (Number(others.count) === 0)
+    throw createError({ statusCode: 400, statusMessage: 'Canopy HQ needs at least one HQ admin' })
+}
+
+/** Renames someone and/or changes their sign-in email (which moves their entry in the company directory). */
+export async function updateStaffDetails(staffId: string, input: { name?: string, email?: string }) {
+  const db = useTenantDb()
+  const existing = await db.prepare('SELECT name, email FROM staff WHERE id = ?').get(staffId) as { name: string, email: string } | undefined
+  if (!existing)
+    throw createError({ statusCode: 404, statusMessage: 'Staff member not found' })
+
+  const name = input.name === undefined ? existing.name : input.name.trim()
+  if (name.length < 2)
+    throw createError({ statusCode: 400, statusMessage: 'Name must be at least 2 characters' })
+
+  const email = input.email === undefined ? existing.email : input.email.trim()
+  const emailChanged = email.toLowerCase() !== existing.email.toLowerCase()
+  if (emailChanged) {
+    if (!/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(email))
+      throw createError({ statusCode: 400, statusMessage: 'Enter a valid email address' })
+    const taken = await db.prepare('SELECT id FROM staff WHERE LOWER(email) = LOWER(?) AND id <> ?').get(email, staffId)
+    if (taken)
+      throw createError({ statusCode: 409, statusMessage: `${email} is already on this workspace` })
+    // Claims the new address first (409 if another company has it), then frees the old one.
+    await registerDirectoryEmail(email, currentOrgId())
+  }
+
+  await db.prepare('UPDATE staff SET name = ?, email = ? WHERE id = ?').run(name, email, staffId)
+  if (emailChanged)
+    await unregisterDirectoryEmail(existing.email, currentOrgId())
+}
+
+/** Deletes someone from the current company: their sign-in, push subscriptions, Care assignments and directory entry. */
+export async function removeStaffMember(staffId: string, actorId: string) {
+  if (staffId === actorId)
+    throw createError({ statusCode: 400, statusMessage: 'You can\'t delete yourself' })
+  await assertKeepsHqAdmin(staffId)
+
+  const db = useTenantDb()
+  const row = await db.prepare('SELECT email FROM staff WHERE id = ?').get(staffId) as { email: string } | undefined
+  if (!row)
+    throw createError({ statusCode: 404, statusMessage: 'Staff member not found' })
+
+  await db.prepare('DELETE FROM push_subscriptions WHERE staff_id = ?').run(staffId)
+  await db.prepare('DELETE FROM staff WHERE id = ?').run(staffId)
+  if (currentOrgId() === HOME_ORG_ID) {
+    await ensureCareTables()
+    await setAgentEngagements(staffId, [])
+  }
+  // Frees the email so the person could join (or be invited to) another workspace.
+  await unregisterDirectoryEmail(row.email, currentOrgId())
+}
