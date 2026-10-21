@@ -29,7 +29,7 @@ onMounted(async () => {
   if (hasApp('service'))
     projectTickets.value = (await fetchUntyped<{ tickets: Ticket[] }>('/api/tickets', { query: { projectId: projectId.value } }).catch(() => ({ tickets: [] }))).tickets
 })
-const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+const when = (iso: string) => new Date(iso).toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'short' })
 
 function onDeleted() {
   router.push('/projects')

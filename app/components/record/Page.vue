@@ -2,10 +2,13 @@
 import type { Interaction, RegardingType } from '~/types/interaction'
 
 /**
- * The one record-page layout shared by leads, tenders and clients, so they look and behave the
- * same: pill action bar → header with key figures and the stage bar → tabs. "Summary" is always
- * Details | Timeline | (key card, Assist, contact); Interactions, Quotes and Files are always there;
- * each record adds its own extra tabs through `extraTabs` and `#tab-<value>` slots.
+ * The one record-page layout shared by leads, tenders and clients, laid out like a Dynamics 365
+ * form: command bar → header (key fields + business process stage bar) → tabs.
+ *  - Summary: the main fields (#summary), the Timeline (log calls, emails, meetings, notes; plus
+ *    the record's history) and a side column (#key-card, Assist, the contact).
+ *  - Details: secondary fields (#details) and the record information Dynamics shows on every form.
+ *  - Related ▾: Activities, Quotes and Documents for every record, plus `relatedTabs` (rendered from
+ *    `#tab-<value>` slots); the one you pick opens as its own tab.
  */
 const props = defineProps<{
   backTo: string
@@ -30,20 +33,21 @@ const props = defineProps<{
   upload: (file: File) => Promise<unknown>
   removeDocument: (id: string) => Promise<unknown>
   timeline: { id: string, label: string, actor?: string, at: string }[]
-  extraTabs?: { value: string, label: string, count?: number }[]
+  /** "Record information" on the Details tab. */
+  info: { owner: string, createdAt: string, updatedAt?: string }
+  relatedTabs?: { value: string, label: string, count?: number, icon: string }[]
 }>()
 const emit = defineEmits<{ stage: [value: string], reopen: [] }>()
 
 const tab = defineModel<string>('tab', { default: 'summary' })
-const tabs = computed(() => [
-  { value: 'summary', label: 'Summary' },
-  ...(props.extraTabs ?? []),
-  { value: 'interactions', label: 'Interactions', count: props.interactions.length },
-  { value: 'quotes', label: 'Quotes' },
-  { value: 'files', label: 'Files', count: props.documents.length },
+const related = computed(() => [
+  ...(props.relatedTabs ?? []),
+  { value: 'activities', label: 'Activities', count: props.interactions.length, icon: 'i-lucide-activity' },
+  { value: 'quotes', label: 'Quotes', icon: 'i-lucide-file-text' },
+  { value: 'documents', label: 'Documents', count: props.documents.length, icon: 'i-lucide-paperclip' },
 ])
 
-const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const when = (iso: string) => new Date(iso).toLocaleString(APP_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const initials = computed(() => (props.contact.name ?? props.contact.email ?? '?').split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase())
 </script>
 
@@ -68,32 +72,36 @@ const initials = computed(() => (props.contact.name ?? props.contact.email ?? '?
       <RecordStageBar v-else :stages="stages" :current="stage" label="Process" :note="stageNote" :readonly="stageReadonly" @select="(value) => emit('stage', value)" />
     </RecordHeader>
 
-    <PageSegmentedTabs v-model="tab" label="Record sections" :options="tabs" class="self-start" />
+    <RecordTabs v-model="tab" :related="related" />
 
-    <!-- Summary: identical arrangement on every record -->
-    <div v-if="tab === 'summary'" class="flex flex-wrap items-start gap-4">
-      <RecordCard title="Details" class="flex-[1_1_340px]">
-        <slot name="details" />
+    <!-- Summary -->
+    <div v-if="tab === 'summary'" class="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.9fr)]">
+      <RecordCard title="Summary">
+        <slot name="summary" />
       </RecordCard>
 
-      <RecordCard title="Timeline" class="flex-[1_1_340px]">
+      <RecordCard title="Timeline">
+        <InteractionsSection :regarding-type="regardingType" :regarding-id="regardingId" :interactions="interactions" />
+        <h3 class="m-0 mt-2 text-sm font-bold text-foreground">
+          Record history
+        </h3>
         <ol class="m-0 flex list-none flex-col p-0">
-          <li v-for="item in timeline" :key="item.id" class="border-b border-border py-3 last:border-0">
+          <li v-for="item in timeline" :key="item.id" class="border-b border-border py-2.5 last:border-0">
             <div class="flex justify-between gap-3">
-              <b class="text-sm text-foreground">{{ item.label }}</b>
+              <span class="text-sm font-semibold text-foreground">{{ item.label }}</span>
               <span class="shrink-0 text-xs text-muted-foreground">{{ when(item.at) }}</span>
             </div>
             <div v-if="item.actor" class="text-[13px] text-muted-foreground">
               {{ item.actor }}
             </div>
           </li>
-          <li v-if="!timeline.length" class="py-3 text-sm text-muted-foreground">
+          <li v-if="!timeline.length" class="py-2.5 text-sm text-muted-foreground">
             Nothing yet.
           </li>
         </ol>
       </RecordCard>
 
-      <aside class="flex flex-[1_1_300px] flex-col gap-4">
+      <aside class="flex flex-col gap-4 lg:col-span-2 2xl:col-span-1">
         <slot name="key-card" />
         <InsightsAiSuggestionCard :regarding-type="regardingType" :regarding-id="regardingId" />
         <RecordCard title="Contact">
@@ -110,17 +118,57 @@ const initials = computed(() => (props.contact.name ?? props.contact.email ?? '?
             </div>
           </div>
           <p v-else class="m-0 text-sm text-muted-foreground">
-            No contact yet — add one under Details.
+            No contact yet — add one in Summary.
           </p>
         </RecordCard>
       </aside>
     </div>
 
-    <template v-for="extra in extraTabs ?? []" :key="extra.value">
+    <!-- Details -->
+    <div v-if="tab === 'details'" class="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <RecordCard title="Details">
+        <slot name="details" />
+      </RecordCard>
+      <RecordCard title="Record information">
+        <dl class="m-0 grid gap-3 text-sm">
+          <div>
+            <dt class="text-xs text-muted-foreground">
+              ID
+            </dt><dd class="m-0 font-semibold text-foreground">
+              {{ regardingId }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-muted-foreground">
+              Owner
+            </dt><dd class="m-0 font-semibold text-foreground">
+              {{ info.owner }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-muted-foreground">
+              Created on
+            </dt><dd class="m-0 text-foreground">
+              {{ when(info.createdAt) }}
+            </dd>
+          </div>
+          <div v-if="info.updatedAt">
+            <dt class="text-xs text-muted-foreground">
+              Modified on
+            </dt><dd class="m-0 text-foreground">
+              {{ when(info.updatedAt) }}
+            </dd>
+          </div>
+        </dl>
+      </RecordCard>
+    </div>
+
+    <!-- Related -->
+    <template v-for="extra in relatedTabs ?? []" :key="extra.value">
       <slot v-if="tab === extra.value" :name="`tab-${extra.value}`" />
     </template>
 
-    <RecordCard v-if="tab === 'interactions'">
+    <RecordCard v-if="tab === 'activities'" title="Activities">
       <InteractionsSection :regarding-type="regardingType" :regarding-id="regardingId" :interactions="interactions" />
     </RecordCard>
 
@@ -128,7 +176,7 @@ const initials = computed(() => (props.contact.name ?? props.contact.email ?? '?
       <QuotesSection :regarding-type="regardingType" :regarding-id="regardingId" :record-name="recordName" :contact-name="contact.name" :contact-email="contact.email" :contact-phone="contact.phone" />
     </RecordCard>
 
-    <RecordDocumentsCard v-if="tab === 'files'" :documents="documents" :upload="upload" :remove="removeDocument" />
+    <RecordDocumentsCard v-if="tab === 'documents'" :documents="documents" :upload="upload" :remove="removeDocument" />
 
     <slot />
   </div>

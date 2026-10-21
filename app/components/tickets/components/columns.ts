@@ -153,6 +153,6 @@ export const columns: ColumnDef<Ticket>[] = [
   {
     accessorKey: 'createdAt',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Created' }),
-    cell: ({ row }) => h('span', { class: 'text-sm text-muted-foreground' }, new Date(row.getValue('createdAt')).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })),
+    cell: ({ row }) => h('span', { class: 'text-sm text-muted-foreground' }, new Date(row.getValue('createdAt')).toLocaleDateString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric' })),
   },
 ]

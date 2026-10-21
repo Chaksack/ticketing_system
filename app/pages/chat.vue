@@ -334,7 +334,7 @@ function isGroupEnd(index: number) {
 }
 
 function metaLabel(message: ChatMessage) {
-  const time = new Date(message.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  const time = new Date(message.createdAt).toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })
   return message.authorId === currentUser.value?.id ? `You · ${time}` : time
 }
 

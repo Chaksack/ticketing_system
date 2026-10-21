@@ -155,8 +155,8 @@ function onDrop(stage: string) {
 const showClosed = ref<Record<string, boolean>>({})
 
 // ── Formatting ────────────────────────────────────────────────────────────
-const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
-const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
+const compact = new Intl.NumberFormat(APP_LOCALE, { notation: 'compact', maximumFractionDigits: 1 })
+const whole = new Intl.NumberFormat(APP_LOCALE, { maximumFractionDigits: 0 })
 const daysSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / DAY))
 const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase()
 function dateBadge(deal: Deal) {

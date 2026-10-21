@@ -1,302 +1,199 @@
 import type { NavMenu, NavMenuItems } from '~/types/nav'
+import type { OrgApp } from '~/types/organization'
+import type { StaffRole } from '~/types/staff'
 
-export const navMenu: NavMenu[] = [
-  {
-    heading: 'Team',
-    items: [
-      {
-        title: 'Calendar',
-        icon: 'i-lucide-calendar-days',
-        link: '/calendar',
-      },
-      {
-        title: 'Email',
-        icon: 'i-lucide-mail',
-        link: '/email',
-      },
-      {
-        title: 'Timesheets',
-        icon: 'i-lucide-clock',
-        link: '/timesheets',
-      },
-      {
-        title: 'Process map',
-        icon: 'i-lucide-git-fork',
-        link: '/process-map',
-      },
-    ],
-  },
-  {
-    heading: 'BD & SM',
-    items: [
-      {
-        title: 'Overview',
-        icon: 'i-lucide-home',
-        link: '/overview',
-        roles: ['bd', 'sm'],
-      },
-      {
-        title: 'Pipeline',
-        icon: 'i-lucide-trending-up',
-        children: [
-          {
-            title: 'Board',
-            icon: 'i-lucide-kanban',
-            link: '/pipeline',
-            roles: ['bd', 'sm'],
-          },
-          {
-            title: 'Leads',
-            icon: 'i-lucide-target',
-            link: '/leads',
-            roles: ['bd', 'sm'],
-          },
-          {
-            title: 'Tenders',
-            icon: 'i-lucide-gavel',
-            link: '/tenders',
-            roles: ['bd', 'sm'],
-          },
-          {
-            title: 'Clients',
-            icon: 'i-lucide-users',
-            link: '/clients',
-            roles: ['bd', 'sm'],
-          },
-        ],
-      },
-      {
-        title: 'Work',
-        icon: 'i-lucide-calendar-check-2',
-        children: [
-          {
-            title: 'Tasks',
-            icon: 'i-lucide-calendar-check-2',
-            link: '/tasks',
-            roles: ['bd', 'sm'],
-          },
-          {
-            title: 'Sprints',
-            icon: 'i-lucide-rocket',
-            link: '/sprints',
-            roles: ['bd', 'sm'],
-          },
-        ],
-      },
-      {
-        title: 'Delivery',
-        icon: 'i-lucide-package-check',
-        children: [
-          {
-            title: 'AMC Plans',
-            icon: 'i-lucide-construction',
-            link: '/amc-plans',
-            roles: ['bd', 'sm'],
-          },
-          {
-            title: 'Projects',
-            icon: 'i-lucide-folder-kanban',
-            link: '/projects',
-            roles: ['bd', 'sm'],
-          },
-        ],
-      },
-      {
-        title: 'Reports',
-        icon: 'i-lucide-bar-chart-3',
-        link: '/bd-reports',
-        roles: ['bd', 'sm'],
-      },
-    ],
-  },
-  {
-    heading: 'Marketing',
-    items: [
-      {
-        title: 'Journeys',
-        icon: 'i-lucide-route',
-        link: '/marketing/journeys',
-        roles: ['bd', 'sm'],
-      },
-      {
-        title: 'Segments',
-        icon: 'i-lucide-users-round',
-        link: '/marketing/segments',
-        roles: ['bd', 'sm'],
-      },
-    ],
-  },
-  {
-    heading: 'Support',
-    items: [
-      {
-        title: 'Tickets',
-        icon: 'i-lucide-calendar-check-2',
-        link: '/tickets',
-        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
-      },
-      {
-        title: 'Live chat',
-        icon: 'i-lucide-messages-square',
-        link: '/inbox',
-        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
-      },
-      {
-        title: 'Knowledge base',
-        icon: 'i-lucide-book-open',
-        link: '/knowledge',
-        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
-      },
-      {
-        title: 'Reports',
-        icon: 'i-lucide-bar-chart-3',
-        link: '/reports',
-        adminOnly: true,
-      },
-      {
-        title: 'Resource Utilization',
-        icon: 'i-lucide-gauge',
-        link: '/resource-utilization',
-        roles: ['engineering_lead', 'engineering_coordinator', 'finance'],
-      },
-    ],
-  },
-  {
-    heading: 'Field Service',
-    items: [
-      {
-        title: 'Schedule board',
-        icon: 'i-lucide-calendar-range',
-        link: '/field',
-        roles: ['agent', 'engineering_coordinator', 'engineering_lead'],
-      },
-      {
-        title: 'Work orders',
-        icon: 'i-lucide-wrench',
-        link: '/field/work-orders',
-        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
-      },
-      {
-        title: 'Assets',
-        icon: 'i-lucide-hard-drive',
-        link: '/field/assets',
-        roles: ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead'],
-      },
-    ],
-  },
+const SALES: StaffRole[] = ['bd', 'sm']
+const SERVICE: StaffRole[] = ['agent', 'engineer', 'engineering_coordinator', 'engineering_lead']
+const DISPATCH: StaffRole[] = ['agent', 'engineering_coordinator', 'engineering_lead']
 
-  {
-    heading: 'Administration',
+/** "My work" — the same personal tools at the top of every area, like Dynamics 365. */
+function myWork(dashboard?: { title: string, link: string, roles?: StaffRole[], adminOnly?: boolean }): NavMenu {
+  return {
+    heading: 'My work',
     items: [
+      ...(dashboard ? [{ ...dashboard, icon: 'i-lucide-layout-dashboard' }] : []),
+      { title: 'Calendar', icon: 'i-lucide-calendar-days', link: '/calendar' },
+      { title: 'Email', icon: 'i-lucide-mail', link: '/email' },
+      { title: 'Timesheets', icon: 'i-lucide-clock', link: '/timesheets' },
+    ],
+  }
+}
+
+export interface NavArea {
+  id: string
+  label: string
+  icon: string
+  /** The company app the area belongs to; areas for switched-off apps are hidden. */
+  app?: OrgApp
+  menu: NavMenu[]
+}
+
+/**
+ * The workspace sitemap, organised into areas the way Dynamics 365 is: one area's groups show at a
+ * time, and "Change area" at the bottom of the sidebar switches between them. The area follows
+ * the page you're on (see AppSidebar).
+ */
+export const navAreas: NavArea[] = [
+  {
+    id: 'service',
+    label: 'Customer Service',
+    icon: 'i-lucide-headset',
+    app: 'service',
+    menu: [
+      myWork({ title: 'Service dashboard', link: '/reports', adminOnly: true }),
       {
-        title: 'Organisation',
-        icon: 'i-lucide-building',
-        link: '/admin/organization',
-        adminOnly: true,
-      },
-      {
-        title: 'Canopy Care results',
-        icon: 'i-lucide-headset',
-        link: '/admin/care-results',
-        adminOnly: true,
-      },
-      {
-        title: 'Executive Dashboard',
-        icon: 'i-lucide-layout-dashboard',
-        link: '/executive-dashboard',
-        adminOnly: true,
-      },
-      {
-        title: 'Admin',
-        icon: 'i-lucide-shield',
-        link: '/admin',
-        adminOnly: true,
-      },
-      {
-        title: 'Integrations',
-        icon: 'i-lucide-plug',
-        children: [
-          {
-            title: 'API Keys',
-            icon: 'i-lucide-key-round',
-            link: '/admin/api-keys',
-            adminOnly: true,
-          },
-          {
-            title: 'ERP Connections',
-            icon: 'i-lucide-cable',
-            link: '/admin/erp-connections',
-            adminOnly: true,
-          },
+        heading: 'Service',
+        items: [
+          { title: 'Cases', icon: 'i-lucide-ticket', link: '/tickets', roles: SERVICE },
+          { title: 'Live chat', icon: 'i-lucide-messages-square', link: '/inbox', roles: SERVICE },
+          { title: 'Knowledge articles', icon: 'i-lucide-book-open', link: '/knowledge', roles: SERVICE },
         ],
       },
       {
-        title: 'Automation',
-        icon: 'i-lucide-workflow',
-        children: [
-          {
-            title: 'Automations',
-            icon: 'i-lucide-workflow',
-            link: '/admin/automations',
-            adminOnly: true,
-          },
-          {
-            title: 'BD Automations',
-            icon: 'i-lucide-route',
-            link: '/admin/bd-automations',
-            adminOnly: true,
-          },
+        heading: 'Service settings',
+        items: [
+          { title: 'SLA policies', icon: 'i-lucide-timer', link: '/admin/sla', adminOnly: true },
+          { title: 'Macros', icon: 'i-lucide-zap', link: '/admin/macros', adminOnly: true },
+          { title: 'Automations', icon: 'i-lucide-workflow', link: '/admin/automations', adminOnly: true },
         ],
-      },
-      {
-        title: 'Configuration',
-        icon: 'i-lucide-settings-2',
-        children: [
-          {
-            title: 'SLA Policies',
-            icon: 'i-lucide-timer',
-            link: '/admin/sla',
-            adminOnly: true,
-          },
-          {
-            title: 'Macros',
-            icon: 'i-lucide-zap',
-            link: '/admin/macros',
-            adminOnly: true,
-          },
-          {
-            title: 'Products',
-            icon: 'i-lucide-package',
-            link: '/admin/products',
-            adminOnly: true,
-          },
-          {
-            title: 'BD Quotas',
-            icon: 'i-lucide-target',
-            link: '/admin/bd-quotas',
-            adminOnly: true,
-          },
-        ],
-      },
-      {
-        title: 'Activity Log',
-        icon: 'i-lucide-history',
-        link: '/admin/activity',
-        adminOnly: true,
       },
     ],
   },
   {
-    heading: 'Tools',
-    items: [
+    id: 'sales',
+    label: 'Sales',
+    icon: 'i-lucide-trending-up',
+    app: 'sales',
+    menu: [
+      myWork({ title: 'Sales dashboard', link: '/overview', roles: SALES }),
       {
-        title: 'Integrations',
-        icon: 'i-lucide-plug',
-        link: '/settings/integrations',
+        heading: 'Customers',
+        items: [
+          { title: 'Clients', icon: 'i-lucide-building', link: '/clients', roles: SALES },
+        ],
+      },
+      {
+        heading: 'Sales',
+        items: [
+          { title: 'Pipeline board', icon: 'i-lucide-kanban', link: '/pipeline', roles: SALES },
+          { title: 'Leads', icon: 'i-lucide-target', link: '/leads', roles: SALES },
+          { title: 'Tenders', icon: 'i-lucide-gavel', link: '/tenders', roles: SALES },
+        ],
+      },
+      {
+        heading: 'Collateral',
+        items: [
+          { title: 'Products', icon: 'i-lucide-package', link: '/admin/products', adminOnly: true },
+          { title: 'AMC plans', icon: 'i-lucide-shield-check', link: '/amc-plans', roles: SALES },
+        ],
+      },
+      {
+        heading: 'Performance',
+        items: [
+          { title: 'BD & SM report', icon: 'i-lucide-bar-chart-3', link: '/bd-reports', roles: SALES },
+          { title: 'Quotas', icon: 'i-lucide-goal', link: '/admin/bd-quotas', adminOnly: true },
+          { title: 'Sales automations', icon: 'i-lucide-route', link: '/admin/bd-automations', adminOnly: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'marketing',
+    label: 'Marketing',
+    icon: 'i-lucide-megaphone',
+    app: 'marketing',
+    menu: [
+      myWork(),
+      {
+        heading: 'Marketing',
+        items: [
+          { title: 'Journeys', icon: 'i-lucide-route', link: '/marketing/journeys', roles: SALES },
+          { title: 'Segments', icon: 'i-lucide-users-round', link: '/marketing/segments', roles: SALES },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'field',
+    label: 'Field Service',
+    icon: 'i-lucide-wrench',
+    app: 'field',
+    menu: [
+      myWork(),
+      {
+        heading: 'Scheduling',
+        items: [
+          { title: 'Schedule board', icon: 'i-lucide-calendar-range', link: '/field', roles: DISPATCH },
+          { title: 'Work orders', icon: 'i-lucide-clipboard-list', link: '/field/work-orders', roles: SERVICE },
+        ],
+      },
+      {
+        heading: 'Service',
+        items: [
+          { title: 'Assets', icon: 'i-lucide-hard-drive', link: '/field/assets', roles: SERVICE },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'projects',
+    label: 'Projects',
+    icon: 'i-lucide-folder-kanban',
+    app: 'projects',
+    menu: [
+      myWork(),
+      {
+        heading: 'Projects',
+        items: [
+          { title: 'Projects', icon: 'i-lucide-folder-kanban', link: '/projects', roles: SALES },
+          { title: 'Tasks', icon: 'i-lucide-calendar-check-2', link: '/tasks', roles: SALES },
+          { title: 'Sprints', icon: 'i-lucide-rocket', link: '/sprints', roles: SALES },
+        ],
+      },
+      {
+        heading: 'Resources',
+        items: [
+          { title: 'Resource utilisation', icon: 'i-lucide-gauge', link: '/resource-utilization', roles: ['engineering_lead', 'engineering_coordinator', 'finance'] },
+          { title: 'Executive dashboard', icon: 'i-lucide-presentation', link: '/executive-dashboard', adminOnly: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: 'i-lucide-settings',
+    menu: [
+      {
+        heading: 'Organisation',
+        items: [
+          { title: 'Organisation', icon: 'i-lucide-building-2', link: '/admin/organization', adminOnly: true },
+          { title: 'Users & roles', icon: 'i-lucide-users', link: '/admin', adminOnly: true },
+          { title: 'Canopy Care results', icon: 'i-lucide-headset', link: '/admin/care-results', adminOnly: true },
+          { title: 'Activity log', icon: 'i-lucide-scroll-text', link: '/admin/activity', adminOnly: true },
+        ],
+      },
+      {
+        heading: 'Integrations',
+        items: [
+          { title: 'API keys', icon: 'i-lucide-key-round', link: '/admin/api-keys', adminOnly: true },
+          { title: 'ERP connections', icon: 'i-lucide-cable', link: '/admin/erp-connections', adminOnly: true },
+          { title: 'My integrations', icon: 'i-lucide-plug', link: '/settings/integrations' },
+        ],
+      },
+      {
+        heading: 'Personal',
+        items: [
+          { title: 'Profile & preferences', icon: 'i-lucide-user-cog', link: '/settings/profile' },
+          { title: 'Process map', icon: 'i-lucide-git-fork', link: '/process-map' },
+        ],
       },
     ],
   },
 ]
+
+/** Every workspace group, across areas (search and permission checks use this). */
+export const navMenu: NavMenu[] = navAreas.flatMap(area => area.menu)
 
 export const navMenuBottom: NavMenuItems = [
   {
@@ -304,11 +201,6 @@ export const navMenuBottom: NavMenuItems = [
     icon: 'i-lucide-circle-help',
     link: '/help',
   },
-  // {
-  //   title: 'Feedback',
-  //   icon: 'i-lucide-send',
-  //   link: '',
-  // },
 ]
 
 /**

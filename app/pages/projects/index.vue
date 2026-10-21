@@ -123,7 +123,7 @@ const onSubmit = handleSubmit(async (values) => {
 })
 
 function formatDate(value?: string) {
-  return value ? new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
+  return value ? new Date(value).toLocaleDateString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
 }
 </script>
 

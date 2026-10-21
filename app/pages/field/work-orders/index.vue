@@ -65,7 +65,7 @@ const STATUS_CLASS: Record<WorkOrderStatus, string> = {
   completed: 'bg-brand-spruce text-white',
   cancelled: 'bg-muted text-muted-foreground',
 }
-const when = (iso?: string) => iso ? new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
+const when = (iso?: string) => iso ? new Date(iso).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
 
 function exportList() {
   downloadCsv('work-orders.csv', ['ID', 'Title', 'Client', 'Asset', 'Location', 'Priority', 'Skill', 'Duration (min)', 'Status', 'Technician', 'Scheduled', 'SLA due', 'Completed', 'Ticket'], visible.value.map(o => [

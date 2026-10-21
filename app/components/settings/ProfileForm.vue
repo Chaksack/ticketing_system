@@ -54,7 +54,7 @@ const onSubmit = handleSubmit(async (values) => {
 function formatDate(value?: string) {
   if (!value)
     return '—'
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(value).toLocaleDateString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024

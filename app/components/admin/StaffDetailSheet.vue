@@ -165,7 +165,7 @@ async function onDelete() {
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString(undefined, {
+  return new Date(value).toLocaleString(APP_LOCALE, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

@@ -13,7 +13,7 @@ onMounted(async () => {
     loading.value = false
   }
 })
-const date = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+const date = (iso: string) => new Date(iso).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric' })
 </script>
 
 <template>

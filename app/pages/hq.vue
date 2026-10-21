@@ -32,7 +32,7 @@ const greeting = computed(() => {
   const hour = new Date().getHours()
   return `${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}, ${currentUser.value?.name.split(' ')[0] ?? ''}`
 })
-const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const when = (iso: string) => new Date(iso).toLocaleString(APP_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const STATUS_CLASS: Record<string, string> = { active: 'bg-brand-forest text-brand-lime', suspended: 'bg-destructive/10 text-destructive' }
 </script>
 

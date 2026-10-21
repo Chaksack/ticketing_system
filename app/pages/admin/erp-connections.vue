@@ -82,7 +82,7 @@ const STATUS_CLASSES: Record<string, string> = {
 }
 
 function formatDateTime(value?: string) {
-  return value ? new Date(value).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Never'
+  return value ? new Date(value).toLocaleString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Never'
 }
 </script>
 

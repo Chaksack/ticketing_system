@@ -5,6 +5,8 @@ const { isSupported, isSubscribed, checkSubscription, subscribe, unsubscribe } =
 const { currentUser, isBd, isSm } = useAuth()
 
 const isWorking = ref(false)
+// Push support can only be known in the browser; render nothing for it until then (hydration).
+const isMounted = useMounted()
 
 onMounted(() => {
   checkSubscription()
@@ -48,7 +50,8 @@ async function onToggle(enable: boolean) {
   </div>
   <Separator />
 
-  <div v-if="!isSupported" class="rounded-md border p-4 text-sm text-muted-foreground">
+  <div v-if="!isMounted" class="h-24" />
+  <div v-else-if="!isSupported" class="rounded-md border p-4 text-sm text-muted-foreground">
     Push notifications aren't supported in this browser.
   </div>
 

@@ -10,7 +10,7 @@ const CONVERTED_BADGE_CLASS = 'bg-emerald-100 text-emerald-700 border-emerald-20
 function formatDeadline(value?: string) {
   if (!value)
     return '—'
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(value).toLocaleDateString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 export const columns: ColumnDef<Tender>[] = [

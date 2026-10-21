@@ -75,10 +75,10 @@ const stats = computed(() => client.value
 
 const tab = ref('summary')
 const extraTabs = computed(() => [
-  { value: 'contacts', label: 'Contacts', count: client.value?.contacts.length },
-  { value: 'projects', label: 'Projects', count: clientProjects.value.length },
-  ...(hasApp('service') ? [{ value: 'tickets', label: 'Tickets', count: clientTickets.value.length }] : []),
-  ...(hasApp('field') ? [{ value: 'assets', label: 'Assets', count: assets.value.length }] : []),
+  { value: 'contacts', icon: 'i-lucide-contact', label: 'Contacts', count: client.value?.contacts.length },
+  { value: 'projects', icon: 'i-lucide-folder-kanban', label: 'Projects', count: clientProjects.value.length },
+  ...(hasApp('service') ? [{ value: 'tickets', icon: 'i-lucide-ticket', label: 'Tickets', count: clientTickets.value.length }] : []),
+  ...(hasApp('field') ? [{ value: 'assets', icon: 'i-lucide-hard-drive', label: 'Assets', count: assets.value.length }] : []),
 ])
 const PROCESS = stages.filter(s => s.value !== 'lost').map(s => ({ value: s.value as ClientStage, label: s.label }))
 const daysInStage = computed(() => {
@@ -123,6 +123,12 @@ async function save() {
   finally {
     saving.value = false
   }
+}
+/** Dynamics' "Save & close": save, then back to the list. */
+async function saveAndClose() {
+  await save()
+  if (!isDirty.value)
+    await navigateTo('/clients')
 }
 defineShortcuts({ meta_s: { usingInput: true, handler: () => isDirty.value && save() } })
 
@@ -215,8 +221,8 @@ function activityLabel(activity: ClientActivity) {
       return activity.message ?? 'Updated'
   }
 }
-const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+const when = (iso: string) => new Date(iso).toLocaleString(APP_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 const timeline = computed(() => client.value
   ? [
       ...clientTickets.value.slice(0, 5).map(t => ({ id: `t-${t.id}`, label: `${t.id} ${t.subject}`, actor: `Service · ${t.status}`, at: t.createdAt })),
@@ -258,17 +264,24 @@ const projectStatus = (status: ProjectStatus) => projectStatuses.find(s => s.val
       :upload="(file) => uploadDocument(client!.id, file)"
       :remove-document="(docId) => removeDocument(client!.id, docId)"
       :timeline="timeline"
-      :extra-tabs="extraTabs"
+      :info="{ owner: client.assignees.map(a => a.name).join(', ') || 'Unassigned', createdAt: client.createdAt, updatedAt: client.updatedAt }"
+      :related-tabs="extraTabs"
       @stage="(value) => moveStage(value as ClientStage)"
       @reopen="moveStage('lead')"
     >
       <template #actions>
         <Button variant="lime" :disabled="saving || !isDirty || !form.name.trim()" @click="save">
+          <Icon name="i-lucide-save" />
           Save
+        </Button>
+        <Button variant="ghost" :disabled="saving || !isDirty || !form.name.trim()" @click="saveAndClose">
+          <Icon name="i-lucide-save-all" />
+          Save &amp; close
         </Button>
         <Popover v-model:open="isAddProjectOpen">
           <PopoverTrigger as-child>
             <Button variant="ghost">
+              <Icon name="i-lucide-folder-plus" />
               New project
             </Button>
           </PopoverTrigger>
@@ -291,18 +304,21 @@ const projectStatus = (status: ProjectStatus) => projectStatuses.find(s => s.val
         </Popover>
         <Button v-if="hasApp('service')" variant="ghost" as-child>
           <NuxtLink :to="{ path: '/tickets', query: { new: '1', clientId: client.id, requester: client.contactName ?? client.name, email: client.contactEmail ?? '' } }">
-            New ticket
+            <Icon name="i-lucide-ticket-plus" /> New ticket
           </NuxtLink>
         </Button>
         <Button v-if="client.stage !== 'lost'" variant="ghost" @click="moveStage('lost')">
+          <Icon name="i-lucide-circle-x" />
           Mark as lost
         </Button>
         <Button variant="ghost" @click="tab = 'quotes'">
+          <Icon name="i-lucide-file-plus-2" />
           New quote
         </Button>
         <Popover>
           <PopoverTrigger as-child>
             <Button variant="ghost">
+              <Icon name="i-lucide-user-plus" />
               Assign
             </Button>
           </PopoverTrigger>
@@ -311,11 +327,12 @@ const projectStatus = (status: ProjectStatus) => projectStatuses.find(s => s.val
           </PopoverContent>
         </Popover>
         <Button variant="ghost" class="text-destructive hover:text-destructive" @click="isDeleteOpen = true">
+          <Icon name="i-lucide-trash-2" />
           Delete
         </Button>
       </template>
 
-      <template #details>
+      <template #summary>
         <div class="grid gap-3 sm:grid-cols-2">
           <div class="flex flex-col gap-1.5 sm:col-span-2">
             <Label for="rec-name" class="text-[13px] font-semibold">Client name</Label>
@@ -338,6 +355,9 @@ const projectStatus = (status: ProjectStatus) => projectStatuses.find(s => s.val
             <Input id="rec-phone" v-model="form.contactPhone" type="tel" />
           </div>
         </div>
+      </template>
+
+      <template #details>
         <RecordExtraContacts
           :emails="client.additionalEmails"
           :phones="client.additionalPhones"

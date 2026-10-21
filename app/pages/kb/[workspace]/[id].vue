@@ -67,7 +67,7 @@ function vote(action: 'helpful' | 'not_helpful') {
           {{ data.article.title }}
         </h1>
         <p class="mt-2 text-sm text-[#5d605d]">
-          Updated {{ new Date(data.article.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) }}
+          Updated {{ new Date(data.article.updatedAt).toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' }) }}
         </p>
         <!-- renderMarkdown escapes everything and only emits a fixed set of tags (app/lib/markdown.ts). -->
         <!-- eslint-disable-next-line vue/no-v-html -->

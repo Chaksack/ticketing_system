@@ -15,10 +15,10 @@ const emit = defineEmits<{
   'export': []
 }>()
 
-const dayLabel = computed(() => props.date?.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) ?? '')
+const dayLabel = computed(() => props.date?.toLocaleDateString(APP_LOCALE, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) ?? '')
 
 function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return new Date(value).toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })
 }
 </script>
 

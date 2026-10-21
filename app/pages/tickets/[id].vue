@@ -21,8 +21,8 @@ const { projects, fetchProjects } = useProjects()
 const ticket = computed(() => tickets.value.find(t => t.id === id.value) ?? null)
 const notFound = ref(false)
 const draft = ref('')
-const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+const when = (iso: string) => new Date(iso).toLocaleString(APP_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const time = (iso: string) => new Date(iso).toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' })
 const similar = ref<{ id: string, subject: string, resolvedAt?: string, resolution?: string }[]>([])
 
 async function loadTicket() {
@@ -126,7 +126,7 @@ const resolveBy = computed(() => {
     return { value: 'No target', note: '', ok: true }
   if (t.resolvedAt)
     return { value: t.resolvedAt <= t.dueAt ? 'Met' : 'Missed', note: when(t.resolvedAt), ok: t.resolvedAt <= t.dueAt }
-  return { value: new Date(t.dueAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }), note: timeLeft(t.dueAt), ok: new Date(t.dueAt) > new Date() }
+  return { value: new Date(t.dueAt).toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' }), note: timeLeft(t.dueAt), ok: new Date(t.dueAt) > new Date() }
 })
 
 async function setStatus(value: TicketStatus) {
@@ -583,7 +583,7 @@ async function resolve() {
             A similar case, <NuxtLink :to="`/tickets/${item.id}`" class="font-semibold text-brand-lime underline">
               {{ item.id }}
             </NuxtLink> "{{ item.subject }}", was resolved<template v-if="item.resolvedAt">
-              on {{ new Date(item.resolvedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) }}
+              on {{ new Date(item.resolvedAt).toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'short' }) }}
             </template><template v-if="item.resolution">
               : {{ item.resolution }}
             </template>

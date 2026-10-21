@@ -34,10 +34,10 @@ function formatListTime(value: string) {
   const date = new Date(value)
   const now = new Date()
   if (date.toDateString() === now.toDateString())
-    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    return date.toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })
   if (now.getTime() - date.getTime() < 6 * 24 * 60 * 60 * 1000)
-    return date.toLocaleDateString(undefined, { weekday: 'short' })
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    return date.toLocaleDateString(APP_LOCALE, { weekday: 'short' })
+  return date.toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric' })
 }
 </script>
 

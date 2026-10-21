@@ -317,6 +317,23 @@ own workspace; Canopy runs the platform from **Canopy HQ**.
   sidebar. Canopy admins land here after signing in; the switcher at the top of the sidebar (or
   "Go to Canopy workspace") opens Canopy's own CRM. `/console` redirects to `/hq`.
 
+### Navigation and record forms (Dynamics 365 style)
+
+- **Areas** — the workspace sidebar shows one area at a time: Customer Service, Sales, Marketing,
+  Field Service, Projects and Settings (`navAreas` in `app/constants/menus.ts`). Each area starts
+  with a "My work" group (dashboard, calendar, email, timesheets). Use **Change area** at the
+  bottom of the sidebar to switch areas. Opening a page that belongs to another area switches to
+  that area. Shared pages keep the area you were in, which is saved in the `canopy-area` cookie.
+- **Record forms** — leads, tenders and clients share `app/components/record/Page.vue`:
+  - A command bar with Save, **Save & close** and the record's actions.
+  - A header with key fields and the business process stage bar.
+  - **Summary** tab: the main fields, a Timeline for logging calls, emails, meetings and notes
+    (plus the record history), and the AI suggestion and contact.
+  - **Details** tab: the remaining fields and the record information (owner, created and
+    modified).
+  - **Related ▾** menu: Activities, Quotes, Documents and record-specific tabs. The one you pick
+    opens as its own tab.
+
 ## Service, Marketing, Field Service and Canopy Care
 
 - **Knowledge base** (`/knowledge`) — Markdown articles with review → publish. Public articles show

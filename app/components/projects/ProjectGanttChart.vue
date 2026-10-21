@@ -89,7 +89,7 @@ const ticks = computed(() => {
   const result: { ms: number, label: string }[] = []
   let cursor = Math.ceil(range.value.start / stepMs) * stepMs
   while (cursor <= range.value.end) {
-    result.push({ ms: cursor, label: new Date(cursor).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })
+    result.push({ ms: cursor, label: new Date(cursor).toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric' }) })
     cursor += stepMs
   }
   return result
@@ -130,7 +130,7 @@ const groups = computed<EpicGroup[]>(() => {
 })
 
 function formatDate(ms: number) {
-  return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(ms).toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric' })
 }
 </script>
 

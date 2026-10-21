@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf'
 import { addBrandHeader, addPageFooter, formatPdfDate, loadLogoDataUrl, sectionTitle, table } from '~/lib/pdfBranding'
 
 function formatEventTime(value: string) {
-  return new Date(value).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return new Date(value).toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })
 }
 
 export async function downloadCalendarReportPdf(events: CalendarEvent[], range: { from: string, to: string }) {
@@ -36,7 +36,7 @@ export async function downloadCalendarReportPdf(events: CalendarEvent[], range: 
 
   for (const day of sortedDays) {
     const dayEvents = [...byDay.get(day)!].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
-    y = sectionTitle(doc, y, new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))
+    y = sectionTitle(doc, y, new Date(`${day}T00:00:00`).toLocaleDateString(APP_LOCALE, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))
     y = table(doc, y, ['Time', 'Type', 'Title', 'Location', 'Attendees', 'Regarding'], dayEvents.map(calendarEvent => [
       `${formatEventTime(calendarEvent.startAt)} – ${formatEventTime(calendarEvent.endAt)}`,
       calendarEvent.activityType || '—',

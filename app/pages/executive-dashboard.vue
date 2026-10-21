@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import NumberFlow from '@number-flow/vue'
-
 definePageMeta({
   middleware: 'admin',
 })
@@ -12,7 +10,7 @@ onMounted(() => {
 })
 
 function currency(amount: number) {
-  return amount.toLocaleString(undefined, { maximumFractionDigits: 0 })
+  return amount.toLocaleString(APP_LOCALE, { maximumFractionDigits: 0 })
 }
 </script>
 
@@ -37,7 +35,7 @@ function currency(amount: number) {
             <CardHeader>
               <CardDescription>Open Tickets</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.support.openTickets ?? 0" />
+                <AnimatedNumber :value="summary?.support.openTickets ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -45,7 +43,7 @@ function currency(amount: number) {
             <CardHeader>
               <CardDescription>Overdue Tickets</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" :class="summary && summary.support.overdueTickets > 0 ? 'text-destructive' : ''">
-                <NumberFlow :value="summary?.support.overdueTickets ?? 0" />
+                <AnimatedNumber :value="summary?.support.overdueTickets ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -73,7 +71,7 @@ function currency(amount: number) {
               <CardDescription>Win Rate</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                 <template v-if="summary?.sales.winRate !== null">
-                  <NumberFlow :value="summary?.sales.winRate ?? 0" suffix="%" />
+                  <AnimatedNumber :value="summary?.sales.winRate ?? 0" suffix="%" />
                 </template>
                 <template v-else>
                   —
@@ -101,7 +99,7 @@ function currency(amount: number) {
             <CardHeader>
               <CardDescription>Active Projects</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.projects.activeProjects ?? 0" />
+                <AnimatedNumber :value="summary?.projects.activeProjects ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -109,7 +107,7 @@ function currency(amount: number) {
             <CardHeader>
               <CardDescription>Staff Over Capacity</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" :class="summary && summary.projects.staffOverCapacity > 0 ? 'text-amber-600 dark:text-amber-400' : ''">
-                <NumberFlow :value="summary?.projects.staffOverCapacity ?? 0" />
+                <AnimatedNumber :value="summary?.projects.staffOverCapacity ?? 0" />
               </CardTitle>
             </CardHeader>
             <CardFooter class="text-sm text-muted-foreground">

@@ -51,7 +51,7 @@ const stats = computed(() => lead.value
   ? [
       { label: 'Est. value', value: money(lead.value.estimatedValue) },
       { label: 'Weighted', value: weighted.value === null ? '—' : `${money(weighted.value)} · ${stageInfo.value?.probability}%` },
-      { label: 'Next step', value: lead.value.nextStepAt ? new Date(lead.value.nextStepAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) : '—' },
+      { label: 'Next step', value: lead.value.nextStepAt ? new Date(lead.value.nextStepAt).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short' }) : '—' },
       { label: 'Owner', value: lead.value.assignees.map(a => a.name).join(', ') || 'Unassigned' },
     ]
   : [])
@@ -112,6 +112,12 @@ async function save() {
   finally {
     saving.value = false
   }
+}
+/** Dynamics' "Save & close": save, then back to the list. */
+async function saveAndClose() {
+  await save()
+  if (!isDirty.value)
+    await navigateTo('/leads')
 }
 defineShortcuts({ meta_s: { usingInput: true, handler: () => isDirty.value && save() } })
 
@@ -200,7 +206,7 @@ const timeline = computed(() => lead.value
     ]
   : [])
 const tab = ref('summary')
-const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 </script>
 
 <template>
@@ -235,30 +241,40 @@ const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undef
       :upload="(file) => uploadDocument(lead!.id, file)"
       :remove-document="(docId) => removeDocument(lead!.id, docId)"
       :timeline="timeline"
+      :info="{ owner: lead.assignees.map(a => a.name).join(', ') || 'Unassigned', createdAt: lead.createdAt, updatedAt: lead.updatedAt }"
       @stage="(value) => moveStage(value as LeadStage)"
       @reopen="moveStage('new')"
     >
       <template #actions>
         <Button variant="lime" :disabled="saving || !isDirty || !form.name.trim()" @click="save">
+          <Icon name="i-lucide-save" />
           Save
         </Button>
+        <Button variant="ghost" :disabled="saving || !isDirty || !form.name.trim()" @click="saveAndClose">
+          <Icon name="i-lucide-save-all" />
+          Save &amp; close
+        </Button>
         <Button v-if="!isConverted" variant="ghost" @click="isQualifyOpen = true">
+          <Icon name="i-lucide-arrow-right-left" />
           Convert to client
         </Button>
         <Button v-else variant="ghost" as-child>
           <NuxtLink :to="`/clients/${lead.convertedClientId}`">
-            Open client
+            <Icon name="i-lucide-building" /> Open client
           </NuxtLink>
         </Button>
         <Button v-if="lead.stage !== 'lost' && !isConverted" variant="ghost" @click="moveStage('lost')">
+          <Icon name="i-lucide-circle-x" />
           Mark as lost
         </Button>
         <Button variant="ghost" @click="tab = 'quotes'">
+          <Icon name="i-lucide-file-plus-2" />
           New quote
         </Button>
         <Popover>
           <PopoverTrigger as-child>
             <Button variant="ghost">
+              <Icon name="i-lucide-user-plus" />
               Assign
             </Button>
           </PopoverTrigger>
@@ -267,11 +283,12 @@ const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undef
           </PopoverContent>
         </Popover>
         <Button variant="ghost" class="text-destructive hover:text-destructive" @click="isDeleteOpen = true">
+          <Icon name="i-lucide-trash-2" />
           Delete
         </Button>
       </template>
 
-      <template #details>
+      <template #summary>
         <div class="grid gap-3 sm:grid-cols-2">
           <div class="flex flex-col gap-1.5 sm:col-span-2">
             <Label for="rec-name" class="text-[13px] font-semibold">Company / lead name</Label>
@@ -298,6 +315,9 @@ const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undef
             <Input id="rec-source" v-model="form.source" placeholder="e.g. Referral, Website" />
           </div>
         </div>
+      </template>
+
+      <template #details>
         <RecordExtraContacts
           :emails="lead.additionalEmails"
           :phones="lead.additionalPhones"

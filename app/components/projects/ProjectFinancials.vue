@@ -120,7 +120,7 @@ async function onRemoveEntry(entry: ProjectFinancialEntry) {
 }
 
 function formatDate(value: string) {
-  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(`${value}T00:00:00`).toLocaleDateString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 </script>
 

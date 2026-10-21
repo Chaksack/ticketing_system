@@ -104,7 +104,7 @@ function waited(since: string) {
   const minutes = Math.round((now.value - new Date(since).getTime()) / 60000)
   return minutes < 60 ? `${minutes}m` : minutes < 2880 ? `${Math.floor(minutes / 60)}h` : `${Math.round(minutes / 1440)}d`
 }
-const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+const time = (iso: string) => new Date(iso).toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' })
 </script>
 
 <template>

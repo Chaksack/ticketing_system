@@ -462,7 +462,7 @@ async function copyInvite() {
             </div>
           </div>
           <p v-if="draft.agreement.signedAt" class="text-sm text-muted-foreground">
-            Fully signed {{ new Date(draft.agreement.signedAt).toLocaleString() }}.
+            Fully signed {{ new Date(draft.agreement.signedAt).toLocaleString(APP_LOCALE) }}.
           </p>
         </CardContent>
       </Card>

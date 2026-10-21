@@ -41,7 +41,7 @@ const PROCESS = tenderStages.filter(s => s.value !== 'lost').map(s => ({ value: 
 const stageInfo = computed(() => tenderStages.find(s => s.value === tender.value?.stage))
 const isConverted = computed(() => !!tender.value?.convertedClientId)
 const money = (value?: number | null) => value === undefined || value === null ? '—' : value.toLocaleString()
-const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+const dateLabel = (iso?: string) => iso ? new Date(iso).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 const daysInStage = computed(() => {
   if (!tender.value)
     return undefined
@@ -53,7 +53,7 @@ const stats = computed(() => tender.value
   ? [
       { label: 'Est. value', value: money(tender.value.estimatedValue) },
       { label: 'Weighted', value: tender.value.estimatedValue && !['won', 'lost'].includes(tender.value.stage) ? `${money(Math.round(tender.value.estimatedValue * (stageInfo.value?.probability ?? 0) / 100))} · ${stageInfo.value?.probability ?? 0}%` : '—' },
-      { label: 'Deadline', value: tender.value.submissionDeadline ? new Date(tender.value.submissionDeadline).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) : '—' },
+      { label: 'Deadline', value: tender.value.submissionDeadline ? new Date(tender.value.submissionDeadline).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short' }) : '—' },
       { label: 'Owner', value: tender.value.assignees.map(a => a.name).join(', ') || 'Unassigned' },
     ]
   : [])
@@ -110,6 +110,12 @@ async function save() {
   finally {
     saving.value = false
   }
+}
+/** Dynamics' "Save & close": save, then back to the list. */
+async function saveAndClose() {
+  await save()
+  if (!isDirty.value)
+    await navigateTo('/tenders')
 }
 defineShortcuts({ meta_s: { usingInput: true, handler: () => isDirty.value && save() } })
 
@@ -240,36 +246,47 @@ const deadlineLeft = computed(() => {
       :upload="(file) => uploadDocument(tender!.id, file)"
       :remove-document="(docId) => removeDocument(tender!.id, docId)"
       :timeline="timeline"
-      :extra-tabs="[{ value: 'tasks', label: 'Tasks', count: tasks.length }]"
+      :info="{ owner: tender.assignees.map(a => a.name).join(', ') || 'Unassigned', createdAt: tender.createdAt, updatedAt: tender.updatedAt }"
+      :related-tabs="[{ value: 'tasks', label: 'Tasks', count: tasks.length, icon: 'i-lucide-list-checks' }]"
       @stage="(value) => moveStage(value as TenderStage)"
       @reopen="moveStage('evaluation')"
     >
       <template #actions>
         <Button variant="lime" :disabled="saving || !isDirty || !form.title.trim()" @click="save">
+          <Icon name="i-lucide-save" />
           Save
+        </Button>
+        <Button variant="ghost" :disabled="saving || !isDirty || !form.title.trim()" @click="saveAndClose">
+          <Icon name="i-lucide-save-all" />
+          Save &amp; close
         </Button>
         <template v-if="!isConverted">
           <Button v-if="tender.stage === 'won'" variant="ghost" :disabled="converting" @click="convert">
+            <Icon name="i-lucide-arrow-right-left" />
             Convert to client
           </Button>
           <Button v-else variant="ghost" @click="moveStage('won')">
+            <Icon name="i-lucide-trophy" />
             Mark as won
           </Button>
           <Button v-if="tender.stage !== 'lost'" variant="ghost" @click="moveStage('lost')">
+            <Icon name="i-lucide-circle-x" />
             Mark as lost
           </Button>
         </template>
         <Button v-else variant="ghost" as-child>
           <NuxtLink :to="`/clients/${tender.convertedClientId}`">
-            Open client
+            <Icon name="i-lucide-building" /> Open client
           </NuxtLink>
         </Button>
         <Button variant="ghost" @click="tab = 'quotes'">
+          <Icon name="i-lucide-file-plus-2" />
           New quote
         </Button>
         <Popover>
           <PopoverTrigger as-child>
             <Button variant="ghost">
+              <Icon name="i-lucide-user-plus" />
               Assign
             </Button>
           </PopoverTrigger>
@@ -278,11 +295,12 @@ const deadlineLeft = computed(() => {
           </PopoverContent>
         </Popover>
         <Button variant="ghost" class="text-destructive hover:text-destructive" @click="isDeleteOpen = true">
+          <Icon name="i-lucide-trash-2" />
           Delete
         </Button>
       </template>
 
-      <template #details>
+      <template #summary>
         <div class="grid gap-3 sm:grid-cols-2">
           <div class="flex flex-col gap-1.5 sm:col-span-2">
             <Label for="rec-name" class="text-[13px] font-semibold">Tender title</Label>
@@ -317,6 +335,9 @@ const deadlineLeft = computed(() => {
             <Input id="rec-source" v-model="form.source" placeholder="e.g. Tender portal, Referral" />
           </div>
         </div>
+      </template>
+
+      <template #details>
         <div class="flex flex-col gap-1.5">
           <Label for="rec-notes" class="text-[13px] font-semibold">Notes</Label>
           <Textarea id="rec-notes" v-model="form.notes" rows="3" placeholder="Scope, requirements, evaluation criteria…" />

@@ -119,8 +119,8 @@ async function complete() {
 
 const directionsUrl = computed(() => order.value?.location ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.value.location)}` : null)
 const statusLabel = (status: WorkOrderStatus) => WORK_ORDER_STATUSES.find(s => s.value === status)?.label ?? status
-const time = (iso?: string) => iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—'
-const dateTime = (iso?: string) => iso ? new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
+const time = (iso?: string) => iso ? new Date(iso).toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' }) : '—'
+const dateTime = (iso?: string) => iso ? new Date(iso).toLocaleString(APP_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
 const durationLabel = (minutes: number) => minutes % 60 ? `${Math.floor(minutes / 60) ? `${Math.floor(minutes / 60)} h ` : ''}${minutes % 60} min` : `${minutes / 60} h`
 const slaBreached = computed(() => !!order.value?.slaDueAt && new Date(order.value.slaDueAt) < new Date() && !['completed', 'cancelled'].includes(order.value.status))
 const isOpen = computed(() => !!order.value && !['completed', 'cancelled'].includes(order.value.status))

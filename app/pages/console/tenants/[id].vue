@@ -53,7 +53,7 @@ function toggleApp(app: OrgApp, on: boolean) {
 const confirmSuspend = ref(false)
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return new Date(value).toLocaleString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 </script>
 

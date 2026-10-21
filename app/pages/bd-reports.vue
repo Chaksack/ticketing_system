@@ -113,11 +113,11 @@ function money(currency: string, value?: number) {
 const REGARDING_LABEL: Record<string, string> = { lead: 'Lead', tender: 'Tender', client: 'Client', unlinked: 'Not linked' }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return new Date(value).toLocaleString(APP_LOCALE, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
 function formatDay(value: string) {
-  return new Date(value.length === 10 ? `${value}T00:00:00` : value).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+  return new Date(value.length === 10 ? `${value}T00:00:00` : value).toLocaleDateString(APP_LOCALE, { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 function daysUntil(value: string) {
@@ -175,7 +175,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>New Leads</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.leads.newCount ?? 0" />
+                <AnimatedNumber :value="summary?.leads.newCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -183,7 +183,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Converted</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.leads.convertedCount ?? 0" />
+                <AnimatedNumber :value="summary?.leads.convertedCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -191,7 +191,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Conversion Rate</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.leads.conversionRate ?? 0" suffix="%" />
+                <AnimatedNumber :value="summary?.leads.conversionRate ?? 0" suffix="%" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -199,7 +199,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Pipeline Value</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.leads.estimatedValueTotal ?? 0" />
+                <AnimatedNumber :value="summary?.leads.estimatedValueTotal ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -207,7 +207,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Weighted Value</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.leads.weightedValueTotal ?? 0" />
+                <AnimatedNumber :value="summary?.leads.weightedValueTotal ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -247,7 +247,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>New Tenders</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.tenders.newCount ?? 0" />
+                <AnimatedNumber :value="summary?.tenders.newCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -255,7 +255,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Won</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.tenders.convertedCount ?? 0" />
+                <AnimatedNumber :value="summary?.tenders.convertedCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -263,7 +263,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Win Rate</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.tenders.conversionRate ?? 0" suffix="%" />
+                <AnimatedNumber :value="summary?.tenders.conversionRate ?? 0" suffix="%" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -271,7 +271,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Pipeline Value</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.tenders.estimatedValueTotal ?? 0" />
+                <AnimatedNumber :value="summary?.tenders.estimatedValueTotal ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -279,7 +279,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Weighted Value</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.tenders.weightedValueTotal ?? 0" />
+                <AnimatedNumber :value="summary?.tenders.weightedValueTotal ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -319,7 +319,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Lead Win Rate</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow v-if="summary?.leads.winRate !== null && summary?.leads.winRate !== undefined" :value="summary.leads.winRate" suffix="%" />
+                <AnimatedNumber v-if="summary?.leads.winRate !== null && summary?.leads.winRate !== undefined" :value="summary.leads.winRate" suffix="%" />
                 <span v-else class="text-base text-muted-foreground">No decided deals</span>
               </CardTitle>
             </CardHeader>
@@ -328,7 +328,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Avg Lead Deal Size</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow v-if="summary?.leads.averageDealSize !== null && summary?.leads.averageDealSize !== undefined" :value="summary.leads.averageDealSize" />
+                <AnimatedNumber v-if="summary?.leads.averageDealSize !== null && summary?.leads.averageDealSize !== undefined" :value="summary.leads.averageDealSize" />
                 <span v-else class="text-base text-muted-foreground">—</span>
               </CardTitle>
             </CardHeader>
@@ -337,7 +337,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Avg Lead Sales Cycle</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow v-if="summary?.leads.avgSalesCycleDays !== null && summary?.leads.avgSalesCycleDays !== undefined" :value="summary.leads.avgSalesCycleDays" suffix=" days" />
+                <AnimatedNumber v-if="summary?.leads.avgSalesCycleDays !== null && summary?.leads.avgSalesCycleDays !== undefined" :value="summary.leads.avgSalesCycleDays" suffix=" days" />
                 <span v-else class="text-base text-muted-foreground">—</span>
               </CardTitle>
             </CardHeader>
@@ -346,7 +346,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Tender Win Rate</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow v-if="summary?.tenders.winRate !== null && summary?.tenders.winRate !== undefined" :value="summary.tenders.winRate" suffix="%" />
+                <AnimatedNumber v-if="summary?.tenders.winRate !== null && summary?.tenders.winRate !== undefined" :value="summary.tenders.winRate" suffix="%" />
                 <span v-else class="text-base text-muted-foreground">No decided deals</span>
               </CardTitle>
             </CardHeader>
@@ -355,7 +355,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Avg Tender Deal Size</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow v-if="summary?.tenders.averageDealSize !== null && summary?.tenders.averageDealSize !== undefined" :value="summary.tenders.averageDealSize" />
+                <AnimatedNumber v-if="summary?.tenders.averageDealSize !== null && summary?.tenders.averageDealSize !== undefined" :value="summary.tenders.averageDealSize" />
                 <span v-else class="text-base text-muted-foreground">—</span>
               </CardTitle>
             </CardHeader>
@@ -364,7 +364,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Avg Tender Sales Cycle</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow v-if="summary?.tenders.avgSalesCycleDays !== null && summary?.tenders.avgSalesCycleDays !== undefined" :value="summary.tenders.avgSalesCycleDays" suffix=" days" />
+                <AnimatedNumber v-if="summary?.tenders.avgSalesCycleDays !== null && summary?.tenders.avgSalesCycleDays !== undefined" :value="summary.tenders.avgSalesCycleDays" suffix=" days" />
                 <span v-else class="text-base text-muted-foreground">—</span>
               </CardTitle>
             </CardHeader>
@@ -396,7 +396,7 @@ function daysUntil(value: string) {
               <template v-if="modelStatus?.trained">
                 <span class="font-medium">Trained on {{ modelStatus.trainingExamples }} decided deals</span>
                 <span class="text-xs text-muted-foreground">
-                  Last trained {{ modelStatus.trainedAt ? new Date(modelStatus.trainedAt).toLocaleString() : '—' }}
+                  Last trained {{ modelStatus.trainedAt ? new Date(modelStatus.trainedAt).toLocaleString(APP_LOCALE) : '—' }}
                   <template v-if="modelStatus.accuracy !== null"> · {{ Math.round(modelStatus.accuracy * 100) }}% held-out accuracy</template>
                 </span>
               </template>
@@ -470,7 +470,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>New Clients</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.clients.newCount ?? 0" />
+                <AnimatedNumber :value="summary?.clients.newCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -478,7 +478,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Stage Changes</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.clients.stageChanges ?? 0" />
+                <AnimatedNumber :value="summary?.clients.stageChanges ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -505,7 +505,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>New Contracts</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.amc.newContracts ?? 0" />
+                <AnimatedNumber :value="summary?.amc.newContracts ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -513,7 +513,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Value ({{ row.currency }})</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="row.total" />
+                <AnimatedNumber :value="row.total" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -540,7 +540,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Tasks Completed</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.tasks.completedCount ?? 0" />
+                <AnimatedNumber :value="summary?.tasks.completedCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -548,7 +548,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>New Projects</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                <NumberFlow :value="summary?.projects.newCount ?? 0" />
+                <AnimatedNumber :value="summary?.projects.newCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -556,7 +556,7 @@ function daysUntil(value: string) {
             <CardHeader>
               <CardDescription>Tasks Overdue (now)</CardDescription>
               <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" :class="summary && summary.tasks.overdueCount > 0 ? 'text-amber-600 dark:text-amber-400' : ''">
-                <NumberFlow :value="summary?.tasks.overdueCount ?? 0" />
+                <AnimatedNumber :value="summary?.tasks.overdueCount ?? 0" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -585,7 +585,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Created in Range</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.tasks.createdCount" />
+                  <AnimatedNumber :value="summary.tasks.createdCount" />
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -593,7 +593,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Completed in Range</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.tasks.completedCount" />
+                  <AnimatedNumber :value="summary.tasks.completedCount" />
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -601,7 +601,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Open Now</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.tasks.openByStatus.reduce((sum, row) => sum + row.count, 0)" />
+                  <AnimatedNumber :value="summary.tasks.openByStatus.reduce((sum, row) => sum + row.count, 0)" />
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -609,7 +609,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Overdue Now</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums" :class="summary.tasks.overdueCount > 0 ? 'text-amber-600 dark:text-amber-400' : ''">
-                  <NumberFlow :value="summary.tasks.overdueCount" />
+                  <AnimatedNumber :value="summary.tasks.overdueCount" />
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -815,7 +815,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Total Activities</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.calendar.totalCount" />
+                  <AnimatedNumber :value="summary.calendar.totalCount" />
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -823,7 +823,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Completed</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.calendar.completedCount" />
+                  <AnimatedNumber :value="summary.calendar.completedCount" />
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -831,7 +831,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Still Scheduled</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.calendar.scheduledCount" />
+                  <AnimatedNumber :value="summary.calendar.scheduledCount" />
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -839,7 +839,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Linked to a Deal/Client</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.calendar.linkedCount" />
+                  <AnimatedNumber :value="summary.calendar.linkedCount" />
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -1019,7 +1019,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Calls, emails, meetings and notes logged on leads, tenders and clients</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.interactions.totalCount" />
+                  <AnimatedNumber :value="summary.interactions.totalCount" />
                 </CardTitle>
               </CardHeader>
               <CardContent class="flex flex-wrap gap-1.5">
@@ -1037,7 +1037,7 @@ function daysUntil(value: string) {
               <CardHeader>
                 <CardDescription>Quotes created in this range</CardDescription>
                 <CardTitle class="text-2xl font-semibold tabular-nums">
-                  <NumberFlow :value="summary.quotes.createdCount" />
+                  <AnimatedNumber :value="summary.quotes.createdCount" />
                 </CardTitle>
               </CardHeader>
               <CardContent class="flex flex-col gap-1.5 text-sm">

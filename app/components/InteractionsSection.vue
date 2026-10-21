@@ -69,7 +69,7 @@ async function onRemove(id: string) {
 }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(value).toLocaleString(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 function directionLabel(interaction: Interaction) {

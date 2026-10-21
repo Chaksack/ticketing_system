@@ -15,7 +15,7 @@ const activeStaff = computed(() => staff.value.filter(s => s.status === 'active'
 
 const viewMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
 
-const monthLabel = computed(() => viewMonth.value.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))
+const monthLabel = computed(() => viewMonth.value.toLocaleDateString(APP_LOCALE, { month: 'long', year: 'numeric' }))
 
 const gridDays = computed(() => {
   const start = new Date(viewMonth.value.getFullYear(), viewMonth.value.getMonth(), 1)
@@ -200,7 +200,7 @@ async function onDeleteEvent() {
 }
 
 function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return new Date(value).toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })
 }
 
 function formatRange(event: CalendarEvent) {

@@ -80,7 +80,7 @@ function onOpenChange(isOpen: boolean) {
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString(undefined, {
+  return new Date(value).toLocaleString(APP_LOCALE, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',

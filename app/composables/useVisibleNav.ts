@@ -78,9 +78,12 @@ export function useVisibleNavLinks() {
     const userRoles = currentUser.value?.roles ?? []
     const context = { apps: currentOrg.value?.apps, isPlatformStaff: isPlatformStaff.value, isHomeOrg: !!currentOrg.value?.isHome }
 
+    const seen = new Set<string>()
     return ([...navMenu, ...hqMenu] as NavMenu[])
       .flatMap(group => group.items)
       .filter((item): item is NavLink => 'link' in item)
+      // "My work" repeats in every area — list each page once.
+      .filter(item => !seen.has(item.link) && !!seen.add(item.link))
       .filter(item => isNavItemVisible(item, isAdmin.value, userRoles, context))
   })
 }

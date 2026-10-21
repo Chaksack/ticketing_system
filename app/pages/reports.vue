@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import NumberFlow from '@number-flow/vue'
-
 definePageMeta({
   middleware: 'admin',
 })
@@ -45,7 +43,7 @@ const priorityData = computed(() => Object.entries(summary.value?.byPriority ?? 
           <CardHeader>
             <CardDescription>Total Tickets</CardDescription>
             <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-              <NumberFlow :value="summary?.totalTickets ?? 0" />
+              <AnimatedNumber :value="summary?.totalTickets ?? 0" />
             </CardTitle>
           </CardHeader>
         </Card>
@@ -54,7 +52,7 @@ const priorityData = computed(() => Object.entries(summary.value?.byPriority ?? 
             <CardDescription>SLA Compliance (30d)</CardDescription>
             <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               <template v-if="summary?.slaCompliance.rate !== null">
-                <NumberFlow :value="summary?.slaCompliance.rate ?? 0" suffix="%" />
+                <AnimatedNumber :value="summary?.slaCompliance.rate ?? 0" suffix="%" />
               </template>
               <template v-else>
                 —
@@ -85,7 +83,7 @@ const priorityData = computed(() => Object.entries(summary.value?.byPriority ?? 
           <CardHeader>
             <CardDescription>Overdue Right Now</CardDescription>
             <CardTitle class="text-2xl font-semibold tabular-nums text-destructive @[250px]/card:text-3xl">
-              <NumberFlow :value="summary?.slaCompliance.openOverdue ?? 0" />
+              <AnimatedNumber :value="summary?.slaCompliance.openOverdue ?? 0" />
             </CardTitle>
           </CardHeader>
           <CardFooter class="text-sm text-muted-foreground">

@@ -190,7 +190,7 @@ const statusLine = computed(() => {
   if (!journey.value)
     return ''
   const label = { draft: 'Draft', active: 'Live', paused: 'Paused' }[journey.value.status]
-  return `Journey · ${label} · saved ${new Date(journey.value.updatedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${isDirty.value ? ' · unsaved changes' : ''}`
+  return `Journey · ${label} · saved ${new Date(journey.value.updatedAt).toLocaleString(APP_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${isDirty.value ? ' · unsaved changes' : ''}`
 })
 const LIBRARY: JourneyStep['type'][] = ['email', 'wait', 'branch', 'create_lead', 'notify_owner']
 </script>

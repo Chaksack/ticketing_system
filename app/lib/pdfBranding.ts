@@ -12,7 +12,7 @@ export function titleCase(value: string) {
 }
 
 export function formatPdfDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(value).toLocaleDateString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 export async function loadLogoDataUrl(): Promise<string | null> {

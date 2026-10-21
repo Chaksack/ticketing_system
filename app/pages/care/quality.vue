@@ -76,7 +76,7 @@ async function submit() {
     saving.value = false
   }
 }
-const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const when = (iso: string) => new Date(iso).toLocaleString(APP_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 </script>
 
 <template>
@@ -108,7 +108,7 @@ const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: 'nu
           <RecordCard title="Transcript">
             <div class="flex max-h-[40vh] flex-col gap-2 overflow-y-auto text-sm">
               <p v-for="message in transcript?.messages ?? []" :key="message.id" class="m-0" :class="message.system ? 'text-xs text-muted-foreground' : ''">
-                <span class="font-mono text-xs text-muted-foreground">{{ new Date(message.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}</span>
+                <span class="font-mono text-xs text-muted-foreground">{{ new Date(message.at).toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' }) }}</span>
                 <b class="ml-1.5">{{ message.fromCustomer ? 'Customer' : message.author }}</b> — {{ message.body }}
               </p>
               <p v-if="!transcript" class="m-0 text-muted-foreground">

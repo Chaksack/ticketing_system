@@ -28,7 +28,7 @@ export function isProjectCurrency(value: unknown): value is ProjectCurrency {
 /** "GH₵ 25,000.00" / "$ 25,000.00" — falls back to the raw code for anything unexpected. */
 export function formatProjectMoney(currency: string, value: number, fractionDigits = 2) {
   const symbol = PROJECT_CURRENCIES.find(c => c.code === currency)?.symbol ?? currency
-  return `${symbol} ${value.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits })}`
+  return `${symbol} ${value.toLocaleString(APP_LOCALE, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits })}`
 }
 
 export type ProjectFinancialEntryKind = 'cost' | 'payment'

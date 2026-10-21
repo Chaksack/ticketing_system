@@ -55,7 +55,7 @@ const dayInput = computed({
       day.value = new Date(y, m - 1, d)
   },
 })
-const dayTitle = computed(() => day.value.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }))
+const dayTitle = computed(() => day.value.toLocaleDateString(APP_LOCALE, { weekday: 'long', day: 'numeric', month: 'long' }))
 
 const toSchedule = computed(() => workOrders.value.filter(w => w.status === 'unscheduled').sort((a, b) => (a.slaDueAt ?? '9').localeCompare(b.slaDueAt ?? '9')))
 const scheduledFor = (technicianId: string) => workOrders.value.filter(w => w.technicianId === technicianId && w.scheduledStart && w.status !== 'unscheduled')
@@ -76,7 +76,7 @@ function bookedPercent(technicianId: string) {
   return Math.round((minutes / totalMinutes) * 100)
 }
 
-const clock = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+const clock = (iso: string) => new Date(iso).toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' })
 const durationLabel = (minutes: number) => minutes % 60 ? `${Math.floor(minutes / 60) ? `${Math.floor(minutes / 60)} h ` : ''}${minutes % 60} min` : `${minutes / 60} h`
 const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase()
 const isSlaToday = (order: WorkOrder) => !!order.slaDueAt && new Date(order.slaDueAt) < new Date(day.value.getFullYear(), day.value.getMonth(), day.value.getDate() + 1)
@@ -288,7 +288,7 @@ async function removeTimeOff(block: TechnicianUnavailability) {
         >
           <span class="block text-sm font-bold text-foreground">{{ order.id }} · {{ order.title }}</span>
           <span class="mt-1 block text-[13px] text-muted-foreground">{{ [order.clientName, durationLabel(order.durationMinutes), order.skill].filter(Boolean).join(' · ') }}</span>
-          <span v-if="order.slaDueAt" class="mt-1.5 block text-xs font-bold" :class="isSlaToday(order) ? 'text-destructive' : 'text-muted-foreground'">SLA: on site by {{ new Date(order.slaDueAt).toLocaleString(undefined, { weekday: isSlaToday(order) ? undefined : 'short', hour: '2-digit', minute: '2-digit' }) }}</span>
+          <span v-if="order.slaDueAt" class="mt-1.5 block text-xs font-bold" :class="isSlaToday(order) ? 'text-destructive' : 'text-muted-foreground'">SLA: on site by {{ new Date(order.slaDueAt).toLocaleString(APP_LOCALE, { weekday: isSlaToday(order) ? undefined : 'short', hour: '2-digit', minute: '2-digit' }) }}</span>
         </button>
         <p v-if="!toSchedule.length" class="m-0 text-sm text-muted-foreground">
           Everything is scheduled.

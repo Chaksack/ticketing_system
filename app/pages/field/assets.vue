@@ -55,7 +55,7 @@ async function remove() {
   }
 }
 
-const date = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+const date = (iso?: string) => iso ? new Date(iso).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 </script>
 
 <template>

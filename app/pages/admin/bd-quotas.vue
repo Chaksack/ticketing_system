@@ -22,7 +22,7 @@ const yearOptions = Array.from({ length: 5 }, (_, i) => String(now.getFullYear()
 const period = computed(() => periodType.value === 'year' ? year.value : month.value)
 const periodLabel = computed(() => periodType.value === 'year'
   ? year.value
-  : new Date(`${month.value}-01T00:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))
+  : new Date(`${month.value}-01T00:00:00`).toLocaleDateString(APP_LOCALE, { month: 'long', year: 'numeric' }))
 
 async function reload() {
   await fetchQuotas(period.value)

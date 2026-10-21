@@ -18,7 +18,7 @@ type Period = 'month' | 'quarter' | 'year'
 const period = ref<Period>('quarter')
 const now = new Date()
 const PERIOD_TABS = computed(() => [
-  { value: 'month' as const, label: now.toLocaleDateString(undefined, { month: 'long' }) },
+  { value: 'month' as const, label: now.toLocaleDateString(APP_LOCALE, { month: 'long' }) },
   { value: 'quarter' as const, label: `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}` },
   { value: 'year' as const, label: `${now.getFullYear()}` },
 ])
@@ -83,8 +83,8 @@ const greeting = computed(() => {
   return firstName ? `${part}, ${firstName}` : part
 })
 
-const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 2 })
-const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
+const compact = new Intl.NumberFormat(APP_LOCALE, { notation: 'compact', maximumFractionDigits: 2 })
+const whole = new Intl.NumberFormat(APP_LOCALE, { maximumFractionDigits: 0 })
 
 const periodLabel = computed(() => ({ month: 'this month', quarter: 'this quarter', year: 'this year' })[period.value])
 
@@ -130,7 +130,7 @@ const trendBars = computed(() => {
   const max = Math.max(1, ...values)
   return TREND_MONTHS.map((date, i) => ({
     key: monthKey(date),
-    label: date.toLocaleDateString(undefined, { month: 'short' }),
+    label: date.toLocaleDateString(APP_LOCALE, { month: 'short' }),
     value: values[i]!,
     height: values[i] ? Math.max(4, (values[i]! / max) * 100) : 0,
     current: i === TREND_MONTHS.length - 1,
@@ -147,7 +147,7 @@ function stageLabel(lead: Lead) {
 }
 
 function formatDate(value?: string) {
-  return value ? new Date(value).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  return value ? new Date(value).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000

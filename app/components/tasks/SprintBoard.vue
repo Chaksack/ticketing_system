@@ -127,7 +127,9 @@ watch([tasks, selectedView, assigneeFilter, priorityFilter, dueFilter, statuses]
 const boardRoot = ref<HTMLElement>()
 const { top: boardTop } = useElementBounding(boardRoot)
 const { height: windowHeight } = useWindowSize()
-const boardHeight = computed(() => `${Math.max(windowHeight.value - boardTop.value - 16, 240)}px`)
+// Only once mounted: the window doesn't exist during server rendering (it was "Infinitypx").
+const isMounted = useMounted()
+const boardHeight = computed(() => isMounted.value ? `${Math.max(windowHeight.value - boardTop.value - 16, 240)}px` : undefined)
 
 async function onChange(statusId: string, evt: any) {
   if (evt.added)
@@ -193,13 +195,13 @@ function initials(name?: string) {
 function formatDueDate(task: Task) {
   if (!task.dueDate)
     return ''
-  return new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(task.dueDate).toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric' })
 }
 
 function formatSprintDate(iso?: string) {
   if (!iso)
     return null
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString(APP_LOCALE, { month: 'short', day: 'numeric' })
 }
 
 const DUE_BADGE_CLASS: Record<string, string> = {
