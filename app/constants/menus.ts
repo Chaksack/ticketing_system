@@ -42,25 +42,37 @@ export const navAreas: NavArea[] = [
     menu: [
       myWork({ title: 'Service dashboard', link: '/reports', adminOnly: true }),
       {
-        heading: 'Service',
+        heading: 'Support desk',
         items: [
           { title: 'Cases', icon: 'i-lucide-ticket', link: '/tickets', roles: SERVICE },
           { title: 'Live chat', icon: 'i-lucide-messages-square', link: '/inbox', roles: SERVICE },
-          { title: 'Knowledge articles', icon: 'i-lucide-book-open', link: '/knowledge', roles: SERVICE },
+          { title: 'Conversation monitor', icon: 'i-lucide-monitor-dot', link: '/service/monitor', roles: SERVICE },
+          { title: 'Customers', icon: 'i-lucide-contact', link: '/service/customers', roles: SERVICE },
+          // Client records stay with sales and admins (the Clients page's own permission).
+          { title: 'Companies', icon: 'i-lucide-building-2', link: '/clients', roles: SALES },
         ],
       },
       {
-        heading: 'AI',
+        heading: 'Support setup',
         items: [
-          { title: 'AI agents', icon: 'i-lucide-bot', link: '/ai-agents', roles: SERVICE, new: true },
-        ],
-      },
-      {
-        heading: 'Service settings',
-        items: [
+          { title: 'Tags', icon: 'i-lucide-tags', link: '/service/tags', roles: SERVICE },
+          { title: 'Quick replies', icon: 'i-lucide-zap', link: '/admin/macros', adminOnly: true },
+          { title: 'Support agents', icon: 'i-lucide-users-round', link: '/service/agents', roles: SERVICE },
+          { title: 'Team schedules', icon: 'i-lucide-calendar-range', link: '/service/schedules', roles: SERVICE },
+          { title: 'Channels', icon: 'i-lucide-radio-tower', link: '/service/channels', roles: SERVICE },
           { title: 'SLA policies', icon: 'i-lucide-timer', link: '/admin/sla', adminOnly: true },
-          { title: 'Macros', icon: 'i-lucide-zap', link: '/admin/macros', adminOnly: true },
           { title: 'Automations', icon: 'i-lucide-workflow', link: '/admin/automations', adminOnly: true },
+        ],
+      },
+      {
+        heading: 'AI capabilities',
+        items: [
+          { title: 'Knowledge base', icon: 'i-lucide-book-open', link: '/knowledge', roles: SERVICE },
+          { title: 'AI agents', icon: 'i-lucide-bot', link: '/ai-agents', roles: SERVICE },
+          { title: 'Model settings', icon: 'i-lucide-cpu', link: '/ai-agents/model', roles: SERVICE },
+          { title: 'Playbooks', icon: 'i-lucide-list-checks', link: '/ai-agents/playbooks', roles: SERVICE },
+          { title: 'AI tools', icon: 'i-lucide-wrench', link: '/ai-agents/tools', roles: SERVICE },
+          { title: 'AI activity', icon: 'i-lucide-scroll-text', link: '/ai-agents/activity', roles: SERVICE },
         ],
       },
     ],

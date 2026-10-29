@@ -3,6 +3,7 @@ import type { AiAgentRun } from '~/types/aiAgent'
 import type { KbArticle } from '~/types/knowledge'
 import type { LiveChatDetail, LiveChatQueueStats, LiveChatSummary } from '~/types/liveChat'
 import { toast } from 'vue-sonner'
+import { tagChipClass } from '~/lib/tagColors'
 import { AI_OUTCOME_LABELS } from '~/types/aiAgent'
 
 // Live chat inbox ("Omnichannel — live chat" in the Canopy design). Customers start chats from the
@@ -25,6 +26,9 @@ const selectedId = ref<string | null>(typeof route.query.open === 'string' ? rou
 const chat = ref<LiveChatDetail | null>(null)
 const articles = ref<KbArticle[]>([])
 const aiRuns = ref<AiAgentRun[]>([])
+interface ChatTag { id: string, name: string, color: string }
+const chatTagList = ref<ChatTag[]>([])
+const { tags: allTags, fetchTags, createTag } = useTags()
 const draft = ref('')
 const suggestion = ref('')
 
@@ -40,11 +44,12 @@ async function loadChat() {
   if (!selectedId.value)
     return
   try {
-    const result = await fetchUntyped<{ chat: LiveChatDetail, articles: KbArticle[], aiRuns: AiAgentRun[] }>(`/api/chats/${selectedId.value}`)
+    const result = await fetchUntyped<{ chat: LiveChatDetail, articles: KbArticle[], aiRuns: AiAgentRun[], tags: ChatTag[] }>(`/api/chats/${selectedId.value}`)
     const grew = (result.chat.messages.length ?? 0) > (chat.value?.id === result.chat.id ? chat.value.messages.length : 0)
     chat.value = result.chat
     articles.value = result.articles
     aiRuns.value = result.aiRuns
+    chatTagList.value = result.tags
     if (grew)
       scrollThread()
   }
@@ -79,6 +84,7 @@ function select(id: string) {
   draft.value = ''
   suggestion.value = ''
   aiRuns.value = []
+  chatTagList.value = []
   navigateTo({ query: { ...route.query, open: id } }, { replace: true })
   loadChat()
 }
@@ -90,6 +96,7 @@ onMounted(async () => {
   await loadChat()
   await fetchMacros()
   await fetchStaff()
+  await fetchTags()
   listTimer = setInterval(() => loadList().catch(() => {}), 5000)
   chatTimer = setInterval(() => loadChat().catch(() => {}), 3000)
 })
@@ -174,6 +181,26 @@ async function act(action: 'assign_me' | 'close' | 'create_ticket' | 'transfer' 
   catch (error: any) {
     toast.error('Could not do that', { description: error?.data?.statusMessage })
   }
+}
+
+// ── Tags (shared with cases; managed in Support setup → Tags) ──────────────
+const tagQuery = ref('')
+const tagOptions = computed(() => allTags.value.filter(t => !chatTagList.value.some(c => c.id === t.id) && t.name.toLowerCase().includes(tagQuery.value.trim().toLowerCase())).slice(0, 8))
+async function saveTags(next: ChatTag[]) {
+  if (!chat.value)
+    return
+  try {
+    chatTagList.value = (await fetchUntyped<{ tags: ChatTag[] }>(`/api/chats/${chat.value.id}/tags`, { method: 'PUT', body: { tagIds: next.map(t => t.id) } })).tags
+  }
+  catch (error: any) {
+    toast.error('Tags not saved', { description: error?.data?.statusMessage })
+  }
+}
+async function addTag(tag?: ChatTag) {
+  const picked = tag ?? (tagQuery.value.trim() ? await createTag(tagQuery.value.trim(), 'green') : null)
+  tagQuery.value = ''
+  if (picked)
+    await saveTags([...chatTagList.value, picked])
 }
 
 const transferTargets = computed(() => staff.value.filter(s => s.status === 'active' && s.id !== currentUser.value?.id && s.roles.some(r => ['admin', 'agent', 'engineer', 'engineering_coordinator', 'engineering_lead'].includes(r))))
@@ -398,6 +425,37 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
           <p v-else class="m-0 text-sm text-muted-foreground">
             {{ chat.visitorEmail }} doesn't match a client or contact yet.
           </p>
+          <NuxtLink :to="`/service/customers/${encodeURIComponent(chat.visitorEmail.toLowerCase())}`" class="text-sm font-semibold text-primary underline-offset-2 hover:underline dark:text-brand-lime">
+            Customer history
+          </NuxtLink>
+          <div class="mt-1 flex flex-col gap-1.5 border-t pt-3">
+            <span class="text-xs font-semibold text-muted-foreground">Tags</span>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="tag in chatTagList" :key="tag.id" class="inline-flex items-center gap-1 rounded-full py-0.5 pl-2.5 pr-1 text-xs font-semibold" :class="tagChipClass(tag.color)">
+                {{ tag.name }}
+                <button type="button" class="rounded-full p-0.5 hover:bg-black/10" :aria-label="`Remove tag ${tag.name}`" @click="saveTags(chatTagList.filter(t => t.id !== tag.id))">
+                  <Icon name="i-lucide-x" class="size-3" />
+                </button>
+              </span>
+              <span v-if="!chatTagList.length" class="text-xs text-muted-foreground">None yet</span>
+            </div>
+            <form class="relative" @submit.prevent="addTag(tagOptions[0])">
+              <label for="chat-tag" class="sr-only">Add a tag</label>
+              <Input id="chat-tag" v-model="tagQuery" placeholder="Add a tag…" autocomplete="off" class="h-8 text-sm" />
+              <ul v-if="tagQuery.trim()" class="absolute inset-x-0 top-full z-10 m-0 mt-1 flex list-none flex-col gap-0.5 rounded-xl bg-popover p-1 shadow-lg ring-1 ring-black/10 dark:ring-white/10" role="listbox" aria-label="Tags">
+                <li v-for="tag in tagOptions" :key="tag.id">
+                  <button type="button" class="w-full rounded-lg px-2.5 py-1.5 text-left text-sm hover:bg-muted" @click="addTag(tag)">
+                    {{ tag.name }}
+                  </button>
+                </li>
+                <li v-if="!allTags.some(t => t.name.toLowerCase() === tagQuery.trim().toLowerCase())">
+                  <button type="button" class="w-full rounded-lg px-2.5 py-1.5 text-left text-sm hover:bg-muted" @click="addTag()">
+                    Create “{{ tagQuery.trim() }}”
+                  </button>
+                </li>
+              </ul>
+            </form>
+          </div>
         </section>
 
         <section v-if="chat && (chat.aiAgentId || aiRuns.length)" class="flex flex-col gap-2.5 rounded-[28px] bg-card p-5 ring-1 ring-black/10 dark:ring-white/10" aria-label="AI activity">

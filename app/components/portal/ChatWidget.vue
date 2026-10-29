@@ -2,9 +2,18 @@
 import type { LiveChatMessage, VisitorChatView } from '~/types/liveChat'
 
 /** "Chat with us" on the support portal. Talks to /api/public/chats with the visitor's private token. */
-const props = defineProps<{ workspace: string, companyName: string }>()
+const props = defineProps<{
+  workspace: string
+  companyName: string
+  /** Header title (Channels → Website chat); defaults to "<company> support". */
+  title?: string
+  /** Button text; defaults to "Chat with us". */
+  launcher?: string
+  /** Embedded on another website (/widget/<workspace>): opens straight away and has no launcher. */
+  embedded?: boolean
+}>()
 
-const open = ref(false)
+const open = ref(!!props.embedded)
 const token = ref<string | null>(null)
 const status = ref<VisitorChatView['status'] | null>(null)
 const agentName = ref<string>()
@@ -134,23 +143,24 @@ const inputClass = 'min-h-11 w-full rounded-xl border border-[#868685] bg-white 
 </script>
 
 <template>
-  <div class="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+  <div :class="embedded ? 'flex h-dvh w-full flex-col' : 'fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6'">
     <section
       v-if="open"
       id="portal-chat"
       aria-label="Live chat"
-      class="flex max-h-[min(640px,calc(100vh-7rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.2)] ring-1 ring-black/10"
+      class="flex flex-col overflow-hidden bg-white"
+      :class="embedded ? 'h-full w-full' : 'max-h-[min(640px,calc(100vh-7rem))] w-[min(380px,calc(100vw-2rem))] rounded-[28px] shadow-[0_10px_40px_rgba(0,0,0,0.2)] ring-1 ring-black/10'"
     >
       <header class="flex items-center justify-between gap-3 bg-brand-forest px-5 py-4 text-white">
         <div>
           <div class="font-bold">
-            {{ companyName }} support
+            {{ title || `${companyName} support` }}
           </div>
           <div class="text-xs text-brand-mist">
             {{ headerLine }}
           </div>
         </div>
-        <button type="button" class="flex size-9 items-center justify-center rounded-full bg-brand-spruce" aria-label="Minimise chat" @click="open = false">
+        <button v-if="!embedded" type="button" class="flex size-9 items-center justify-center rounded-full bg-brand-spruce" aria-label="Minimise chat" @click="open = false">
           <Icon name="i-lucide-minus" class="size-4" />
         </button>
       </header>
@@ -220,6 +230,7 @@ const inputClass = 'min-h-11 w-full rounded-xl border border-[#868685] bg-white 
     </section>
 
     <button
+      v-if="!embedded"
       type="button"
       class="inline-flex min-h-13 items-center gap-2 rounded-full bg-brand-forest px-5 font-semibold text-brand-lime shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
       :aria-expanded="open"
@@ -227,7 +238,7 @@ const inputClass = 'min-h-11 w-full rounded-xl border border-[#868685] bg-white 
       @click="open = !open; open && token && poll()"
     >
       <Icon name="i-lucide-messages-square" class="size-5" />
-      {{ open ? 'Close chat' : 'Chat with us' }}
+      {{ open ? 'Close chat' : (launcher || 'Chat with us') }}
     </button>
   </div>
 </template>

@@ -267,6 +267,48 @@ export async function migrateModuleTables() {
   await db.exec('ALTER TABLE live_chats ADD COLUMN IF NOT EXISTS handoff_reason TEXT')
   await db.exec('ALTER TABLE live_chats ADD COLUMN IF NOT EXISTS handed_off_at TEXT')
 
+  // ── Support desk (server/utils/supportDesk.ts) ───────────────────────────
+  // Tags on live chats (the same tags as tickets).
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS live_chat_tags (
+      chat_id TEXT NOT NULL,
+      tag_id TEXT NOT NULL,
+      PRIMARY KEY (chat_id, tag_id)
+    )
+  `)
+  // Customer profile details the team adds (customers themselves are everyone who raised a ticket or chatted).
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS customer_profiles (
+      email TEXT PRIMARY KEY,
+      name TEXT,
+      phone TEXT,
+      notes TEXT,
+      updated_at TEXT NOT NULL,
+      updated_by TEXT
+    )
+  `)
+  // Weekly support rota: weekday 0 = Sunday … 6 = Saturday, times HH:MM in the workspace time zone.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS support_shifts (
+      id TEXT PRIMARY KEY,
+      staff_id TEXT NOT NULL,
+      weekday INTEGER NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `)
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_support_shifts_staff ON support_shifts (staff_id)')
+  // Channel switches and settings ('web_chat', …).
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS support_channels (
+      id TEXT PRIMARY KEY,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      config TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL
+    )
+  `)
+
   // ── Canopy HQ access (only read in Canopy's own workspace) ──────────────
   // 'admin' = runs HQ (clients, onboarding, Care); 'agent' = Care agent desktop; NULL = workspace only.
   const hqColumn = await db.prepare(`SELECT 1 FROM information_schema.columns WHERE table_name = 'staff' AND column_name = 'hq_role'`).get()

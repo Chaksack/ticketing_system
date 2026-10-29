@@ -11,5 +11,5 @@ export default defineEventHandler(async (event) => {
   const articles = await searchKbArticles(visitorText, { limit: 3 })
   // What the AI agent did in this chat, newest first.
   const aiRuns = chat.aiAgentId ? (await useTenantDb().prepare(`${RUN_SELECT} WHERE ai_agent_runs.chat_id = ? ORDER BY ai_agent_runs.created_at DESC LIMIT 20`).all(chat.id) as Parameters<typeof mapRunRow>[0][]).map(mapRunRow) : []
-  return { chat, articles, aiRuns }
+  return { chat, articles, aiRuns, tags: (await chatTags([chat.id])).get(chat.id) ?? [] }
 })

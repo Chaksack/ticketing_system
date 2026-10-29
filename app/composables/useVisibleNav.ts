@@ -11,6 +11,7 @@ const APP_BY_PATH: [prefix: string, app: OrgApp][] = [
   ['/inbox', 'service'],
   ['/knowledge', 'service'],
   ['/ai-agents', 'service'],
+  ['/service', 'service'],
   ['/reports', 'service'],
   ['/admin/automations', 'service'],
   ['/admin/sla', 'service'],

@@ -93,7 +93,7 @@ async function remove() {
 defineShortcuts({ meta_s: { usingInput: true, handler: () => isDirty.value && save() } })
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
-const tab = ref('summary')
+const tab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'summary')
 const related = computed(() => [
   { value: 'playbooks', label: 'Playbooks', count: form.value?.scenarios.length, icon: 'i-lucide-list-checks' },
   { value: 'activity', label: 'Activity', count: runs.value.length, icon: 'i-lucide-activity' },

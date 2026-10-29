@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
   const db = useTenantDb()
 
   await db.prepare('DELETE FROM ticket_tags WHERE tag_id = ?').run(id)
+  await db.prepare('DELETE FROM live_chat_tags WHERE tag_id = ?').run(id)
   await db.prepare('DELETE FROM tags WHERE id = ?').run(id)
 
   return { success: true }

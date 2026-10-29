@@ -358,6 +358,25 @@ own workspace; Canopy runs the platform from **Canopy HQ**.
   - **Take over** stops the AI; **Back to AI** hands the chat back.
   - **Internal notes** are seen only by staff.
   - An **AI activity** panel shows what the AI said and why.
+- **Customer Service sidebar** (modelled on AgentDesk's support desk):
+  - **Support desk:**
+    - Cases and Live chat
+    - **Conversation monitor** (`/service/monitor`): a live wall of every open chat (AI handling, waiting with wait timers, with an agent) and today's numbers
+    - **Customers** (`/service/customers`): everyone who raised a ticket or chatted, with history, ratings and team notes
+    - Companies, which is the Clients page and is shown to sales roles and admins
+  - **Support setup:**
+    - **Tags**, shared by cases and chats, and added to chats from the inbox
+    - Quick replies (macros)
+    - **Support agents**: presence, shift, load and on-call
+    - **Team schedules**: the weekly rota, in the `Africa/Accra` time zone
+    - **Channels**: website chat on/off, title and button text. The embed code (`public/widget.js` → `/widget/<workspace>`) puts the same chat on any website.
+    - SLA policies and Automations
+  - **AI capabilities:**
+    - Knowledge base and AI agents
+    - **Model settings**
+    - **Playbooks**: every agent's playbooks
+    - **AI tools**: which agents use each tool and how often. MCP and custom tools aren't supported yet.
+    - **AI activity**: an audit of every AI reply
 - **AI agents** (`/ai-agents`, `server/utils/aiAgent.ts`) — agentic first-line support, modelled
   on AgentDesk's AI agents and Chatwoot's Captain.
   - **First response:** a new chat goes to the first enabled agent (within its hours and rollout

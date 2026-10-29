@@ -123,6 +123,8 @@ export default defineNuxtConfig({
     '/settings': { redirect: '/settings/profile' },
     // The old staff-console overview is now the Canopy HQ home.
     '/console': { redirect: '/hq' },
+    // Customer Service has no landing page of its own; the breadcrumb goes to the live monitor.
+    '/service': { redirect: '/service/monitor' },
   },
 
   imports: {
@@ -138,7 +140,9 @@ export default defineNuxtConfig({
       // Routes only ever called from outside the app — schedulers, OAuth redirects, Slack — don't
       // need typing, so they're left out of the generated route types.
       'types:extend': (types) => {
-        const untyped = ['/api/cron/', '/api/integrations/', '/api/slack/']
+        // Called through fetchUntyped (app/lib), so they don't need typed $fetch routes — keeping the
+        // route union small avoids "Type instantiation is excessively deep".
+        const untyped = ['/api/cron/', '/api/integrations/', '/api/slack/', '/api/service/', '/api/ai-agents/', '/api/care/', '/api/hq/']
         for (const path of Object.keys(types.routes)) {
           if (untyped.some(prefix => path.startsWith(prefix)))
             delete types.routes[path]

@@ -497,7 +497,7 @@ const inputClass = 'min-h-12 w-full rounded-[10px] border border-[#868685] bg-wh
     </footer>
 
     <ClientOnly>
-      <PortalChatWidget v-if="portalData" :workspace="workspaceSlug" :company-name="workspaceName" />
+      <PortalChatWidget v-if="portalData?.chat.enabled" :workspace="workspaceSlug" :company-name="workspaceName" :title="portalData.chat.title" :launcher="portalData.chat.launcher" />
     </ClientOnly>
   </div>
 </template>

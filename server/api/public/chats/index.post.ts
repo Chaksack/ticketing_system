@@ -18,6 +18,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Type your question to start the chat' })
 
   await ensureDb()
+  if (!(await loadChannelSetting('web_chat')).enabled)
+    throw createError({ statusCode: 403, statusMessage: 'Live chat is switched off. Please raise a request instead.' })
   const ip = getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'
   if (!(await checkRateLimit('live-chat-start-ip', ip, CHATS_PER_IP_PER_HOUR, HOUR_MS)).allowed)
     throw createError({ statusCode: 429, statusMessage: 'Too many chats started recently. Please try again later or raise a request instead.' })

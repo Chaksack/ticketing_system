@@ -19,7 +19,16 @@ async function onRefresh() {
 }
 
 /** Path segments whose title isn't just the word capitalised. */
-const SEGMENT_TITLES: Record<string, string> = { 'hq': 'Canopy HQ', 'team': 'Team & access', 'ai-agents': 'AI agents' }
+const SEGMENT_TITLES: Record<string, string> = { 'hq': 'Canopy HQ', 'team': 'Team & access', 'ai-agents': 'AI agents', 'service': 'Customer Service' }
+
+function safeDecode(segment: string) {
+  try {
+    return decodeURIComponent(segment)
+  }
+  catch {
+    return segment
+  }
+}
 
 function setLinks() {
   if (route.fullPath === homePath.value) {
@@ -30,11 +39,14 @@ function setLinks() {
   const segments = route.path.split('/').filter(item => item !== '')
 
   const breadcrumbs = segments.map((item, index) => {
-    const str = item.replace(/-/g, ' ')
-    const title = SEGMENT_TITLES[item] ?? str
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ')
+    const str = safeDecode(item).replace(/-/g, ' ')
+    // Emails (customer pages) keep their case.
+    const title = SEGMENT_TITLES[item] ?? (str.includes('@')
+      ? str
+      : str
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' '))
 
     return {
       title,
