@@ -2,9 +2,34 @@ import type { SupportChannel, SupportCustomer, SupportShift } from '../../app/ty
 
 /**
  * Support desk screens (Customer Service → Support desk / Support setup): customers, the agents'
- * rota, chat tags and channel switches. The rota uses one time zone per workspace for now.
+ * rota, chat tags and channel switches. Rota times are in the workspace's time zone
+ * (Admin → Organisation).
  */
-export const SUPPORT_TIME_ZONE = 'Africa/Accra'
+export const DEFAULT_TIME_ZONE = 'Africa/Accra'
+
+export function isValidTimeZone(zone: unknown): zone is string {
+  try {
+    return typeof zone === 'string' && !!zone && !!new Intl.DateTimeFormat('en-GB', { timeZone: zone })
+  }
+  catch {
+    return false
+  }
+}
+
+/** The workspace's time zone (Admin → Organisation), for the rota and new AI agents' hours. */
+export async function workspaceTimeZone() {
+  const row = await useTenantDb().prepare('SELECT value FROM workspace_settings WHERE key = \'time_zone\'').get() as { value: string } | undefined
+  return isValidTimeZone(row?.value) ? row.value : DEFAULT_TIME_ZONE
+}
+
+export async function setWorkspaceTimeZone(zone: string) {
+  if (!isValidTimeZone(zone))
+    throw createError({ statusCode: 400, statusMessage: 'Pick a time zone from the list' })
+  await useTenantDb().prepare(`
+    INSERT INTO workspace_settings (key, value, updated_at) VALUES ('time_zone', ?, ?)
+    ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+  `).run(zone, new Date().toISOString())
+}
 
 // ── Rota ──────────────────────────────────────────────────────────────────
 
@@ -19,14 +44,14 @@ export async function listSupportShifts() {
   return rows.map(mapSupportShiftRow)
 }
 
-/** Weekday (0 = Sunday) and "HH:MM" now, in the support time zone. */
-export function supportClock(at = new Date()) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: SUPPORT_TIME_ZONE, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at).map(p => [p.type, p.value]))
+/** Weekday (0 = Sunday) and "HH:MM" now, in the given time zone. */
+export function supportClock(timeZone: string, at = new Date()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at).map(p => [p.type, p.value]))
   return { weekday: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday ?? ''), time: `${parts.hour}:${parts.minute}` }
 }
 
-export function isOnShift(shifts: SupportShift[], staffId: string, at = new Date()) {
-  const { weekday, time } = supportClock(at)
+export function isOnShift(shifts: SupportShift[], staffId: string, timeZone: string, at = new Date()) {
+  const { weekday, time } = supportClock(timeZone, at)
   return shifts.some(s => s.staffId === staffId && s.weekday === weekday && s.startTime <= time && time < s.endTime)
 }
 

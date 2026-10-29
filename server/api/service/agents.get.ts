@@ -16,7 +16,8 @@ export default defineEventHandler(async (event): Promise<{ agents: SupportAgent[
   const activeChats = await count('SELECT assignee_id AS id, COUNT(*) AS count FROM live_chats WHERE status = \'active\' AND assignee_id IS NOT NULL GROUP BY assignee_id')
   const resolved = new Map((await db.prepare('SELECT assignee_id AS id, COUNT(*) AS count FROM tickets WHERE resolved_at >= ? AND assignee_id IS NOT NULL GROUP BY assignee_id').all(weekAgo).catch(() => []) as { id: string, count: string | number }[]).map(r => [r.id, Number(r.count)]))
   const ratings = new Map((await db.prepare('SELECT tickets.assignee_id AS id, AVG(ticket_surveys.rating) AS rating FROM ticket_surveys JOIN tickets ON tickets.id = ticket_surveys.ticket_id WHERE ticket_surveys.rating IS NOT NULL GROUP BY tickets.assignee_id').all() as { id: string, rating: string | number }[]).map(r => [r.id, Number(r.rating)]))
-  const { weekday } = supportClock()
+  const timeZone = await workspaceTimeZone()
+  const { weekday } = supportClock(timeZone)
 
   return {
     agents: staff.map(row => ({
@@ -27,7 +28,7 @@ export default defineEventHandler(async (event): Promise<{ agents: SupportAgent[
       status: row.status,
       presence: derivePresenceState(row),
       onCall: !!Number(row.on_call),
-      onShift: isOnShift(shifts, row.id),
+      onShift: isOnShift(shifts, row.id, timeZone),
       shiftToday: shifts.filter(s => s.staffId === row.id && s.weekday === weekday).map(s => `${s.startTime}–${s.endTime}`).join(', ') || undefined,
       openTickets: openTickets.get(row.id) ?? 0,
       activeChats: activeChats.get(row.id) ?? 0,

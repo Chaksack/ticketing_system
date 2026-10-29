@@ -11,13 +11,17 @@ const TASK_LIST_SELECT = `
   LEFT JOIN tenders ON tenders.id = tasks.tender_id
 `
 
+// Sales and admins see every task (the boards); everyone else gets the tasks assigned to them,
+// which is what Timesheets needs to log time against.
 export default defineEventHandler(async (event) => {
-  await requireBd(event)
+  const user = await requireSessionUser(event)
   await ensureDb()
 
   const db = useTenantDb()
   const rows = await db.prepare(`${TASK_LIST_SELECT} ORDER BY tasks.created_at DESC`).all() as TaskRow[]
   const assigneesByTask = await getAllTaskAssignees()
+  const tasks = rows.map(row => mapTaskRow(row, assigneesByTask.get(row.id) ?? []))
+  const seesAll = user.roles.some(role => role === 'admin' || role === 'bd' || role === 'sm')
 
-  return { tasks: rows.map(row => mapTaskRow(row, assigneesByTask.get(row.id) ?? [])) }
+  return { tasks: seesAll ? tasks : tasks.filter(task => task.assignees.some(a => a.id === user.id)) }
 })

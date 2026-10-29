@@ -15,8 +15,7 @@ definePageMeta({
 
 const { tickets, fetchTickets, addTicket } = useTickets()
 const { staff, fetchStaff } = useStaff()
-const { clients, fetchClients } = useClients()
-const { projects, fetchProjects } = useProjects()
+const { clients, projects, fetchDirectory } = useCustomerDirectory()
 const route = useRoute()
 
 // Who the new ticket is for (optional). Left blank, it's matched by the requester's email.
@@ -103,10 +102,8 @@ const { handleSubmit, resetForm, setFieldValue } = useForm({
 })
 
 watch(() => isReportOpen.value, async (open) => {
-  if (open && !clients.value.length) {
-    await fetchClients().catch(() => {})
-    await fetchProjects().catch(() => {})
-  }
+  if (open)
+    await fetchDirectory().catch(() => {})
 })
 
 onMounted(async () => {

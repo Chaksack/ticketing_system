@@ -6,7 +6,7 @@ definePageMeta({ middleware: 'agent' })
 
 const { isAdmin, currentUser } = useAuth()
 const isDispatcher = computed(() => isAdmin.value || (currentUser.value?.roles ?? []).some(r => ['agent', 'engineering_coordinator', 'engineering_lead'].includes(r)))
-const { clients, fetchClients } = useClients()
+const { clients, fetchDirectory } = useCustomerDirectory()
 const { confirm } = useConfirm()
 
 const assets = ref<FieldAsset[]>([])
@@ -17,7 +17,7 @@ async function load() {
 onMounted(async () => {
   await load()
   if (isDispatcher.value)
-    await fetchClients()
+    await fetchDirectory()
 })
 
 const visible = computed(() => {

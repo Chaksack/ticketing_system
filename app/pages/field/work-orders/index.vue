@@ -9,7 +9,7 @@ definePageMeta({ middleware: 'agent' })
 const route = useRoute()
 const { isAdmin, currentUser } = useAuth()
 const isDispatcher = computed(() => isAdmin.value || (currentUser.value?.roles ?? []).some(r => ['agent', 'engineering_coordinator', 'engineering_lead'].includes(r)))
-const { clients, fetchClients } = useClients()
+const { clients, fetchDirectory } = useCustomerDirectory()
 
 const VIEWS = [
   { value: 'all', label: 'All work orders' },
@@ -38,7 +38,7 @@ onMounted(async () => {
     view.value = 'mine'
   await load()
   if (isDispatcher.value) {
-    await fetchClients()
+    await fetchDirectory()
     assets.value = (await fetchUntyped<{ assets: FieldAsset[] }>('/api/field/assets')).assets
   }
   if (route.query.new === '1' && isDispatcher.value)

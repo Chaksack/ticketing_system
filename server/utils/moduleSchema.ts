@@ -299,6 +299,14 @@ export async function migrateModuleTables() {
     )
   `)
   await db.exec('CREATE INDEX IF NOT EXISTS idx_support_shifts_staff ON support_shifts (staff_id)')
+  // Workspace-wide settings by key (e.g. 'time_zone').
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS workspace_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `)
   // Channel switches and settings ('web_chat', …).
   await db.exec(`
     CREATE TABLE IF NOT EXISTS support_channels (

@@ -32,7 +32,9 @@ const emit = defineEmits<{
 }>()
 
 const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
+// ?tag=<id> (from Support setup → Tags) opens the list filtered to that tag.
+const route = useRoute()
+const columnFilters = ref<ColumnFiltersState>(typeof route.query.tag === 'string' ? [{ id: 'tags', value: [route.query.tag] }] : [])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 

@@ -127,7 +127,10 @@ async function remove(tag: TagWithUsage) {
               <span v-else class="rounded-full px-3 py-1 text-sm font-semibold" :class="tagChipClass(tag.color)">{{ tag.name }}</span>
             </TableCell>
             <TableCell class="text-right tabular-nums">
-              {{ tag.tickets }}
+              <NuxtLink v-if="tag.tickets" :to="`/tickets?tag=${tag.id}`" class="font-semibold hover:underline">
+                {{ tag.tickets }}
+              </NuxtLink>
+              <span v-else class="text-muted-foreground">0</span>
             </TableCell>
             <TableCell class="text-right tabular-nums">
               {{ tag.chats }}

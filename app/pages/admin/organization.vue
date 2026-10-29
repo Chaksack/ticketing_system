@@ -8,21 +8,31 @@ definePageMeta({ middleware: 'admin' })
 const { currentUser } = useAuth()
 const organization = ref<Organization | null>(null)
 const name = ref('')
+const timeZone = ref('')
+const savedTimeZone = ref('')
 const busy = ref(false)
+// Every zone the browser knows, with the common ones for Canopy's customers first.
+const COMMON_ZONES = ['Africa/Accra', 'Africa/Lagos', 'Africa/Nairobi', 'Africa/Johannesburg', 'Europe/London', 'America/New_York']
+const timeZones = computed(() => {
+  const all = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : COMMON_ZONES
+  return [...COMMON_ZONES, ...all.filter(zone => !COMMON_ZONES.includes(zone))]
+})
 const origin = useRequestURL().origin
 
 onMounted(async () => {
-  const result = await fetchUntyped<{ organization: Organization }>('/api/organization')
+  const result = await fetchUntyped<{ organization: Organization, timeZone: string }>('/api/organization')
   organization.value = result.organization
   name.value = result.organization.name
+  timeZone.value = savedTimeZone.value = result.timeZone
 })
 
-async function save(patch: { name?: string, apps?: OrgApp[] }, message: string) {
+async function save(patch: { name?: string, apps?: OrgApp[], timeZone?: string }, message: string) {
   busy.value = true
   try {
-    const result = await fetchUntyped<{ organization: Organization }>('/api/organization', { method: 'PATCH', body: patch })
+    const result = await fetchUntyped<{ organization: Organization, timeZone: string }>('/api/organization', { method: 'PATCH', body: patch })
     organization.value = result.organization
     name.value = result.organization.name
+    timeZone.value = savedTimeZone.value = result.timeZone
     // Keep the sidebar and header in step with the new name and apps.
     if (currentUser.value?.org)
       currentUser.value.org = { ...currentUser.value.org, name: result.organization.name, apps: result.organization.apps }
@@ -87,6 +97,20 @@ async function copyPortal() {
               <Input id="org-name" v-model="name" />
             </div>
             <Button type="submit" :disabled="busy || !name.trim() || name === organization.name">
+              Save
+            </Button>
+          </form>
+          <form class="flex flex-wrap items-end gap-2" @submit.prevent="save({ timeZone }, 'Time zone saved')">
+            <div class="flex min-w-[240px] flex-1 flex-col gap-1.5">
+              <Label for="org-time-zone">Time zone</Label>
+              <select id="org-time-zone" v-model="timeZone" class="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                <option v-for="zone in timeZones" :key="zone" :value="zone">
+                  {{ zone.replace(/_/g, ' ') }}
+                </option>
+              </select>
+              <span class="text-xs text-muted-foreground">Used for team schedules and new AI agents' business hours.</span>
+            </div>
+            <Button type="submit" :disabled="busy || !timeZone || timeZone === savedTimeZone">
               Save
             </Button>
           </form>

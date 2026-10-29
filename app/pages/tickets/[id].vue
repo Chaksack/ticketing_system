@@ -10,13 +10,14 @@ definePageMeta({ middleware: 'agent' })
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
-const { currentUser, hasApp } = useAuth()
+const { currentUser, isAdmin, isBd, isSm } = useAuth()
 const { tickets, fetchTickets, fetchTicket, addReply, updateTicket, addTag, removeTag, applyMacro, escalateTicket } = useTickets()
 const { staff, fetchStaff } = useStaff()
 const { tags, fetchTags, createTag } = useTags()
 const { macros, fetchMacros } = useMacros()
-const { clients, fetchClients } = useClients()
-const { projects, fetchProjects } = useProjects()
+// Names only (readable by every role); full client records are for sales and admins.
+const { clients, projects, fetchDirectory, clientForEmail } = useCustomerDirectory()
+const canOpenClients = computed(() => isAdmin.value || isBd.value || isSm.value)
 
 const ticket = computed(() => tickets.value.find(t => t.id === id.value) ?? null)
 const notFound = ref(false)
@@ -43,10 +44,7 @@ onMounted(async () => {
   // (Sequential on purpose — see the note in overview.vue about overlapping queries.)
   if (!staff.value.length)
     await fetchStaff()
-  if (hasApp('sales') && !clients.value.length)
-    await fetchClients().catch(() => {})
-  if (!projects.value.length)
-    await fetchProjects().catch(() => {})
+  await fetchDirectory().catch(() => {})
   await fetchTickets()
   if (!tags.value.length)
     await fetchTags()
@@ -251,10 +249,7 @@ async function draftWithAssist() {
 const customer = computed(() => {
   if (ticket.value?.clientId)
     return clients.value.find(c => c.id === ticket.value!.clientId) ?? null
-  const email = ticket.value?.requesterEmail.toLowerCase()
-  if (!email)
-    return null
-  return clients.value.find(c => c.contactEmail?.toLowerCase() === email || c.additionalEmails.some(e => e.email.toLowerCase() === email) || c.contacts.some(p => p.email?.toLowerCase() === email)) ?? null
+  return clientForEmail(ticket.value?.requesterEmail)
 })
 const customerContact = computed(() => customer.value?.contacts.find(p => p.email?.toLowerCase() === ticket.value?.requesterEmail.toLowerCase()))
 const clientProjects = computed(() => projects.value.filter(p => p.clientId === (ticket.value?.clientId ?? customer.value?.id)))
@@ -642,7 +637,7 @@ async function resolve() {
           </template>
         </div>
         <div class="flex flex-wrap gap-x-4 gap-y-1">
-          <NuxtLink v-if="customer || ticket.clientId" :to="`/clients/${customer?.id ?? ticket.clientId}`" class="text-sm font-semibold text-primary underline-offset-2 hover:underline dark:text-brand-lime">
+          <NuxtLink v-if="canOpenClients && (customer || ticket.clientId)" :to="`/clients/${customer?.id ?? ticket.clientId}`" class="text-sm font-semibold text-primary underline-offset-2 hover:underline dark:text-brand-lime">
             Open client record
           </NuxtLink>
           <NuxtLink v-if="ticket.projectId" :to="`/projects/${ticket.projectId}`" class="text-sm font-semibold text-primary underline-offset-2 hover:underline dark:text-brand-lime">
