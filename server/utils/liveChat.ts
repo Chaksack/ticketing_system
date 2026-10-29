@@ -19,6 +19,11 @@ export interface LiveChatRow {
   last_message_at: string
   closed_at: string | null
   care_handled: number | string
+  ai_agent_id?: string | null
+  ai_agent_name?: string | null
+  ai_thinking_at?: string | null
+  handoff_reason?: string | null
+  handed_off_at?: string | null
 }
 
 interface MessageRow {
@@ -30,10 +35,11 @@ interface MessageRow {
 }
 
 export const CHAT_SELECT = `
-  SELECT live_chats.*, clients.name AS client_name,
-    (SELECT body FROM live_chat_messages m WHERE m.chat_id = live_chats.id ORDER BY m.created_at DESC LIMIT 1) AS last_message
+  SELECT live_chats.*, clients.name AS client_name, ai_agents.name AS ai_agent_name,
+    (SELECT body FROM live_chat_messages m WHERE m.chat_id = live_chats.id AND m.author_type <> 'note' ORDER BY m.created_at DESC LIMIT 1) AS last_message
   FROM live_chats
   LEFT JOIN clients ON clients.id = live_chats.client_id
+  LEFT JOIN ai_agents ON ai_agents.id = live_chats.ai_agent_id
 `
 
 export function mapChatRow(row: LiveChatRow): LiveChatSummary {
@@ -54,6 +60,10 @@ export function mapChatRow(row: LiveChatRow): LiveChatSummary {
     firstResponseAt: row.first_response_at ?? undefined,
     closedAt: row.closed_at ?? undefined,
     careHandled: Number(row.care_handled) === 1,
+    aiAgentId: row.ai_agent_id ?? undefined,
+    aiAgentName: row.ai_agent_name ?? undefined,
+    handoffReason: row.handoff_reason ?? undefined,
+    handedOffAt: row.handed_off_at ?? undefined,
   }
 }
 
@@ -65,11 +75,13 @@ export function newChatToken() {
   return randomBytes(24).toString('hex')
 }
 
-export async function loadChatMessages(chatId: string, after?: string) {
+/** The transcript; `visitor: true` leaves out internal notes (what the customer's browser gets). */
+export async function loadChatMessages(chatId: string, after?: string, options: { visitor?: boolean } = {}) {
   const db = useTenantDb()
+  const notes = options.visitor ? ` AND author_type <> 'note'` : ''
   const rows = after
-    ? await db.prepare('SELECT * FROM live_chat_messages WHERE chat_id = ? AND created_at > ? ORDER BY created_at').all(chatId, after) as MessageRow[]
-    : await db.prepare('SELECT * FROM live_chat_messages WHERE chat_id = ? ORDER BY created_at').all(chatId) as MessageRow[]
+    ? await db.prepare(`SELECT * FROM live_chat_messages WHERE chat_id = ? AND created_at > ?${notes} ORDER BY created_at`).all(chatId, after) as MessageRow[]
+    : await db.prepare(`SELECT * FROM live_chat_messages WHERE chat_id = ?${notes} ORDER BY created_at`).all(chatId) as MessageRow[]
   return rows.map(mapMessageRow)
 }
 
@@ -121,8 +133,11 @@ export async function addAgentChatMessage(chatId: string, agent: { id: string, n
     throw createError({ statusCode: 409, statusMessage: 'This chat has ended' })
 
   const at = await addChatMessage(chatId, { authorType: 'agent', authorId: agent.id, authorName: agent.name, body })
+  // A person replying takes the chat over from the AI.
+  if (chat.status === 'ai')
+    await addChatMessage(chatId, { authorType: 'system', authorName: 'System', body: `${agent.name} joined the chat.` })
   await db.prepare(`
-    UPDATE live_chats SET status = 'active',
+    UPDATE live_chats SET status = 'active', ai_thinking_at = NULL,
       assignee_id = COALESCE(assignee_id, ?), assignee_name = COALESCE(assignee_name, ?),
       first_response_at = COALESCE(first_response_at, ?), care_handled = CASE WHEN ? = 1 THEN 1 ELSE care_handled END
     WHERE id = ?
@@ -130,7 +145,7 @@ export async function addAgentChatMessage(chatId: string, agent: { id: string, n
 }
 
 /** Turns the transcript into a ticket (so it gets an SLA, follow-ups and email replies) and links them. */
-export async function createTicketFromChat(chatId: string, actor: { id: string, name: string }, options: { category?: string, priority?: 'low' | 'medium' | 'high' | 'urgent' } = {}) {
+export async function createTicketFromChat(chatId: string, actor: { id: string, name: string }, options: { category?: string, priority?: 'low' | 'medium' | 'high' | 'urgent', subject?: string, description?: string, unassigned?: boolean } = {}) {
   const db = useTenantDb()
   const chat = await loadChatDetail(chatId)
   if (!chat)
@@ -138,7 +153,7 @@ export async function createTicketFromChat(chatId: string, actor: { id: string, 
   if (chat.ticketId)
     return chat.ticketId
 
-  const transcript = chat.messages.map(m => `[${new Date(m.createdAt).toISOString().slice(11, 16)}] ${m.authorName}: ${m.body}`).join('\n')
+  const transcript = chat.messages.filter(m => m.authorType !== 'note').map(m => `[${new Date(m.createdAt).toISOString().slice(11, 16)}] ${m.authorName}: ${m.body}`).join('\n')
   const id = await nextTicketId()
   const now = new Date().toISOString()
   const priority = options.priority ?? 'medium'
@@ -148,7 +163,7 @@ export async function createTicketFromChat(chatId: string, actor: { id: string, 
   await db.prepare(`
     INSERT INTO tickets (id, subject, description, requester, requester_email, category, status, priority, created_at, updated_at, assignee_id, due_at, first_response_due_at, first_response_at, client_id, project_id, contract_id)
     VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, (chat.subject ?? `Live chat with ${chat.visitorName}`).slice(0, 200), `From live chat ${chat.id}:\n\n${transcript}`, chat.visitorName, chat.visitorEmail, options.category ?? 'Live chat', priority, now, now, chat.assigneeId ?? actor.id, dueAt ?? null, firstResponseDueAt ?? null, chat.firstResponseAt ?? null, customer.clientId, customer.projectId, customer.contractId)
+  `).run(id, (options.subject ?? chat.subject ?? `Live chat with ${chat.visitorName}`).slice(0, 200), `${options.description ? `${options.description}\n\n` : ''}From live chat ${chat.id}:\n\n${transcript}`, chat.visitorName, chat.visitorEmail, options.category ?? 'Live chat', priority, now, now, chat.assigneeId ?? (options.unassigned ? null : actor.id), dueAt ?? null, firstResponseDueAt ?? null, chat.firstResponseAt ?? null, customer.clientId, customer.projectId, customer.contractId)
   await logTicketActivity({ ticketId: id, type: 'created_from_chat', actorId: actor.id, actorName: actor.name, message: `${actor.name} created this ticket from live chat ${chat.id}` })
   await db.prepare('UPDATE live_chats SET ticket_id = ? WHERE id = ?').run(id, chatId)
   await addChatMessage(chatId, { authorType: 'system', authorName: 'System', body: `We've opened case ${id} for this. You'll get updates by email.` })
@@ -159,6 +174,7 @@ export async function liveChatQueueStats() {
   const db = useTenantDb()
   const waiting = await db.prepare('SELECT started_at FROM live_chats WHERE status = \'waiting\' ORDER BY started_at').all() as { started_at: string }[]
   const active = await db.prepare('SELECT COUNT(*) AS count FROM live_chats WHERE status = \'active\'').get() as { count: string | number }
+  const ai = await db.prepare('SELECT COUNT(*) AS count FROM live_chats WHERE status = \'ai\'').get() as { count: string | number }
   const agents = await db.prepare('SELECT id, role, roles, last_active_at, presence_override FROM staff WHERE status = \'active\'').all() as { id: string, role: string, roles: string | null, last_active_at: string | null, presence_override: string }[]
   const deskAgents = agents.filter(a => parseStaffRoles(a).some(r => r === 'agent' || r === 'admin'))
   return {
@@ -167,5 +183,13 @@ export async function liveChatQueueStats() {
     activeChats: Number(active.count),
     agentsOnline: deskAgents.filter(a => derivePresenceState(a) === 'online').length,
     agentsTotal: deskAgents.length,
+    aiHandling: Number(ai.count),
   }
+}
+
+/** Tells whoever is on call that a customer is waiting for a person. */
+export async function notifyChatWaiting(chatId: string, visitorName: string, preview: string) {
+  const onCall = await useTenantDb().prepare('SELECT id FROM staff WHERE on_call = 1 AND status = \'active\'').all() as { id: string }[]
+  for (const member of onCall)
+    await createNotification({ staffId: member.id, type: 'live_chat', title: `${visitorName} is waiting in live chat`, body: preview.slice(0, 120), url: `/inbox?open=${chatId}` })
 }

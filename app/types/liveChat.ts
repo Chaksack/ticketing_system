@@ -1,5 +1,7 @@
-export type LiveChatStatus = 'waiting' | 'active' | 'closed'
-export type LiveChatAuthor = 'visitor' | 'agent' | 'system'
+/** ai: an AI agent is handling it; waiting: queued for a person; active: a person is on it. */
+export type LiveChatStatus = 'ai' | 'waiting' | 'active' | 'closed'
+/** ai: an AI agent's reply; note: an internal note only staff see. */
+export type LiveChatAuthor = 'visitor' | 'agent' | 'ai' | 'system' | 'note'
 
 export interface LiveChatMessage {
   id: string
@@ -26,6 +28,11 @@ export interface LiveChatSummary {
   firstResponseAt?: string
   closedAt?: string
   careHandled: boolean
+  aiAgentId?: string
+  aiAgentName?: string
+  /** Why the AI passed the chat to a person. */
+  handoffReason?: string
+  handedOffAt?: string
 }
 
 export interface LiveChatDetail extends LiveChatSummary {
@@ -41,11 +48,17 @@ export interface LiveChatQueueStats {
   activeChats: number
   agentsOnline: number
   agentsTotal: number
+  /** Chats an AI agent is handling right now. */
+  aiHandling: number
 }
 
 /** What the visitor's browser sees (no internal ids). */
 export interface VisitorChatView {
   status: LiveChatStatus
   agentName?: string
+  /** The AI agent's name while it is handling the chat. */
+  aiAgentName?: string
+  /** The AI is writing a reply. */
+  typing?: boolean
   messages: LiveChatMessage[]
 }

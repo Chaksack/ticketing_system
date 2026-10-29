@@ -8,6 +8,8 @@ const open = ref(false)
 const token = ref<string | null>(null)
 const status = ref<VisitorChatView['status'] | null>(null)
 const agentName = ref<string>()
+const aiAgentName = ref<string>()
+const typing = ref(false)
 const messages = ref<LiveChatMessage[]>([])
 const form = reactive({ name: '', email: '', message: '' })
 const draft = ref('')
@@ -36,6 +38,8 @@ async function poll() {
     const view = await fetchUntyped<VisitorChatView>(`/api/public/chats/${token.value}`, { query: { workspace: props.workspace, after } })
     status.value = view.status
     agentName.value = view.agentName
+    aiAgentName.value = view.aiAgentName
+    typing.value = !!view.typing
     if (view.messages.length) {
       messages.value.push(...view.messages.filter(m => !messages.value.some(existing => existing.id === m.id)))
       nextTick(() => thread.value?.scrollTo({ top: thread.value.scrollHeight }))
@@ -99,6 +103,26 @@ async function send() {
   }
 }
 
+/** Leave the AI assistant and queue for a person. */
+async function askForPerson() {
+  if (!token.value)
+    return
+  await $fetch(`/api/public/chats/${token.value}`, { method: 'POST', query: { workspace: props.workspace }, body: { action: 'human' } }).catch(() => {})
+  await poll()
+}
+
+const headerLine = computed(() => {
+  if (status.value === 'ai')
+    return `${aiAgentName.value ?? 'Our assistant'} · AI assistant`
+  if (status.value === 'active' && agentName.value)
+    return `You're chatting with ${agentName.value}`
+  if (status.value === 'waiting')
+    return 'Waiting for the next available person…'
+  if (status.value === 'closed')
+    return 'Chat ended'
+  return 'We usually reply in a few minutes'
+})
+
 async function end() {
   if (!token.value)
     return
@@ -123,7 +147,7 @@ const inputClass = 'min-h-11 w-full rounded-xl border border-[#868685] bg-white 
             {{ companyName }} support
           </div>
           <div class="text-xs text-brand-mist">
-            {{ status === 'active' && agentName ? `You're chatting with ${agentName}` : status === 'waiting' ? 'Waiting for the next available person…' : status === 'closed' ? 'Chat ended' : 'We usually reply in a few minutes' }}
+            {{ headerLine }}
           </div>
         </div>
         <button type="button" class="flex size-9 items-center justify-center rounded-full bg-brand-spruce" aria-label="Minimise chat" @click="open = false">
@@ -155,14 +179,21 @@ const inputClass = 'min-h-11 w-full rounded-xl border border-[#868685] bg-white 
             <p v-if="message.authorType === 'system'" class="m-0 self-center text-center text-xs text-[#5d605d]">
               {{ message.body }}
             </p>
-            <p
-              v-else
-              class="m-0 max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[15px] leading-normal"
-              :class="message.authorType === 'visitor' ? 'self-end bg-brand-forest text-white' : 'self-start bg-white text-brand-obsidian ring-1 ring-black/10'"
-            >
-              {{ message.body }}
-            </p>
+            <div v-else class="flex max-w-[85%] flex-col gap-0.5" :class="message.authorType === 'visitor' ? 'self-end items-end' : 'self-start'">
+              <span v-if="message.authorType === 'ai'" class="flex items-center gap-1 text-[11px] font-semibold text-[#5d605d]">
+                <Icon name="i-lucide-sparkles" class="size-3" /> {{ message.authorName }} · AI
+              </span>
+              <p
+                class="m-0 whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[15px] leading-normal"
+                :class="message.authorType === 'visitor' ? 'bg-brand-forest text-white' : message.authorType === 'ai' ? 'bg-brand-mist text-brand-obsidian' : 'bg-white text-brand-obsidian ring-1 ring-black/10'"
+              >
+                {{ message.body }}
+              </p>
+            </div>
           </template>
+          <p v-if="typing" class="m-0 flex items-center gap-1 self-start rounded-2xl bg-brand-mist px-3.5 py-2.5" role="status" aria-label="The assistant is typing">
+            <span v-for="dot in 3" :key="dot" class="size-1.5 animate-bounce rounded-full bg-brand-forest" :style="{ animationDelay: `${dot * 120}ms` }" />
+          </p>
         </div>
         <form v-if="status !== 'closed'" class="flex gap-2 border-t border-brand-fog p-3" @submit.prevent="send">
           <label for="portal-chat-input" class="sr-only">Message</label>
@@ -172,9 +203,14 @@ const inputClass = 'min-h-11 w-full rounded-xl border border-[#868685] bg-white 
           </button>
         </form>
         <div class="flex justify-between gap-2 border-t border-brand-fog px-4 py-2 text-xs">
-          <button v-if="status !== 'closed'" type="button" class="font-semibold text-brand-forest underline" @click="end">
-            End chat
-          </button>
+          <span v-if="status !== 'closed'" class="flex gap-3">
+            <button v-if="status === 'ai'" type="button" class="font-semibold text-brand-forest underline" @click="askForPerson">
+              Talk to a person
+            </button>
+            <button type="button" class="font-semibold text-brand-forest underline" @click="end">
+              End chat
+            </button>
+          </span>
           <button v-else type="button" class="font-semibold text-brand-forest underline" @click="reset">
             Start a new chat
           </button>

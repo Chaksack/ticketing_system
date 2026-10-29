@@ -215,6 +215,58 @@ export async function migrateModuleTables() {
     )
   `)
 
+  // ── AI agents (server/utils/aiAgent.ts) ──────────────────────────────────
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS ai_agents (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 0,
+      config TEXT NOT NULL,
+      sort_no INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      updated_by TEXT
+    )
+  `)
+  // One row ('default'): the workspace's own AI connection for agents. api_key is encrypted.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS ai_model_settings (
+      id TEXT PRIMARY KEY,
+      provider TEXT NOT NULL DEFAULT 'company',
+      model TEXT,
+      base_url TEXT,
+      api_key TEXT,
+      updated_at TEXT NOT NULL
+    )
+  `)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS ai_agent_runs (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      chat_id TEXT,
+      question TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      reply TEXT,
+      sources TEXT NOT NULL DEFAULT '[]',
+      steps TEXT NOT NULL DEFAULT '[]',
+      handoff_reason TEXT,
+      error TEXT,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      latency_ms INTEGER NOT NULL DEFAULT 0,
+      dry_run INTEGER NOT NULL DEFAULT 0,
+      gap_article_id TEXT,
+      created_at TEXT NOT NULL
+    )
+  `)
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_ai_agent_runs_agent ON ai_agent_runs (agent_id, created_at)')
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_ai_agent_runs_chat ON ai_agent_runs (chat_id)')
+  await db.exec('ALTER TABLE live_chats ADD COLUMN IF NOT EXISTS ai_agent_id TEXT')
+  // When the AI started writing a reply (cleared when it's done) — drives the visitor's typing dots.
+  await db.exec('ALTER TABLE live_chats ADD COLUMN IF NOT EXISTS ai_thinking_at TEXT')
+  await db.exec('ALTER TABLE live_chats ADD COLUMN IF NOT EXISTS handoff_reason TEXT')
+  await db.exec('ALTER TABLE live_chats ADD COLUMN IF NOT EXISTS handed_off_at TEXT')
+
   // ── Canopy HQ access (only read in Canopy's own workspace) ──────────────
   // 'admin' = runs HQ (clients, onboarding, Care); 'agent' = Care agent desktop; NULL = workspace only.
   const hqColumn = await db.prepare(`SELECT 1 FROM information_schema.columns WHERE table_name = 'staff' AND column_name = 'hq_role'`).get()

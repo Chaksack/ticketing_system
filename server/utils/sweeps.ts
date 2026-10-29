@@ -63,10 +63,11 @@ export async function autoCloseInactiveTickets() {
 
 export async function runTicketSweep() {
   await ensureDb()
-  const [escalated, closed] = await Promise.all([
+  const [escalated, closed, aiChatsClosed] = await Promise.all([
     escalateBreachedSla(),
     autoCloseInactiveTickets(),
+    resolveIdleAiChats(),
   ])
   await pruneRateLimitCounters()
-  return { escalated, closed }
+  return { escalated, closed, aiChatsClosed }
 }

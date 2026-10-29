@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import type { AiAgentRun } from '~/types/aiAgent'
 import type { KbArticle } from '~/types/knowledge'
 import type { LiveChatDetail, LiveChatQueueStats, LiveChatSummary } from '~/types/liveChat'
 import { toast } from 'vue-sonner'
+import { AI_OUTCOME_LABELS } from '~/types/aiAgent'
 
 // Live chat inbox ("Omnichannel — live chat" in the Canopy design). Customers start chats from the
-// support portal; this page polls for new ones and new messages.
+// support portal; this page polls for new ones and new messages. With an AI agent switched on, new
+// chats start in "AI handling": the team can watch, take over, or pass a chat back to the AI.
 definePageMeta({ middleware: 'agent' })
 
 const route = useRoute()
@@ -12,7 +15,7 @@ const { currentUser, currentOrg } = useAuth()
 const { macros, fetchMacros } = useMacros()
 const { staff, fetchStaff } = useStaff()
 
-type ListFilter = 'open' | 'mine' | 'closed'
+type ListFilter = 'open' | 'ai' | 'mine' | 'closed'
 const filter = ref<ListFilter>('open')
 const openChats = ref<LiveChatSummary[]>([])
 const closedChats = ref<LiveChatSummary[]>([])
@@ -21,6 +24,7 @@ const stats = ref<LiveChatQueueStats | null>(null)
 const selectedId = ref<string | null>(typeof route.query.open === 'string' ? route.query.open : null)
 const chat = ref<LiveChatDetail | null>(null)
 const articles = ref<KbArticle[]>([])
+const aiRuns = ref<AiAgentRun[]>([])
 const draft = ref('')
 const suggestion = ref('')
 
@@ -36,10 +40,11 @@ async function loadChat() {
   if (!selectedId.value)
     return
   try {
-    const result = await fetchUntyped<{ chat: LiveChatDetail, articles: KbArticle[] }>(`/api/chats/${selectedId.value}`)
+    const result = await fetchUntyped<{ chat: LiveChatDetail, articles: KbArticle[], aiRuns: AiAgentRun[] }>(`/api/chats/${selectedId.value}`)
     const grew = (result.chat.messages.length ?? 0) > (chat.value?.id === result.chat.id ? chat.value.messages.length : 0)
     chat.value = result.chat
     articles.value = result.articles
+    aiRuns.value = result.aiRuns
     if (grew)
       scrollThread()
   }
@@ -56,10 +61,13 @@ const listShown = computed(() => {
     return closedChats.value
   if (filter.value === 'mine')
     return openChats.value.filter(c => c.assigneeId === currentUser.value?.id)
-  return openChats.value
+  if (filter.value === 'ai')
+    return openChats.value.filter(c => c.status === 'ai')
+  return openChats.value.filter(c => c.status !== 'ai')
 })
 const listTabs = computed(() => [
-  { value: 'open' as const, label: 'Open', count: openChats.value.length },
+  { value: 'open' as const, label: 'Needs a person', count: openChats.value.filter(c => c.status !== 'ai').length },
+  { value: 'ai' as const, label: 'AI handling', count: openChats.value.filter(c => c.status === 'ai').length },
   { value: 'mine' as const, label: 'Mine', count: openChats.value.filter(c => c.assigneeId === currentUser.value?.id).length },
   { value: 'closed' as const, label: 'Closed' },
 ])
@@ -70,6 +78,7 @@ function select(id: string) {
   chat.value = null
   draft.value = ''
   suggestion.value = ''
+  aiRuns.value = []
   navigateTo({ query: { ...route.query, open: id } }, { replace: true })
   loadChat()
 }
@@ -96,6 +105,8 @@ function scrollThread() {
 
 // ── Composer ──────────────────────────────────────────────────────────────
 const sending = ref(false)
+/** Reply to the customer, or leave an internal note only the team sees. */
+const composeMode = ref<'reply' | 'note'>('reply')
 const slashQuery = computed(() => draft.value.match(/^\/(\S*)$/)?.[1]?.toLowerCase() ?? null)
 const slashMatches = computed(() => slashQuery.value === null ? [] : macros.value.filter(m => m.name.toLowerCase().includes(slashQuery.value!)).slice(0, 6))
 
@@ -109,7 +120,7 @@ async function send() {
     return
   sending.value = true
   try {
-    chat.value = (await fetchUntyped<{ chat: LiveChatDetail }>(`/api/chats/${chat.value.id}/messages`, { method: 'POST', body: { message } })).chat
+    chat.value = (await fetchUntyped<{ chat: LiveChatDetail }>(`/api/chats/${chat.value.id}/messages`, { method: 'POST', body: { message, note: composeMode.value === 'note' } })).chat
     draft.value = ''
     suggestion.value = ''
     scrollThread()
@@ -149,13 +160,15 @@ async function suggestReply() {
   }
 }
 
-async function act(action: 'assign_me' | 'close' | 'create_ticket' | 'transfer', extra: Record<string, string> = {}) {
+async function act(action: 'assign_me' | 'close' | 'create_ticket' | 'transfer' | 'return_to_ai', extra: Record<string, string> = {}) {
   if (!chat.value)
     return
   try {
     chat.value = (await fetchUntyped<{ chat: LiveChatDetail }>(`/api/chats/${chat.value.id}`, { method: 'PATCH', body: { action, ...extra } })).chat
     if (action === 'create_ticket')
       toast(`Ticket ${chat.value.ticketId} created`, { description: 'The transcript is on the ticket, and the customer was told.' })
+    if (action === 'return_to_ai')
+      toast(`${chat.value.aiAgentName ?? 'The AI'} is handling this chat again`)
     loadList()
   }
   catch (error: any) {
@@ -190,7 +203,7 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
 
 <template>
   <div class="flex w-full flex-col gap-4">
-    <PageTitle title="Live chat" description="Chats customers start from your support portal. Turn any chat into a ticket to keep its SLA and email follow-ups.">
+    <PageTitle title="Live chat" description="Chats customers start from your support portal. AI agents answer first when switched on; turn any chat into a ticket to keep its SLA and email follow-ups.">
       <template #aside>
         <PageSegmentedTabs v-model="filter" label="Chats" :options="listTabs" />
       </template>
@@ -210,14 +223,15 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
         >
           <span class="flex items-center justify-between gap-2">
             <span class="truncate font-semibold text-foreground">{{ item.visitorName }}</span>
-            <span v-if="item.status === 'waiting'" class="shrink-0 rounded-full bg-brand-lime px-2 py-0.5 text-[11px] font-bold text-brand-forest">Waiting {{ waitLabel(item.startedAt) }}</span>
+            <span v-if="item.status === 'waiting'" class="shrink-0 rounded-full bg-brand-lime px-2 py-0.5 text-[11px] font-bold text-brand-forest">{{ item.handedOffAt ? 'From AI' : 'Waiting' }} {{ waitLabel(item.handedOffAt ?? item.startedAt) }}</span>
+            <span v-else-if="item.status === 'ai'" class="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-mist px-2 py-0.5 text-[11px] font-bold text-brand-forest dark:bg-brand-spruce dark:text-brand-mist"><Icon name="i-lucide-sparkles" class="size-3" />AI</span>
             <span v-else class="shrink-0 text-xs text-muted-foreground">{{ time(item.lastMessageAt) }}</span>
           </span>
           <span class="truncate text-xs text-muted-foreground">{{ item.clientName ?? item.visitorEmail }}<template v-if="item.assigneeName"> · {{ item.assigneeName }}</template></span>
           <span class="line-clamp-1 text-sm">{{ item.lastMessage }}</span>
         </button>
         <p v-if="!listShown.length" class="m-0 p-4 text-center text-sm text-muted-foreground">
-          {{ filter === 'closed' ? 'No ended chats yet.' : 'No one is waiting. Chats start from the "Chat with us" button on your support portal.' }}
+          {{ filter === 'closed' ? 'No ended chats yet.' : filter === 'ai' ? 'The AI isn\'t handling any chats right now.' : 'No one is waiting. Chats start from the "Chat with us" button on your support portal.' }}
         </p>
       </section>
 
@@ -232,15 +246,22 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
                   Web chat · {{ chat.visitorName }}
                 </div>
                 <div class="truncate text-xs text-muted-foreground">
-                  {{ chat.visitorEmail }} · started {{ time(chat.startedAt) }}<template v-if="chat.assigneeName">
+                  {{ chat.visitorEmail }} · started {{ time(chat.startedAt) }}<template v-if="chat.status === 'ai'">
+                    · {{ chat.aiAgentName ?? 'AI agent' }} (AI) is answering
+                  </template><template v-else-if="chat.assigneeName">
                     · with {{ chat.assigneeName }}
                   </template>
                 </div>
               </div>
             </div>
             <div class="flex flex-wrap gap-1.5">
-              <Button v-if="chat.status !== 'closed' && chat.assigneeId !== currentUser?.id" size="sm" variant="lime" @click="act('assign_me')">
-                Take chat
+              <Button v-if="chat.status !== 'closed' && (chat.status === 'ai' || chat.assigneeId !== currentUser?.id)" size="sm" variant="lime" @click="act('assign_me')">
+                <Icon :name="chat.status === 'ai' ? 'i-lucide-hand' : 'i-lucide-user-check'" />
+                {{ chat.status === 'ai' ? 'Take over' : 'Take chat' }}
+              </Button>
+              <Button v-if="chat.status === 'active' || chat.status === 'waiting'" size="sm" variant="outline" @click="act('return_to_ai')">
+                <Icon name="i-lucide-sparkles" />
+                Back to AI
               </Button>
               <Button v-if="chat.ticketId" size="sm" variant="outline" as-child>
                 <NuxtLink :to="`/tickets?open=${chat.ticketId}`">
@@ -273,11 +294,18 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
               <p v-if="message.authorType === 'system'" class="m-0 self-center rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                 {{ message.body }}
               </p>
-              <div v-else class="flex max-w-[80%] flex-col gap-1" :class="message.authorType === 'agent' ? 'self-end items-end' : 'self-start'">
-                <span class="text-[11px] font-semibold text-muted-foreground">{{ message.authorType === 'agent' ? message.authorName : 'Customer' }} · {{ time(message.createdAt) }}</span>
+              <div v-else-if="message.authorType === 'note'" class="flex w-full max-w-[90%] flex-col gap-1 self-center rounded-2xl border border-dashed border-amber-400 bg-amber-50 px-4 py-2.5 text-sm text-amber-950 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-100">
+                <span class="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide"><Icon name="i-lucide-lock" class="size-3" />Internal note · {{ message.authorName }} · {{ time(message.createdAt) }}</span>
+                <span class="whitespace-pre-wrap">{{ message.body }}</span>
+              </div>
+              <div v-else class="flex max-w-[80%] flex-col gap-1" :class="message.authorType === 'visitor' ? 'self-start' : 'self-end items-end'">
+                <span class="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                  <Icon v-if="message.authorType === 'ai'" name="i-lucide-sparkles" class="size-3" />
+                  {{ message.authorType === 'visitor' ? 'Customer' : message.authorType === 'ai' ? `${message.authorName} · AI` : message.authorName }} · {{ time(message.createdAt) }}
+                </span>
                 <p
                   class="m-0 whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-normal"
-                  :class="message.authorType === 'agent' ? 'bg-brand-forest text-white' : 'bg-brand-fog text-brand-obsidian dark:bg-muted dark:text-foreground'"
+                  :class="message.authorType === 'agent' ? 'bg-brand-forest text-white' : message.authorType === 'ai' ? 'bg-brand-mist text-brand-obsidian ring-1 ring-brand-forest/20 dark:bg-brand-spruce dark:text-white' : 'bg-brand-fog text-brand-obsidian dark:bg-muted dark:text-foreground'"
                 >
                   {{ message.body }}
                 </p>
@@ -305,13 +333,25 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
                 </button>
               </li>
             </ul>
-            <label for="chat-reply" class="sr-only">Reply</label>
+            <div class="flex items-center justify-between gap-2">
+              <div class="inline-flex rounded-full bg-muted p-0.5 text-xs font-semibold" role="radiogroup" aria-label="Message type">
+                <button type="button" role="radio" :aria-checked="composeMode === 'reply'" class="rounded-full px-3 py-1.5" :class="composeMode === 'reply' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'" @click="composeMode = 'reply'">
+                  Reply
+                </button>
+                <button type="button" role="radio" :aria-checked="composeMode === 'note'" class="rounded-full px-3 py-1.5" :class="composeMode === 'note' ? 'bg-amber-100 text-amber-950 shadow-sm dark:bg-amber-500/20 dark:text-amber-100' : 'text-muted-foreground'" @click="composeMode = 'note'">
+                  Internal note
+                </button>
+              </div>
+              <span v-if="chat.status === 'ai' && composeMode === 'reply'" class="text-xs text-muted-foreground">Replying takes the chat over from the AI.</span>
+            </div>
+            <label for="chat-reply" class="sr-only">{{ composeMode === 'note' ? 'Internal note' : 'Reply' }}</label>
             <textarea
               id="chat-reply"
               v-model="draft"
               rows="3"
-              class="w-full resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              placeholder="Type a reply — Enter to send, Shift+Enter for a new line, / for macros"
+              class="w-full resize-none rounded-2xl border px-4 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              :class="composeMode === 'note' ? 'border-amber-400 bg-amber-50 dark:bg-amber-500/10' : 'border-input bg-background'"
+              :placeholder="composeMode === 'note' ? 'Note for the team — the customer won\'t see this' : 'Type a reply — Enter to send, Shift+Enter for a new line, / for macros'"
               @keydown="onComposerKeydown"
             />
             <div class="flex flex-wrap justify-between gap-2">
@@ -320,7 +360,7 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
                 {{ suggesting ? 'Thinking…' : 'Suggest reply' }}
               </Button>
               <Button type="submit" :disabled="sending || !draft.trim()">
-                Send
+                {{ composeMode === 'note' ? 'Add note' : 'Send' }}
               </Button>
             </div>
           </form>
@@ -357,6 +397,49 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
           </template>
           <p v-else class="m-0 text-sm text-muted-foreground">
             {{ chat.visitorEmail }} doesn't match a client or contact yet.
+          </p>
+        </section>
+
+        <section v-if="chat && (chat.aiAgentId || aiRuns.length)" class="flex flex-col gap-2.5 rounded-[28px] bg-card p-5 ring-1 ring-black/10 dark:ring-white/10" aria-label="AI activity">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="m-0 flex items-center gap-1.5 text-base font-bold text-foreground">
+              <Icon name="i-lucide-sparkles" class="size-4" />AI activity
+            </h2>
+            <NuxtLink v-if="chat.aiAgentId" :to="`/ai-agents/${chat.aiAgentId}`" class="text-xs font-semibold text-primary hover:underline dark:text-brand-lime">
+              {{ chat.aiAgentName ?? 'Agent' }}
+            </NuxtLink>
+          </div>
+          <p v-if="chat.handoffReason" class="m-0 rounded-xl bg-brand-mist px-3 py-2 text-sm text-brand-forest dark:bg-brand-spruce dark:text-brand-mist">
+            Handed to the team: {{ chat.handoffReason }}
+          </p>
+          <details v-for="run in aiRuns" :key="run.id" class="rounded-xl bg-muted/60 px-3 py-2 text-sm">
+            <summary class="cursor-pointer list-none">
+              <span class="flex items-center justify-between gap-2">
+                <span class="font-semibold text-foreground">{{ AI_OUTCOME_LABELS[run.outcome] }}</span>
+                <span class="text-xs text-muted-foreground">{{ time(run.createdAt) }} · {{ (run.latencyMs / 1000).toFixed(1) }}s</span>
+              </span>
+              <span class="line-clamp-1 text-xs text-muted-foreground">“{{ run.question }}”</span>
+            </summary>
+            <div class="mt-2 flex flex-col gap-1.5 text-xs">
+              <div v-if="run.sources.length">
+                <span class="font-semibold">Sources:</span>
+                <NuxtLink v-for="source in run.sources" :key="source.id" :to="`/knowledge/${source.id}`" class="ml-1 underline">
+                  {{ source.title }}
+                </NuxtLink>
+              </div>
+              <div v-for="(step, index) in run.steps" :key="index">
+                <span class="font-mono">{{ step.tool }}</span> → {{ step.result }}
+              </div>
+              <div v-if="run.handoffReason">
+                <span class="font-semibold">Handoff:</span> {{ run.handoffReason }}
+              </div>
+              <div v-if="run.error" class="text-destructive">
+                {{ run.error }}
+              </div>
+            </div>
+          </details>
+          <p v-if="!aiRuns.length" class="m-0 text-sm text-muted-foreground">
+            {{ chat.status === 'ai' ? 'The AI is reading the conversation…' : 'No AI replies in this chat.' }}
           </p>
         </section>
 
@@ -407,6 +490,14 @@ const initials = (name: string) => name.split(/\s+/).map(p => p[0]).join('').sli
               </dt>
               <dd class="m-0 text-2xl font-black text-foreground">
                 {{ stats?.activeChats ?? '—' }}
+              </dd>
+            </div>
+            <div class="rounded-xl bg-muted/60 p-3">
+              <dt class="text-xs text-muted-foreground">
+                AI handling
+              </dt>
+              <dd class="m-0 text-2xl font-black text-foreground">
+                {{ stats?.aiHandling ?? '—' }}
               </dd>
             </div>
             <div class="rounded-xl bg-muted/60 p-3">

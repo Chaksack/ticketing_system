@@ -354,6 +354,36 @@ own workspace; Canopy runs the platform from **Canopy HQ**.
   and live chats. "Draft article" on a ticket writes one with the person's AI (or a template).
 - **Live chat** (`/inbox`) — customers start chats from the portal's "Chat with us" button; agents
   answer, use macros (`/`), get suggested replies, and turn a chat into a ticket.
+  - Tabs: **Needs a person** and **AI handling**.
+  - **Take over** stops the AI; **Back to AI** hands the chat back.
+  - **Internal notes** are seen only by staff.
+  - An **AI activity** panel shows what the AI said and why.
+- **AI agents** (`/ai-agents`, `server/utils/aiAgent.ts`) — agentic first-line support, modelled
+  on AgentDesk's AI agents and Chatwoot's Captain.
+  - **First response:** a new chat goes to the first enabled agent (within its hours and rollout
+    share). Each customer message runs one turn: the model reads the conversation and the matching
+    knowledge articles.
+  - **Tools:** it can search the knowledge base, look up the customer's tickets (matched by
+    email), create a ticket, or hand off. Every turn must end with `reply` or
+    `handoff_to_human`.
+  - **Answerability gate:** in "Only from knowledge" mode, an answer must cite an article or a
+    tool result. Otherwise the customer gets the fallback message instead of a guess, and the chat
+    goes to a person.
+  - **Handoffs:** these happen when the customer asks for a person, on configured keywords, when
+    the AI has no answer, or when the AI is down. They post a summary note for the team. If no
+    one is online, they also open a ticket so the question isn't lost.
+  - **Agent settings:** persona, welcome and handoff messages, rules, playbooks (step-by-step
+    instructions per situation), business hours, gradual rollout and auto-close of quiet chats.
+  - **Testing:** a playground runs the settings on screen without touching customers.
+  - **Audit trail:** every turn is stored in `ai_agent_runs` (outcome, sources, tool calls,
+    latency). Questions it couldn't answer appear under **Knowledge gaps** with "Draft article".
+  - **Model settings** (on the AI agents page) choose the workspace's AI:
+    - Canopy's company Claude key (`NUXT_ANTHROPIC_API_KEY`)
+    - the workspace's own Claude key
+    - any OpenAI-compatible endpoint (OpenAI, Azure, Groq, OpenRouter, a local model)
+
+    Keys are stored encrypted and never sent back. An agent can't be switched on until a model is
+    connected.
 - **Ticket workspace** (`/tickets/<id>`) — queue, case and customer side by side; *Resolve case*
   can send a one-question satisfaction survey (`/survey/<workspace>/<token>`). A 1–2 rating reopens
   the ticket. Results are under Support → Reports.

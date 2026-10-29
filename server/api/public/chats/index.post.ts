@@ -33,10 +33,9 @@ export default defineEventHandler(async (event) => {
   `).run(id, token, name, email, identified?.clientId ?? null, message.slice(0, 140), now, now)
   await addChatMessage(id, { authorType: 'visitor', authorName: name, body: message })
 
-  // Let whoever is on call know someone is waiting.
-  const onCall = await db.prepare('SELECT id FROM staff WHERE on_call = 1 AND status = \'active\'').all() as { id: string }[]
-  for (const member of onCall)
-    await createNotification({ staffId: member.id, type: 'live_chat', title: `${name} is waiting in live chat`, body: message.slice(0, 120), url: `/inbox?open=${id}` })
+  // An AI agent answers first when one is switched on; otherwise whoever is on call is told someone is waiting.
+  if (!(await assignAgentToNewChat(event, id)))
+    await notifyChatWaiting(id, name, message)
 
   setResponseStatus(event, 201)
   return { token }

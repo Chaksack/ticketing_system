@@ -66,6 +66,15 @@ export function searchTerms(text: string) {
  * matches. Good enough for "articles that might answer this" without a search engine.
  */
 export async function searchKbArticles(query: string, options: { publicOnly?: boolean, includeUnpublished?: boolean, excludeId?: string, limit?: number } = {}) {
+  return (await searchKbArticlesScored(query, options)).map(result => result.article)
+}
+
+/**
+ * Keyword search with a relevance score (title hits count 3, body hits 1) and the share of the
+ * query's words that matched — the AI agent uses both to decide whether an article really covers
+ * the question. `products` limits results to articles tagged with one of those products.
+ */
+export async function searchKbArticlesScored(query: string, options: { publicOnly?: boolean, includeUnpublished?: boolean, excludeId?: string, limit?: number, products?: string[] } = {}) {
   const terms = searchTerms(query).slice(0, 12)
   if (!terms.length)
     return []
@@ -76,19 +85,22 @@ export async function searchKbArticles(query: string, options: { publicOnly?: bo
   if (options.publicOnly)
     where.push('kb_articles.visibility = \'public\'')
   const rows = await useTenantDb().prepare(`${KB_SELECT}${where.length ? ` WHERE ${where.join(' AND ')}` : ''}`).all() as KbRow[]
+  const products = (options.products ?? []).map(p => p.toLowerCase())
 
   return rows
     .filter(row => row.id !== options.excludeId)
-    .map((row) => {
-      const title = row.title.toLowerCase()
-      const body = row.body.toLowerCase()
+    .map(row => mapKbRow(row))
+    .filter(article => !products.length || article.products.some(p => products.includes(p.toLowerCase())))
+    .map((article) => {
+      const title = article.title.toLowerCase()
+      const body = article.body.toLowerCase()
+      const matched = terms.filter(term => title.includes(term) || body.includes(term)).length
       const score = terms.reduce((sum, term) => sum + (title.includes(term) ? 3 : 0) + (body.includes(term) ? 1 : 0), 0)
-      return { article: mapKbRow(row), score }
+      return { article, score, coverage: matched / terms.length }
     })
     .filter(result => result.score >= Math.min(2, terms.length))
     .sort((a, b) => b.score - a.score)
     .slice(0, options.limit ?? 5)
-    .map(result => result.article)
 }
 
 /** Staff who can write and read the knowledge base: the service desk and engineers, plus admins. */

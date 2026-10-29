@@ -50,6 +50,12 @@ export const navAreas: NavArea[] = [
         ],
       },
       {
+        heading: 'AI',
+        items: [
+          { title: 'AI agents', icon: 'i-lucide-bot', link: '/ai-agents', roles: SERVICE, new: true },
+        ],
+      },
+      {
         heading: 'Service settings',
         items: [
           { title: 'SLA policies', icon: 'i-lucide-timer', link: '/admin/sla', adminOnly: true },

@@ -17,7 +17,13 @@ export default defineEventHandler(async (event) => {
   if (chat.status === 'closed')
     throw createError({ statusCode: 409, statusMessage: 'This chat has ended' })
 
-  const body = await readBody<{ message?: string, action?: 'end' }>(event)
+  const body = await readBody<{ message?: string, action?: 'end' | 'human' }>(event)
+  // "Talk to a person" in the widget.
+  if (body?.action === 'human') {
+    if (chat.status === 'ai')
+      await handOffChat(chat.id, chat.ai_agent_id ? await loadAiAgent(chat.ai_agent_id) : null, 'the customer asked for a person')
+    return { ok: true }
+  }
   if (body?.action === 'end') {
     await addChatMessage(chat.id, { authorType: 'system', authorName: 'System', body: `${chat.visitor_name} ended the chat.` })
     await db.prepare('UPDATE live_chats SET status = \'closed\', closed_at = ? WHERE id = ?').run(new Date().toISOString(), chat.id)
@@ -31,5 +37,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 429, statusMessage: 'You are sending messages too quickly.' })
 
   await addChatMessage(chat.id, { authorType: 'visitor', authorName: chat.visitor_name, body: message })
+  if (chat.status === 'ai')
+    scheduleAgentTurn(event, chat.id)
   return { ok: true }
 })

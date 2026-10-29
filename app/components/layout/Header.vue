@@ -19,14 +19,15 @@ async function onRefresh() {
 }
 
 /** Path segments whose title isn't just the word capitalised. */
-const SEGMENT_TITLES: Record<string, string> = { hq: 'Canopy HQ', team: 'Team & access' }
+const SEGMENT_TITLES: Record<string, string> = { 'hq': 'Canopy HQ', 'team': 'Team & access', 'ai-agents': 'AI agents' }
 
 function setLinks() {
   if (route.fullPath === homePath.value) {
     return [{ title: 'Home', href: homePath.value }]
   }
 
-  const segments = route.fullPath.split('/').filter(item => item !== '')
+  // The path only: query strings (?open=…) aren't breadcrumbs.
+  const segments = route.path.split('/').filter(item => item !== '')
 
   const breadcrumbs = segments.map((item, index) => {
     const str = item.replace(/-/g, ' ')
